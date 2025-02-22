@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, SafeAreaView, StatusBar, ScrollView } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 
 const HomeScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
+      <ScrollView>
       <StatusBar barStyle="dark-content" />
       
       {/* Header */}
@@ -109,6 +110,7 @@ const HomeScreen = ({ navigation }) => {
           <Ionicons name="person-outline" size={24} color="gray" />
         </TouchableOpacity>
       </View> */}
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -277,7 +279,7 @@ const styles = StyleSheet.create({
   },
   sosContainer: {
     position: 'absolute',
-    bottom: 90,
+    bottom: 65,
     alignSelf: 'center',
   },
   sosButton: {
