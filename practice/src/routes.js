@@ -90,6 +90,8 @@ const Routes = () => {
           } else if (route.name === "Navigation") {
             IconComponent = MaterialCommunityIcons;
             iconName = "navigation-variant-outline";
+          } else if (route.name === "SOS") {
+            iconName = "alert-circle-outline"; // You can pick any icon you like
           } else if (route.name === "Community") {
             iconName = focused ? "people" : "people-outline";
           } else if (route.name === "Profile") {
@@ -97,7 +99,7 @@ const Routes = () => {
           }
 
           return (
-            <Animated.View 
+            <Animated.View
               style={{
                 transform: [{ scale: focused ? 1 : 1 }],
                 backgroundColor: focused ? 'rgba(255, 75, 140, 0.1)' : 'transparent',
@@ -109,9 +111,9 @@ const Routes = () => {
                 justifyContent: 'center',
               }}
             >
-              <IconComponent 
-                name={iconName} 
-                size={size} 
+              <IconComponent
+                name={iconName}
+                size={size}
                 color={color}
                 style={{
                   transform: [{ translateY: focused ? -2 : 0 }]
@@ -122,8 +124,9 @@ const Routes = () => {
         },
       })}
     >
-      <Tab.Screen 
-        name="Home" 
+      {/* 1) Home */}
+      <Tab.Screen
+        name="Home"
         component={HomeStack}
         options={{
           tabBarLabel: ({ focused }) => (
@@ -140,23 +143,51 @@ const Routes = () => {
           ),
         }}
       />
-      <Tab.Screen 
-        name="Navigation" 
+
+      {/* 2) Navigation */}
+      <Tab.Screen
+        name="Navigation"
         component={HomeStack}
         options={{
           tabBarLabel: () => null,
         }}
       />
 
-      <Tab.Screen 
-        name="Community" 
+      {/** 
+       * 3) SOS — inserted between Navigation & Community
+       *    You can rename its icon, label, or target component as desired.
+       */}
+      <Tab.Screen
+        name="SOS"
+        component={HomeStack}
+        options={{
+          tabBarLabel: ({ focused }) => (
+            <Animated.Text
+              style={{
+                color: focused ? "#FF4B8C" : "#8e8e8e",
+                fontSize: 12,
+                fontWeight: focused ? '600' : '400',
+                opacity: focused ? 1 : 0.8,
+              }}
+            >
+              SOS
+            </Animated.Text>
+          ),
+        }}
+      />
+
+      {/* 4) Community */}
+      <Tab.Screen
+        name="Community"
         component={HomeStack}
         options={{
           tabBarLabel: () => null,
         }}
       />
-      <Tab.Screen 
-        name="Profile" 
+
+      {/* 5) Profile */}
+      <Tab.Screen
+        name="Profile"
         component={ProfileStack}
         options={{
           tabBarLabel: ({ focused }) => (
@@ -174,6 +205,7 @@ const Routes = () => {
         }}
       />
     </Tab.Navigator>
+
   );
 };
 
