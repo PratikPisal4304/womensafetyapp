@@ -52,10 +52,10 @@ const Routes = () => {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: "rgba(255, 255, 255, 0.95)",
-          borderTopWidth: 0,
+          backgroundColor: "rgba(253, 241, 252, 0.95)",
+          borderTopWidth: 1,
           paddingVertical: 15,
-          marginHorizontal: "10%",
+          marginHorizontal: "5%",
           height: 65,
           position: "absolute",
           left: 20,
@@ -66,9 +66,9 @@ const Routes = () => {
           shadowColor: "#000",
           shadowOpacity: 0.15,
           shadowOffset: { width: 0, height: 8 },
-          shadowRadius: 15,
+          shadowRadius: 25,
           borderWidth: 1,
-          borderColor: "rgba(255, 255, 255, 0.2)",
+          borderColor: "rgba(232, 108, 201, 0.57)",
         },
         tabBarActiveTintColor: "#FF4B8C",
         tabBarInactiveTintColor: "#8e8e8e",
@@ -79,7 +79,7 @@ const Routes = () => {
           fontWeight: '500',
         },
         tabBarItemStyle: {
-          padding: 4,
+          padding: 2,
         },
         tabBarIcon: ({ color, size, focused }) => {
           let iconName;
@@ -99,7 +99,7 @@ const Routes = () => {
           return (
             <Animated.View 
               style={{
-                transform: [{ scale: focused ? 1.2 : 1 }],
+                transform: [{ scale: focused ? 1 : 1 }],
                 backgroundColor: focused ? 'rgba(255, 75, 140, 0.1)' : 'transparent',
                 padding: 8,
                 borderRadius: 15,
@@ -147,6 +147,7 @@ const Routes = () => {
           tabBarLabel: () => null,
         }}
       />
+
       <Tab.Screen 
         name="Community" 
         component={HomeStack}
