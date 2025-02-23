@@ -1,115 +1,117 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, SafeAreaView, StatusBar, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, SafeAreaView, StatusBar, ScrollView, } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 
 const HomeScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView>
-      <StatusBar barStyle="dark-content" />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.userInfo}>
-          <Image
-            source={require('../../assets/icon.png')} // Make sure to add an avatar image
-            style={styles.avatar}
-          />
-          <Text style={styles.greeting}>Hey there👋,</Text>
-          <Text style={styles.username}>Lucy</Text>
-        </View>
-        <View style={styles.headerIcons}>
-          <TouchableOpacity>
-            <Ionicons name="mic-outline" size={24} color="black" />
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <Ionicons name="notifications-outline" size={24} color="black" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Quick Actions */}
-      <View style={styles.quickActions}>
-        <TouchableOpacity style={styles.actionButton}>
-          <Image
-            source={require('../../assets/fake-call.png')} // Add icon image
-            style={styles.actionIcon}
-          />
-          <Text style={styles.actionText}>Fake call</Text>
-        </TouchableOpacity>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}>
+        <StatusBar barStyle="dark-content" />
         
-        <TouchableOpacity style={styles.actionButton}>
-          <Image
-            source={require('../../assets/icon.png')} // Add icon image
-            style={styles.actionIcon}
-          />
-          <Text style={styles.actionText}>Share live{'\n'}location</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Add Close People Section */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Add Close people</Text>
-          <Text style={styles.sectionSubtitle}>Add close people and friends for sos</Text>
-        </View>
-        <TouchableOpacity style={styles.addButton}>
-          <Text style={styles.addButtonText}>Add friends</Text>
-          <Ionicons name="person-add" size={20} color="white" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Journey Section */}
-      <TouchableOpacity style={styles.journeySection}>
-        <View style={styles.journeyContent}>
-          <Image
-            source={require('../../assets/icon.png')} // Add journey icon
-            style={styles.journeyIcon}
-          />
-          <View>
-            <Text style={styles.journeyTitle}>Start a journey</Text>
-            <Text style={styles.journeySubtitle}>Enter your destination, and the app will track{'\n'}your route in real-time.</Text>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.userInfo}>
+            <Image
+              source={require('../../assets/icon.png')} // Make sure to add an avatar image
+              style={styles.avatar}
+            />
+            <Text style={styles.greeting}>Hey there👋,</Text>
+            <Text style={styles.username}>Lucy Patil</Text>
+          </View>
+          <View style={styles.headerIcons}>
+            <TouchableOpacity>
+              <Ionicons name="mic-outline" size={24} color="black" />
+            </TouchableOpacity>
+            <TouchableOpacity>
+              <Ionicons name="notifications-outline" size={24} color="black" />
+            </TouchableOpacity>
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={24} color="black" />
-      </TouchableOpacity>
 
-      {/* Emergency Buttons */}
-      <TouchableOpacity style={styles.emergencyButton}>
-        <FontAwesome5 name="shield-alt" size={20} color="black" />
-        <Text style={styles.emergencyText}>Police station near me</Text>
-        <Ionicons name="chevron-forward" size={24} color="black" />
-      </TouchableOpacity>
+        {/* Quick Actions */}
+        <View style={styles.quickActions}>
+          <TouchableOpacity style={styles.actionButton}>
+            <Image
+              source={require('../../assets/fake-call.png')} // Add icon image
+              style={styles.actionIcon}
+            />
+            <Text style={styles.actionText}>Fake call</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.actionButton}>
+            <Image
+              source={require('../../assets/icon.png')} // Add icon image
+              style={styles.actionIcon}
+            />
+            <Text style={styles.actionText}>Share live{'\n'}location</Text>
+          </TouchableOpacity>
+        </View>
 
-      <TouchableOpacity style={styles.emergencyButton}>
-        <FontAwesome5 name="hospital" size={20} color="black" />
-        <Text style={styles.emergencyText}>Hospital Near</Text>
-        <Ionicons name="chevron-forward" size={24} color="black" />
-      </TouchableOpacity>
+        {/* Add Close People Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Add Close people</Text>
+            <Text style={styles.sectionSubtitle}>Add close people and friends for sos</Text>
+          </View>
+          <TouchableOpacity style={styles.addButton}>
+            <Text style={styles.addButtonText}>Add friends</Text>
+            <Ionicons name="person-add" size={20} color="white" />
+          </TouchableOpacity>
+        </View>
+        
+        {/* Journey Section */}
+        <TouchableOpacity style={styles.journeySection}>
+          <View style={styles.journeyContent}>
+            <Image
+              source={require('../../assets/icon.png')} // Add journey icon
+              style={styles.journeyIcon}
+            />
+            <View>
+              <Text style={styles.journeyTitle}>Start a journey</Text>
+              <Text style={styles.journeySubtitle}>
+                Enter your destination, and the app will{'\n'}track your route in real-time.
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="black" />
+        </TouchableOpacity>
+        
+        {/* Emergency Buttons */}
+        <TouchableOpacity style={styles.emergencyButton}>
+          <FontAwesome5 name="shield-alt" size={20} color="black" />
+          <Text style={styles.emergencyText}>Police station near me</Text>
+          <Ionicons name="chevron-forward" size={24} color="black" />
+        </TouchableOpacity>
 
-      {/* SOS Button */}
-      <View style={styles.sosContainer}>
-        <TouchableOpacity style={styles.sosButton}>
-          <Text style={styles.sosText}>SOS</Text>
+        <TouchableOpacity style={styles.emergencyButton}>
+          <FontAwesome5 name="hospital" size={20} color="black" />
+          <Text style={styles.emergencyText}>Hospital Near</Text>
+          <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
-      </View>
 
-      {/* Bottom Navigation */}
-      {/* <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
-          <Ionicons name="home" size={24} color="#FF4B8C" />
-          <Text style={styles.navText}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <MaterialCommunityIcons name="navigation-variant-outline" size={24} color="gray" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Ionicons name="people-outline" size={24} color="gray" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Ionicons name="person-outline" size={24} color="gray" />
-        </TouchableOpacity>
-      </View> */}
+        {/* SOS Button */}
+        <View style={styles.sosContainer}>
+          <TouchableOpacity style={styles.sosButton}>
+            <Text style={styles.sosText}>SOS</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Bottom Navigation */}
+        {/* <View style={styles.bottomNav}>
+          <TouchableOpacity style={styles.navItem}>
+            <Ionicons name="home" size={24} color="#FF4B8C" />
+            <Text style={styles.navText}>Home</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navItem}>
+            <MaterialCommunityIcons name="navigation-variant-outline" size={24} color="gray" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navItem}>
+            <Ionicons name="people-outline" size={24} color="gray" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navItem}>
+            <Ionicons name="person-outline" size={24} color="gray" />
+          </TouchableOpacity>
+        </View> */}
       </ScrollView>
     </SafeAreaView>
   );
@@ -238,11 +240,12 @@ const styles = StyleSheet.create({
   journeyContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 15,
+    flex: 1, // Expanded to take full width  
   },
   journeyIcon: {
     width: 40,
     height: 40,
+    marginRight: 15,
   },
   journeyTitle: {
     fontSize: 18,
