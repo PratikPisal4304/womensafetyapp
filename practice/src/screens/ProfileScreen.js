@@ -1,100 +1,166 @@
-import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Image } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useTheme } from "../context/ThemeContext";
+import React from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-const ProfileScreen = () => {
-  const { theme } = useTheme();
-  const isDarkMode = theme === "dark";
+const ProfileScreen = ({ navigation }) => {
+  const preferences = [
+    { title: 'Manage Friends', icon: 'account-group', screen: 'ManageFriends' },
+    { title: 'Change Language', icon: 'translate', screen: 'ChangeLanguage' },
+    { title: 'Notification Settings', icon: 'bell', screen: 'NotificationSettings' },
+    { title: 'Customize / Themes', icon: 'palette', screen: 'CustomiseThemes' },
+  ];
+
+  const moreItems = [
+    { title: 'Help Line Numbers', icon: 'phone' },
+    { title: 'Connectivity Settings', icon: 'wifi' },
+    { title: 'Help & Support', icon: 'lifebuoy' },
+    { title: 'About Us', icon: 'information' },
+  ];
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: isDarkMode ? "#121212" : "#F5FCFF" }]}
-      edges={["top"]}
-    >
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={isDarkMode ? "#121212" : "#F5FCFF"} />
-
-      <View style={[styles.container, { backgroundColor: isDarkMode ? "#1E1E1E" : "#FFF" }]}>
-        {/* Profile Image */}
-        <Image
-          source={{ uri: "https://www.headshotpro.com/avatar-results/danny-1.webp" }} // Replace with actual image URL
-          style={styles.profileImage}
-        />
-
-        {/* Profile Name */}
-        <Text style={[styles.name, { color: isDarkMode ? "#FFF" : "#000" }]}>John Doe</Text>
-
-        {/* Email */}
-        <Text style={[styles.email, { color: isDarkMode ? "#CCC" : "#555" }]}>johndoe@example.com</Text>
-
-        {/* Bio Section */}
-        <Text style={[styles.bio, { color: isDarkMode ? "#BBB" : "#666" }]}>
-          Passionate developer, React Native enthusiast, and tech explorer.
-        </Text>
-
-        {/* Edit Profile Button */}
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: isDarkMode ? "#444" : "#007BFF" }]}
-          onPress={() => alert("Edit Profile")}
-        >
-          <Text style={[styles.buttonText, { color: "#FFF" }]}>Edit Profile</Text>
-        </TouchableOpacity>
-
-        {/* Logout Button */}
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: isDarkMode ? "#AA0000" : "#FF3B30" }]}
-          onPress={() => alert("Logout")}
-        >
-          <Text style={[styles.buttonText, { color: "#FFF" }]}>Logout</Text>
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <View style={styles.headerCurve} />
+        <Image source={{ uri: 'https://via.placeholder.com/80' }} style={styles.avatar} />
+        <Text style={styles.name}>Lucy</Text>
+        <Text style={styles.phone}>+91 12345 678910</Text>
+        <TouchableOpacity style={styles.editButton} onPress={() => navigation.navigate('EditProfileScreen')}>
+          <MaterialCommunityIcons name="account-edit" size={28} color="#fff" />
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+
+      <ScrollView style={styles.content}>
+        {/* Preferences Section */}
+        <Text style={styles.sectionTitle}>Preferences</Text>
+        <View style={styles.sectionContainer}>
+          {preferences.map((item, index) => (
+            <TouchableOpacity 
+              key={index}
+              style={styles.listItem}
+              onPress={() => navigation.navigate(item.screen)}
+            >
+              <MaterialCommunityIcons name={item.icon} size={24} color="#555" />
+              <Text style={styles.itemText}>{item.title}</Text>
+              <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* More Section */}
+        <Text style={styles.sectionTitle}>More</Text>
+        <View style={styles.sectionContainer}>
+          {moreItems.map((item, index) => (
+            <TouchableOpacity key={index} style={styles.listItem}>
+              <MaterialCommunityIcons name={item.icon} size={24} color="#555" />
+              <Text style={styles.itemText}>{item.title}</Text>
+              <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+
+    </View>
   );
 };
 
-// Styles
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-    borderRadius: 10,
+    backgroundColor: '#f8f9fa',
   },
-  profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 15,
+  headerContainer: {
+    backgroundColor: '#ff5f96',
+    alignItems: 'center',
+    paddingTop: 50,
+    paddingBottom: 30,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+    position: 'relative',
+  },
+  headerCurve: {
+    position: 'absolute',
+    top: '100%',
+    width: '100%',
+    height: 30,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#ddd',
   },
   name: {
     fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 5,
-  },
-  email: {
-    fontSize: 16,
-    marginBottom: 15,
-  },
-  bio: {
-    fontSize: 14,
-    textAlign: "center",
-    marginBottom: 20,
-    paddingHorizontal: 20,
-  },
-  button: {
+    fontWeight: 'bold',
+    color: '#fff',
     marginTop: 10,
-    padding: 15,
-    borderRadius: 10,
-    alignItems: "center",
-    width: "80%",
   },
-  buttonText: {
+  phone: {
+    fontSize: 14,
+    color: '#fff',
+    opacity: 0.8,
+  },
+  editButton: {
+    position: 'absolute',
+    right: 20,
+    top: 50,
+  },
+  content: {
+    flex: 1,
+    marginTop: 20,
+  },
+  sectionTitle: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: 'bold',
+    marginLeft: 20,
+    marginVertical: 10,
+    color: '#555',
+  },
+  sectionContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginHorizontal: 15,
+    paddingVertical: 5,
+    elevation: 2,
+  },
+  listItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  itemText: {
+    flex: 1,
+    fontSize: 16,
+    marginLeft: 15,
+    color: '#333',
+  },
+  bottomNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    elevation: 5,
+  },
+  sosButton: {
+    backgroundColor: '#e63946',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 50,
+    alignItems: 'center',
+  },
+  sosText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
 
