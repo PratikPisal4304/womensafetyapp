@@ -6,6 +6,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated from "react-native-reanimated";
 import KeyboardAwareWrapper from "./components/KeyboardAwareWrapper";
 import HomeScreen from "./screens/HomeScreen";
+import TrackMeScreen from "./screens/TrackMeScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
 import SettingScreen from "./screens/SettingScreen";
@@ -121,9 +122,20 @@ export default function Routes() {
       {/* 2) Navigation */}
       <Tab.Screen
         name="Navigation"
-        component={HomeStack}
+        component={TrackMeScreen}
         options={{
-          tabBarLabel: () => null,
+          tabBarLabel: ({ focused }) => (
+            <Animated.Text
+              style={{
+                color: focused ? "#FF4B8C" : "#8e8e8e",
+                fontSize: 12,
+                fontWeight: focused ? "600" : "400",
+                opacity: focused ? 1 : 0.8,
+              }}
+            >
+              Track Me
+            </Animated.Text>
+          ),
         }}
       />
 
