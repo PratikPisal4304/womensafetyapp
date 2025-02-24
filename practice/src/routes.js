@@ -34,7 +34,7 @@ const HomeStack = () => {
 // Stack Navigator for Profile Section
 const ProfileStack = () => {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen 
         name="ProfileMain" 
         component={ProfileScreen} 
@@ -188,7 +188,7 @@ const Routes = () => {
       {/* 5) Profile */}
       <Tab.Screen
         name="Profile"
-        component={ProfileStack}
+        component={ProfileStack} 
         options={{
           tabBarLabel: ({ focused }) => (
             <Animated.Text
