@@ -1,14 +1,27 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, SafeAreaView, StatusBar, ScrollView, } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  StatusBar,
+  ScrollView,
+} from 'react-native';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+const PINK = '#ff5f96';
 
 const HomeScreen = ({ navigation }) => {
   return (
-    <SafeAreaView style={styles.container}>
+    // We omit 'top' from edges so pink extends behind the iOS status bar
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+
       <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}>
-        <StatusBar barStyle="dark-content" />
         
-        {/* Header */}
+        {/* Pink Header with Curve (like CommunityScreen) */}
         <View style={styles.header}>
           <View style={styles.userInfo}>
             <Image
@@ -32,15 +45,15 @@ const HomeScreen = ({ navigation }) => {
         <View style={styles.quickActions}>
           <TouchableOpacity style={styles.actionButton}>
             <Image
-              source={require('../../assets/fake-call.png')} // Add icon image
+              source={require('../../assets/fake-call.png')}
               style={styles.actionIcon}
             />
             <Text style={styles.actionText}>Fake call</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.actionButton}>
             <Image
-              source={require('../../assets/icon.png')} // Add icon image
+              source={require('../../assets/icon.png')}
               style={styles.actionIcon}
             />
             <Text style={styles.actionText}>Share live{'\n'}location</Text>
@@ -58,12 +71,12 @@ const HomeScreen = ({ navigation }) => {
             <Ionicons name="person-add" size={20} color="white" />
           </TouchableOpacity>
         </View>
-        
+
         {/* Journey Section */}
         <TouchableOpacity style={styles.journeySection}>
           <View style={styles.journeyContent}>
             <Image
-              source={require('../../assets/icon.png')} // Add journey icon
+              source={require('../../assets/icon.png')}
               style={styles.journeyIcon}
             />
             <View>
@@ -75,7 +88,7 @@ const HomeScreen = ({ navigation }) => {
           </View>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
-        
+
         {/* Emergency Buttons */}
         <TouchableOpacity style={styles.emergencyButton}>
           <FontAwesome5 name="shield-alt" size={20} color="black" />
@@ -89,40 +102,36 @@ const HomeScreen = ({ navigation }) => {
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
 
-       
-
-        {/* Bottom Navigation */}
+        {/* Bottom Navigation (commented out) */}
         {/* <View style={styles.bottomNav}>
-          <TouchableOpacity style={styles.navItem}>
-            <Ionicons name="home" size={24} color="#FF4B8C" />
-            <Text style={styles.navText}>Home</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem}>
-            <MaterialCommunityIcons name="navigation-variant-outline" size={24} color="gray" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem}>
-            <Ionicons name="people-outline" size={24} color="gray" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem}>
-            <Ionicons name="person-outline" size={24} color="gray" />
-          </TouchableOpacity>
+          ...
         </View> */}
       </ScrollView>
     </SafeAreaView>
   );
 };
 
+export default HomeScreen;
+
+// =======================
+//     STYLES
+// =======================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFF',
   },
   header: {
+    backgroundColor: PINK,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+    paddingHorizontal: 20,
+    paddingTop: 70, // Enough space for iOS status bar area
+    paddingBottom: 40,
+    marginBottom: 20, // Creates space below the pink area
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
   },
   userInfo: {
     flexDirection: 'column',
@@ -235,7 +244,7 @@ const styles = StyleSheet.create({
   journeyContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1, // Expanded to take full width  
+    flex: 1,
   },
   journeyIcon: {
     width: 40,
@@ -321,5 +330,3 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
-
-export default HomeScreen;
