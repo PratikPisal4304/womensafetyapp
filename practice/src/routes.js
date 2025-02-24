@@ -1,3 +1,5 @@
+// Routes.js
+import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -8,12 +10,7 @@ import ProfileScreen from "./screens/ProfileScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
 import SettingScreen from "./screens/SettingScreen";
 import CommunityScreen from "./screens/CommunityScreen";
-// import LocationShareScreen from "./screens/LocationShareScreen";
-// import FakeCallScreen from "./screens/FakeCallScreen";
-// import StartJourneyScreen from "./screens/StartJourneyScreen";
-// import EmergencyContactsScreen from "./screens/EmergencyContactsScreen";
-// import NearbyPoliceScreen from "./screens/NearbyPoliceScreen";
-// import NearbyHospitalScreen from "./screens/NearbyHospitalScreen";
+import FrostedTabBar from "./components/FrostedTabBar"; // <-- Our new custom bar
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -25,69 +22,38 @@ const withKeyboardAwareWrapper = (Component) => (props) => (
   </KeyboardAwareWrapper>
 );
 
-// Stack Navigator for Home Section
-const HomeStack = () => {
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="HomeMain" component={withKeyboardAwareWrapper(HomeScreen)} />
-      {/* <Stack.Screen name="LocationShare" component={withKeyboardAwareWrapper(LocationShareScreen)} />
-      <Stack.Screen name="FakeCall" component={withKeyboardAwareWrapper(FakeCallScreen)} />
-      <Stack.Screen name="StartJourney" component={withKeyboardAwareWrapper(StartJourneyScreen)} />
-      <Stack.Screen name="EmergencyContacts" component={withKeyboardAwareWrapper(EmergencyContactsScreen)} />
-      <Stack.Screen name="NearbyPolice" component={withKeyboardAwareWrapper(NearbyPoliceScreen)} />
-      <Stack.Screen name="NearbyHospital" component={withKeyboardAwareWrapper(NearbyHospitalScreen)} /> */}
-    </Stack.Navigator>
-  );
-};
+// HomeStack
+const HomeStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="HomeMain" component={withKeyboardAwareWrapper(HomeScreen)} />
+  </Stack.Navigator>
+);
 
-// Stack Navigator for Profile Section
-const ProfileStack = () => {
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen
-        name="ProfileMain"
-        component={withKeyboardAwareWrapper(ProfileScreen)}
-        options={{ title: "Profile" }}
-      />
-      <Stack.Screen name="EditProfile" component={withKeyboardAwareWrapper(EditProfileScreen)} />
-    </Stack.Navigator>
-  );
-};
+// ProfileStack
+const ProfileStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="ProfileMain" component={withKeyboardAwareWrapper(ProfileScreen)} />
+    <Stack.Screen name="EditProfile" component={withKeyboardAwareWrapper(EditProfileScreen)} />
+  </Stack.Navigator>
+);
 
-// Main Tab Navigator
-const Routes = () => {
+export default function Routes() {
   return (
     <Tab.Navigator
+      // Use our custom frosted tab bar
+      tabBar={(props) => <FrostedTabBar {...props} />}
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarStyle: {
-          // Remove curves & gaps, add a semi-transparent pink
-          backgroundColor: "rgba(255, 175, 204, 0.3)", // Pinkish blur-like effect
-          position: "absolute",
-          bottom: 0, // No gap below
-          left: 0,
-          right: 0,
-          height: 65,
-          // Remove extra margins & border radius
-          borderRadius: 0,
-          borderTopWidth: 0,
-          // Optional subtle shadow for a "floating" look
-          elevation: 10,
-          shadowColor: "#000",
-          shadowOpacity: 0.1,
-          shadowOffset: { width: 0, height: -2 },
-          shadowRadius: 8,
-        },
         tabBarActiveTintColor: "#FF4B8C",
         tabBarInactiveTintColor: "#8e8e8e",
         tabBarShowLabel: true,
         tabBarLabelStyle: {
           fontSize: 12,
-          marginTop: 5,
+          marginTop: 2,   // reduce the gap between icons & labels
           fontWeight: "500",
         },
         tabBarItemStyle: {
-          padding: 2,
+          padding: 0,    // reduce padding so icons & labels are closer
         },
         tabBarIcon: ({ color, size, focused }) => {
           let iconName;
@@ -99,7 +65,7 @@ const Routes = () => {
             IconComponent = MaterialCommunityIcons;
             iconName = "navigation-variant-outline";
           } else if (route.name === "SOS") {
-            iconName = "alert-circle-outline"; // You can pick any icon you like
+            iconName = "alert-circle-outline";
           } else if (route.name === "Community") {
             iconName = focused ? "people" : "people-outline";
           } else if (route.name === "Profile") {
@@ -111,7 +77,7 @@ const Routes = () => {
               style={{
                 transform: [{ scale: focused ? 1 : 1 }],
                 backgroundColor: focused ? "rgba(255, 75, 140, 0.1)" : "transparent",
-                padding: 8,
+                padding: 5, // smaller padding around icon
                 borderRadius: 15,
                 width: 40,
                 height: 40,
@@ -161,10 +127,7 @@ const Routes = () => {
         }}
       />
 
-      {/** 
-       * 3) SOS — inserted between Navigation & Community
-       *    You can rename its icon, label, or target component as desired.
-       */}
+      {/* 3) SOS */}
       <Tab.Screen
         name="SOS"
         component={HomeStack}
@@ -225,6 +188,4 @@ const Routes = () => {
       />
     </Tab.Navigator>
   );
-};
-
-export default Routes;
+}
