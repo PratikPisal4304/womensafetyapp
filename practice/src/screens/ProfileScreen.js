@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-const ProfileScreen = ({ navigation }) => {
+const ProfileScreen = ({navigation}) => {
   const preferences = [
     { title: 'Manage Friends', icon: 'account-group', screen: 'ManageFriends' },
     { title: 'Change Language', icon: 'translate', screen: 'ChangeLanguage' },
@@ -12,10 +12,15 @@ const ProfileScreen = ({ navigation }) => {
 
   const moreItems = [
     { title: 'Help Line Numbers', icon: 'phone' },
-    { title: 'Connectivity Settings', icon: 'wifi' },
     { title: 'Help & Support', icon: 'lifebuoy' },
     { title: 'About Us', icon: 'information' },
   ];
+
+  const handleLogout = () => {
+    // Replace with your actual logout logic
+    console.log('Logging out...');
+    // e.g., navigation.replace('Login');
+  };
 
   return (
     <View style={styles.container}>
@@ -25,12 +30,19 @@ const ProfileScreen = ({ navigation }) => {
         <Image source={{ uri: 'https://via.placeholder.com/80' }} style={styles.avatar} />
         <Text style={styles.name}>Lucy</Text>
         <Text style={styles.phone}>+91 12345 678910</Text>
-        <TouchableOpacity style={styles.editButton} onPress={() => navigation.navigate('EditProfileScreen')}>
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => navigation.navigate('EditProfile')}
+        >
           <MaterialCommunityIcons name="account-edit" size={28} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
+      {/* Main Content */}
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+      >
         {/* Preferences Section */}
         <Text style={styles.sectionTitle}>Preferences</Text>
         <View style={styles.sectionContainer}>
@@ -58,12 +70,21 @@ const ProfileScreen = ({ navigation }) => {
             </TouchableOpacity>
           ))}
         </View>
-      </ScrollView>
 
+        {/* Logout Button */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </View>
   );
 };
 
+/* 
+  =========================
+          STYLES
+  =========================
+*/
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -112,6 +133,10 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 20,
   },
+  // Adds bottom padding so the logout button isn't hidden by tab bar
+  contentContainer: {
+    paddingBottom: 100,
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -140,27 +165,26 @@ const styles = StyleSheet.create({
     marginLeft: 15,
     color: '#333',
   },
-  bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+  logoutButton: {
+    backgroundColor: '#FF4B8C', // Pink color
+    marginHorizontal: 60,
+    marginTop: 30,
+    marginBottom: 20,
+    paddingVertical: 16,
+    borderRadius: 20,
     alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingVertical: 10,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    elevation: 5,
+    elevation: 3,
+    // Optional shadow for iOS
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
   },
-  sosButton: {
-    backgroundColor: '#e63946',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 50,
-    alignItems: 'center',
-  },
-  sosText: {
+  logoutText: {
     color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });
 
