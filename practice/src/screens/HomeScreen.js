@@ -89,12 +89,7 @@ const HomeScreen = ({ navigation }) => {
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
 
-        {/* SOS Button */}
-        <View style={styles.sosContainer}>
-          <TouchableOpacity style={styles.sosButton}>
-            <Text style={styles.sosText}>SOS</Text>
-          </TouchableOpacity>
-        </View>
+       
 
         {/* Bottom Navigation */}
         {/* <View style={styles.bottomNav}>
