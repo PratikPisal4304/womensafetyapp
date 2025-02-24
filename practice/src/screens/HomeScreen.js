@@ -85,7 +85,7 @@ const HomeScreen = ({ navigation }) => {
 
         <TouchableOpacity style={styles.emergencyButton}>
           <FontAwesome5 name="hospital" size={20} color="black" />
-          <Text style={styles.emergencyText}>Hospital Near</Text>
+          <Text style={styles.emergencyText}>Hospital near me </Text>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
 

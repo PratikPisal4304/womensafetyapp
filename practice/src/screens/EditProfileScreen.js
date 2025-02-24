@@ -139,11 +139,11 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     backgroundColor: '#ff5f96',
+    alignItems: 'center',
     paddingTop: 50,
     paddingBottom: 30,
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
-    alignItems: 'center',
     position: 'relative',
   },
   headerCurve: {

@@ -2,10 +2,12 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated from "react-native-reanimated";
+import KeyboardAwareWrapper from "./components/KeyboardAwareWrapper";
 import HomeScreen from "./screens/HomeScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
 import SettingScreen from "./screens/SettingScreen";
+import CommunityScreen from "./screens/CommunityScreen";
 // import LocationShareScreen from "./screens/LocationShareScreen";
 // import FakeCallScreen from "./screens/FakeCallScreen";
 // import StartJourneyScreen from "./screens/StartJourneyScreen";
@@ -16,17 +18,24 @@ import SettingScreen from "./screens/SettingScreen";
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
+// Wrapper function to add KeyboardAwareWrapper to screens
+const withKeyboardAwareWrapper = (Component) => (props) => (
+  <KeyboardAwareWrapper>
+    <Component {...props} />
+  </KeyboardAwareWrapper>
+);
+
 // Stack Navigator for Home Section
 const HomeStack = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="HomeMain" component={HomeScreen} />
-      {/* <Stack.Screen name="LocationShare" component={LocationShareScreen} />
-      <Stack.Screen name="FakeCall" component={FakeCallScreen} />
-      <Stack.Screen name="StartJourney" component={StartJourneyScreen} />
-      <Stack.Screen name="EmergencyContacts" component={EmergencyContactsScreen} />
-      <Stack.Screen name="NearbyPolice" component={NearbyPoliceScreen} />
-      <Stack.Screen name="NearbyHospital" component={NearbyHospitalScreen} /> */}
+      <Stack.Screen name="HomeMain" component={withKeyboardAwareWrapper(HomeScreen)} />
+      {/* <Stack.Screen name="LocationShare" component={withKeyboardAwareWrapper(LocationShareScreen)} />
+      <Stack.Screen name="FakeCall" component={withKeyboardAwareWrapper(FakeCallScreen)} />
+      <Stack.Screen name="StartJourney" component={withKeyboardAwareWrapper(StartJourneyScreen)} />
+      <Stack.Screen name="EmergencyContacts" component={withKeyboardAwareWrapper(EmergencyContactsScreen)} />
+      <Stack.Screen name="NearbyPolice" component={withKeyboardAwareWrapper(NearbyPoliceScreen)} />
+      <Stack.Screen name="NearbyHospital" component={withKeyboardAwareWrapper(NearbyHospitalScreen)} /> */}
     </Stack.Navigator>
   );
 };
@@ -35,12 +44,12 @@ const HomeStack = () => {
 const ProfileStack = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen 
-        name="ProfileMain" 
-        component={ProfileScreen} 
+      <Stack.Screen
+        name="ProfileMain"
+        component={withKeyboardAwareWrapper(ProfileScreen)}
         options={{ title: "Profile" }}
       />
-      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="EditProfile" component={withKeyboardAwareWrapper(EditProfileScreen)} />
     </Stack.Navigator>
   );
 };
@@ -52,23 +61,22 @@ const Routes = () => {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: "rgba(253, 241, 252, 0.95)",
-          borderTopWidth: 1,
-          paddingVertical: 15,
-          marginHorizontal: "5%",
-          height: 65,
+          // Remove curves & gaps, add a semi-transparent pink
+          backgroundColor: "rgba(255, 175, 204, 0.3)", // Pinkish blur-like effect
           position: "absolute",
-          left: 20,
-          right: 20,
-          bottom: 20,
-          borderRadius: 25,
-          elevation: 25,
+          bottom: 0, // No gap below
+          left: 0,
+          right: 0,
+          height: 65,
+          // Remove extra margins & border radius
+          borderRadius: 0,
+          borderTopWidth: 0,
+          // Optional subtle shadow for a "floating" look
+          elevation: 10,
           shadowColor: "#000",
-          shadowOpacity: 0.15,
-          shadowOffset: { width: 0, height: 8 },
-          shadowRadius: 25,
-          borderWidth: 1,
-          borderColor: "rgba(232, 108, 201, 0.57)",
+          shadowOpacity: 0.1,
+          shadowOffset: { width: 0, height: -2 },
+          shadowRadius: 8,
         },
         tabBarActiveTintColor: "#FF4B8C",
         tabBarInactiveTintColor: "#8e8e8e",
@@ -76,7 +84,7 @@ const Routes = () => {
         tabBarLabelStyle: {
           fontSize: 12,
           marginTop: 5,
-          fontWeight: '500',
+          fontWeight: "500",
         },
         tabBarItemStyle: {
           padding: 2,
@@ -102,13 +110,13 @@ const Routes = () => {
             <Animated.View
               style={{
                 transform: [{ scale: focused ? 1 : 1 }],
-                backgroundColor: focused ? 'rgba(255, 75, 140, 0.1)' : 'transparent',
+                backgroundColor: focused ? "rgba(255, 75, 140, 0.1)" : "transparent",
                 padding: 8,
                 borderRadius: 15,
                 width: 40,
                 height: 40,
-                alignItems: 'center',
-                justifyContent: 'center',
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
               <IconComponent
@@ -116,7 +124,7 @@ const Routes = () => {
                 size={size}
                 color={color}
                 style={{
-                  transform: [{ translateY: focused ? -2 : 0 }]
+                  transform: [{ translateY: focused ? -2 : 0 }],
                 }}
               />
             </Animated.View>
@@ -134,7 +142,7 @@ const Routes = () => {
               style={{
                 color: focused ? "#FF4B8C" : "#8e8e8e",
                 fontSize: 12,
-                fontWeight: focused ? '600' : '400',
+                fontWeight: focused ? "600" : "400",
                 opacity: focused ? 1 : 0.8,
               }}
             >
@@ -166,7 +174,7 @@ const Routes = () => {
               style={{
                 color: focused ? "#FF4B8C" : "#8e8e8e",
                 fontSize: 12,
-                fontWeight: focused ? '600' : '400',
+                fontWeight: focused ? "600" : "400",
                 opacity: focused ? 1 : 0.8,
               }}
             >
@@ -179,23 +187,34 @@ const Routes = () => {
       {/* 4) Community */}
       <Tab.Screen
         name="Community"
-        component={HomeStack}
-        options={{
-          tabBarLabel: () => null,
-        }}
-      />
-
-      {/* 5) Profile */}
-      <Tab.Screen
-        name="Profile"
-        component={ProfileStack} 
+        component={withKeyboardAwareWrapper(CommunityScreen)}
         options={{
           tabBarLabel: ({ focused }) => (
             <Animated.Text
               style={{
                 color: focused ? "#FF4B8C" : "#8e8e8e",
                 fontSize: 12,
-                fontWeight: focused ? '600' : '400',
+                fontWeight: focused ? "600" : "400",
+                opacity: focused ? 1 : 0.8,
+              }}
+            >
+              Community
+            </Animated.Text>
+          ),
+        }}
+      />
+
+      {/* 5) Profile */}
+      <Tab.Screen
+        name="Profile"
+        component={ProfileStack}
+        options={{
+          tabBarLabel: ({ focused }) => (
+            <Animated.Text
+              style={{
+                color: focused ? "#FF4B8C" : "#8e8e8e",
+                fontSize: 12,
+                fontWeight: focused ? "600" : "400",
                 opacity: focused ? 1 : 0.8,
               }}
             >
@@ -205,7 +224,6 @@ const Routes = () => {
         }}
       />
     </Tab.Navigator>
-
   );
 };
 
