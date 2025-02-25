@@ -1,5 +1,5 @@
 // FakeCallScreen.js
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -12,39 +12,55 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
-const BACKGROUND_PINK = '#ffeef2';  // Soft pink background
-const PINK = '#ff5f96';            // Vibrant pink for buttons/icons
-const GREEN = '#4CAF50';           // "Call now" button color
+const PINK_BG = '#ffd1e1';  // Soft pink background from screenshot
+const PINK = '#ff5f96';     // Vibrant pink for icons/floating button
+const GREEN = '#4CAF50';    // "Call now" button color
 
 export default function FakeCallScreen({ navigation }) {
-  // Example: handle back arrow
+  // Example: list of contacts
+  const [contacts, setContacts] = useState([
+    {
+      id: '1',
+      name: 'Mom',
+      phone: '+91 12345 678910',
+      avatar: 'https://via.placeholder.com/50/FFC0CB/000000?text=M', // Example placeholder
+    },
+    {
+      id: '2',
+      name: 'Dad',
+      phone: '+91 12345 678910',
+      avatar: 'https://via.placeholder.com/50/FFC0CB/000000?text=D', // Example placeholder
+    },
+  ]);
+
+  // Handle back arrow
   const handleBack = () => {
     navigation.goBack();
   };
 
-  // Example: handle "Call now"
-  const handleCallNow = () => {
-    // Implement your "fake call" logic here
-    alert('Initiating fake call...');
-  };
-
-  // Example: handle contact card edit
-  const handleEditContact = (contactName) => {
-    // Implement contact edit logic
-    alert(`Editing contact: ${contactName}`);
-  };
-
-  // Example: handle add contact
+  // Handle adding a new contact
   const handleAddContact = () => {
-    // Implement add new contact logic
+    // e.g. open a modal or navigate to "AddContactScreen"
     alert('Add new contact');
+  };
+
+  // Handle editing a contact
+  const handleEditContact = (contact) => {
+    // e.g. open an edit screen or modal
+    alert(`Editing contact: ${contact.name}`);
+  };
+
+  // Handle "Call now" button
+  const handleCallNow = () => {
+    // Implement your "fake call" logic
+    alert('Initiating fake call...');
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={BACKGROUND_PINK} />
+      <StatusBar barStyle="dark-content" backgroundColor={PINK_BG} />
 
-      {/* Header with back arrow & title */}
+      {/* Top row: circle back arrow & title */}
       <View style={styles.headerRow}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <Ionicons name="arrow-back" size={20} color="#fff" />
@@ -54,62 +70,60 @@ export default function FakeCallScreen({ navigation }) {
 
       {/* Subtitle */}
       <Text style={styles.subtitle}>
-        The Fake Call feature allows users to simulate an incoming call at any moment, 
+        The Fake Call feature allows users to simulate an incoming call at any moment,
         providing a discreet way to escape uncomfortable or potentially dangerous situations.
       </Text>
 
-      {/* Scrollable area for contact cards, etc. */}
-      <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 100 }}>
-        
-        {/* Example contact card: Mom */}
-        <View style={styles.contactCard}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={styles.contactName}>Mom</Text>
-            <Text style={styles.contactPhone}>+91 12345 678910</Text>
+      {/* Scrollable contact list */}
+      <ScrollView style={styles.contactList} contentContainerStyle={{ paddingBottom: 140 }}>
+        {contacts.map((contact) => (
+          <View key={contact.id} style={styles.contactCard}>
+            {/* Left side: small avatar + name & phone */}
+            <View style={styles.contactInfo}>
+              <Image
+                source={{ uri: contact.avatar }}
+                style={styles.avatar}
+              />
+              <View style={{ marginLeft: 10 }}>
+                <Text style={styles.contactName}>{contact.name}</Text>
+                <Text style={styles.contactPhone}>{contact.phone}</Text>
+              </View>
+            </View>
+            {/* Right side: edit icon */}
+            <TouchableOpacity onPress={() => handleEditContact(contact)}>
+              <MaterialIcons name="edit" size={20} color="#666" />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={() => handleEditContact('Mom')}>
-            <MaterialIcons name="edit" size={20} color="#666" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Example contact card: Dad */}
-        <View style={styles.contactCard}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={styles.contactName}>Dad</Text>
-            <Text style={styles.contactPhone}>+91 12345 678910</Text>
-          </View>
-          <TouchableOpacity onPress={() => handleEditContact('Dad')}>
-            <MaterialIcons name="edit" size={20} color="#666" />
-          </TouchableOpacity>
-        </View>
-
+        ))}
       </ScrollView>
 
-      {/* Floating add contact button */}
+      {/* Floating add contact button (pink) */}
       <TouchableOpacity style={styles.floatingButton} onPress={handleAddContact}>
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
 
-      {/* Call now button */}
+      {/* "Call now" button (green) */}
       <TouchableOpacity style={styles.callButton} onPress={handleCallNow}>
+        <Ionicons name="call-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
         <Text style={styles.callButtonText}>Call now</Text>
       </TouchableOpacity>
 
       {/* Note at bottom */}
       <Text style={styles.note}>
-        Note: The Fake Call feature is designed to help you stay safe by giving you a quick 
+        Note: The Fake Call feature is designed to help you stay safe by giving you a quick
         and discreet way to exit any uncomfortable or risky situation.
       </Text>
     </SafeAreaView>
   );
 }
 
-// ================== STYLES ==================
+// =============== STYLES ===============
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BACKGROUND_PINK,  // Soft pink background
+    backgroundColor: PINK_BG, // Pink background
     paddingHorizontal: 20,
+    position: 'relative',
   },
   headerRow: {
     flexDirection: 'row',
@@ -117,10 +131,10 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#999',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: PINK,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 15,
@@ -136,7 +150,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: '#333',
   },
-  content: {
+  contactList: {
     flex: 1,
     marginTop: 20,
   },
@@ -154,20 +168,30 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
   },
+  contactInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#ddd',
+  },
   contactName: {
     fontSize: 16,
     fontWeight: '600',
     color: '#000',
-    marginRight: 10,
   },
   contactPhone: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
+    marginTop: 2,
   },
   floatingButton: {
     position: 'absolute',
     right: 20,
-    bottom: 130,  // above the "Call now" button
+    bottom: 140, // leave space above the "Call now" button
     width: 50,
     height: 50,
     borderRadius: 25,
@@ -189,6 +213,8 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     paddingVertical: 15,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
     elevation: 4,
     shadowColor: '#000',
     shadowOpacity: 0.15,

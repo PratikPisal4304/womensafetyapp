@@ -53,11 +53,13 @@ const ProfileScreen = ({ navigation }) => {
         />
         <Text style={styles.name}>Lucy</Text>
         <Text style={styles.phone}>+91 12345 678910</Text>
+        
+        {/* EDIT PROFILE BUTTON - updated */}
         <TouchableOpacity
           style={styles.editButton}
           onPress={() => navigation.navigate('EditProfile')}
         >
-          <MaterialCommunityIcons name="account-edit" size={28} color="#fff" />
+          <MaterialCommunityIcons name="account-edit" size={28} color="#000" />
         </TouchableOpacity>
       </View>
 
@@ -83,7 +85,9 @@ const ProfileScreen = ({ navigation }) => {
         <Text style={styles.sectionTitle}>More</Text>
         <View style={styles.sectionContainer}>
           {moreItems.map((item, index) => (
-            <TouchableOpacity key={index} style={styles.listItem}
+            <TouchableOpacity 
+              key={index} 
+              style={styles.listItem}
               onPress={() => {
                 if (item.screen) {
                   navigation.navigate(item.screen);
@@ -150,11 +154,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     opacity: 0.8,
   },
+
+  // UPDATED EDIT BUTTON
   editButton: {
     position: 'absolute',
     right: 20,
-    top: 50,
+    top: 70, 
+    backgroundColor: 'rgba(255,255,255,0.4)', 
+    padding: 8,
+    borderRadius: 20,
   },
+
   content: {
     flex: 1,
     marginTop: 20,
