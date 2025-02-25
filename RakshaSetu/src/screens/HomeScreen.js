@@ -43,7 +43,7 @@ const HomeScreen = ({ navigation }) => {
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity onPress={() => navigation.navigate('FakeCall')} style={styles.actionButton}>
             <Image
               source={require('../../assets/fake-call.png')}
               style={styles.actionIcon}
@@ -106,7 +106,7 @@ const HomeScreen = ({ navigation }) => {
         {/* <View style={styles.bottomNav}>
           ...
         </View> */}
-      </ScrollView>
+      </ScrollView> 
     </SafeAreaView>
   );
 };

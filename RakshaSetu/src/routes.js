@@ -13,6 +13,7 @@ import SignUpScreen from "./screens/SignUpScreen";
 import CreatePinScreen from "./screens/CreatePinScreen";
 import TellUsAboutYourselfScreen from "./screens/TellUsAboutYourselfScreen";
 import HomeScreen from "./screens/HomeScreen";
+import FakeCallScreen from "./screens/FakeCallScreen";
 import TrackMeScreen from "./screens/TrackMeScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
@@ -35,7 +36,11 @@ const HomeStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen
       name="HomeMain"
-      component={withKeyboardAwareWrapper(HomeScreen)}
+      component={(HomeScreen)}
+    />
+    <Stack.Screen
+      name="FakeCall"
+      component={(FakeCallScreen)}
     />
   </Stack.Navigator>
 );
@@ -183,7 +188,7 @@ function MainTabs() {
       {/* Tab 4) Community */}
       <Tab.Screen
         name="Community"
-        component={withKeyboardAwareWrapper(CommunityScreen)}
+        component={(CommunityScreen)}
         options={{
           tabBarLabel: ({ focused }) => (
             <Animated.Text

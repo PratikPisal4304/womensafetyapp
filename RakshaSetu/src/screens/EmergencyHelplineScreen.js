@@ -23,15 +23,14 @@ const EmergencyHelplineScreen = () => {
 
   return (
     <View style={styles.wrapper}>
-      {/* StatusBar translucent so the pink background shows behind it */}
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
-
-      {/* Header with bottom corner curves */}
+      
+      {/* Header with bottom curves */}
       <View style={styles.headerContainer}>
         <Text style={styles.headerTitle}>Emergency Helpline</Text>
         <Text style={styles.subHeader}>Help line numbers</Text>
       </View>
-
+      
       {/* Main content */}
       <View style={styles.cardContainer}>
         {HELPLINES.map((item) => (
@@ -62,15 +61,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FF5F96', // Pink fills the status bar area
     paddingTop: StatusBar.currentHeight || 20,
+    overflow: 'hidden', // Prevent any scrolling or bouncing
   },
   headerContainer: {
     backgroundColor: '#FF5F96',
     alignItems: 'center',
     paddingVertical: 60,
     paddingHorizontal: 20,
-    // Curved bottom edges
     borderBottomLeftRadius: 50,
     borderBottomRightRadius: 50,
+    overflow: 'hidden', // Ensure the curve is not affected by overflow
   },
   headerTitle: {
     fontSize: 26,
@@ -92,6 +92,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 20,
     justifyContent: 'center',
+    overflow: 'hidden', // Prevent any bounce in the content area
   },
   card: {
     flexDirection: 'row',

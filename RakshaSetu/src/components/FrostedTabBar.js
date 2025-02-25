@@ -1,16 +1,21 @@
-// FrostedTabBar.js
 import React from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Platform } from "react-native";
 import { BottomTabBar } from "@react-navigation/bottom-tabs";
 import { BlurView } from "expo-blur";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function FrostedTabBar(props) {
+  const insets = useSafeAreaInsets();
+  const containerStyle = [
+    styles.container,
+    { paddingBottom: Platform.OS === "android" ? 0 : insets.bottom },
+  ];
+
   return (
-    <View style={styles.container}>
-      {/* BlurView with a pinkish background overlay for a frosted pink look */}
+    <View style={containerStyle}>
       <BlurView
-        intensity={40}       // Increase for stronger blur
-        tint="light"         // 'light', 'dark', or 'default'
+        intensity={40}
+        tint="light"
         style={[styles.blurContainer, styles.pinkOverlay]}
       >
         <BottomTabBar {...props} />
@@ -22,12 +27,11 @@ export default function FrostedTabBar(props) {
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    left: 0,          // spans the entire width
+    left: 0,
     right: 0,
     bottom: 0,
-    height: 70,       // a bit taller for a bigger bar
-    backgroundColor: "transparent", 
-    // Optional floating shadow
+    height: 80,
+    backgroundColor: "transparent",
     elevation: 10,
     shadowColor: "#000",
     shadowOpacity: 0.1,
@@ -38,7 +42,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   pinkOverlay: {
-    // Pinkish tint on top of the blur
-    backgroundColor: "rgba(252, 166, 197, 0.2)", 
+    backgroundColor: "rgba(252, 166, 197, 0.2)",
   },
 });

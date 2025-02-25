@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   StyleSheet,
   TouchableOpacity,
   Image,
   StatusBar,
   TextInput,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -16,24 +16,22 @@ const PINK = '#ff5f96';
 const CARD_RADIUS = 10;
 
 export default function CommunityScreen() {
-  // State to track the text typed in the search bar
   const [searchTerm, setSearchTerm] = useState('');
 
   const handleSearchSubmit = () => {
     console.log('Search submitted:', searchTerm);
-    // You can navigate or filter content based on searchTerm here
+    // Filter content or navigate based on searchTerm here
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      {/* We omit 'top' from edges so the pink background extends behind the status bar */}
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* Pink Header */}
+      {/* Pinned Pink Header */}
       <View style={styles.headerContainer}>
         <Text style={styles.headerTitle}>My Community</Text>
 
-        {/* Search Bar with TextInput */}
+        {/* Search Bar */}
         <View style={styles.searchBar}>
           <MaterialIcons name="search" size={24} color="#666" style={{ marginRight: 8 }} />
           <TextInput
@@ -42,16 +40,16 @@ export default function CommunityScreen() {
             placeholderTextColor="#666"
             value={searchTerm}
             onChangeText={setSearchTerm}
-            onSubmitEditing={handleSearchSubmit} // Called when user hits "Enter" on keyboard
+            onSubmitEditing={handleSearchSubmit}
             returnKeyType="search"
           />
         </View>
       </View>
 
-      {/* Main Content */}
+      {/* Scrollable content below the pinned header */}
       <ScrollView
-        style={styles.content}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* Featured Articles */}
@@ -96,17 +94,13 @@ export default function CommunityScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recent Discussions</Text>
           <View style={styles.discussionCard}>
-            <Text style={styles.discussionTitle}>
-              How to report workplace harassment?
-            </Text>
+            <Text style={styles.discussionTitle}>How to report workplace harassment?</Text>
             <Text style={styles.discussionExcerpt}>
               Learn the steps to report harassment...
             </Text>
           </View>
           <View style={styles.discussionCard}>
-            <Text style={styles.discussionTitle}>
-              Legal aid for domestic violence victims
-            </Text>
+            <Text style={styles.discussionTitle}>Legal aid for domestic violence victims</Text>
             <Text style={styles.discussionExcerpt}>
               Find out how to get legal help...
             </Text>
@@ -117,7 +111,7 @@ export default function CommunityScreen() {
   );
 }
 
-/* ========== STYLES ========== */
+// ========== STYLES ==========
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -128,10 +122,8 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
     paddingHorizontal: 20,
-    paddingTop: 70, // Enough space to cover iOS status bar area
+    paddingTop: 70, // Enough space for iOS status bar area
     paddingBottom: 40,
-    // Add marginBottom to create space between the header and content
-    marginBottom: 20,
   },
   headerTitle: {
     fontSize: 24,
@@ -157,12 +149,20 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 15,
   },
-  content: {
+
+  // The scrollable area below the pinned header
+  scrollContainer: {
     flex: 1,
-    paddingHorizontal: 16,
+    backgroundColor: '#f8f8f8',
   },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 100, // extra space if needed
+  },
+
   section: {
     marginBottom: 24,
+    marginTop: 20,
   },
   sectionTitle: {
     fontSize: 18,
@@ -170,6 +170,7 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 16,
   },
+
   articleCard: {
     backgroundColor: '#fff',
     borderRadius: CARD_RADIUS,
@@ -197,6 +198,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 16,
   },
+
   categoryContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -221,6 +223,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
+
   discussionCard: {
     backgroundColor: '#fff',
     borderRadius: CARD_RADIUS,
