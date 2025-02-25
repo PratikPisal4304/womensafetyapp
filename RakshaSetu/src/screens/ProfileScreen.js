@@ -1,8 +1,15 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Image
+} from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-const ProfileScreen = ({navigation}) => {
+const ProfileScreen = ({ navigation }) => {
   const preferences = [
     { title: 'Manage Friends', icon: 'account-group', screen: 'ManageFriends' },
     { title: 'Change Language', icon: 'translate', screen: 'ChangeLanguage' },
@@ -10,11 +17,12 @@ const ProfileScreen = ({navigation}) => {
     { title: 'Customize / Themes', icon: 'palette', screen: 'CustomiseThemes' },
   ];
 
+  // Add the `screen` property to the Help Line Numbers item
   const moreItems = [
-    { title: 'Help Line Numbers', icon: 'phone' },
-    { title: 'Help & Support', icon: 'lifebuoy' },
-    { title: 'About Us', icon: 'information' },
-  ];
+    { title: 'Help Line Numbers', icon: 'phone', screen: 'EmergencyHelpline' },
+    { title: 'Help & Support', icon: 'lifebuoy', screen: 'HelpSupport' },
+    { title: 'About Us', icon: 'information', screen: 'AboutUs' },
+  ];  
 
   const handleLogout = () => {
     // Replace with your actual logout logic
@@ -27,7 +35,10 @@ const ProfileScreen = ({navigation}) => {
       {/* Header */}
       <View style={styles.headerContainer}>
         <View style={styles.headerCurve} />
-        <Image source={{ uri: 'https://via.placeholder.com/80' }} style={styles.avatar} />
+        <Image
+          source={{ uri: 'https://via.placeholder.com/80' }}
+          style={styles.avatar}
+        />
         <Text style={styles.name}>Lucy</Text>
         <Text style={styles.phone}>+91 12345 678910</Text>
         <TouchableOpacity
@@ -39,15 +50,12 @@ const ProfileScreen = ({navigation}) => {
       </View>
 
       {/* Main Content */}
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-      >
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {/* Preferences Section */}
         <Text style={styles.sectionTitle}>Preferences</Text>
         <View style={styles.sectionContainer}>
           {preferences.map((item, index) => (
-            <TouchableOpacity 
+            <TouchableOpacity
               key={index}
               style={styles.listItem}
               onPress={() => navigation.navigate(item.screen)}
@@ -63,7 +71,16 @@ const ProfileScreen = ({navigation}) => {
         <Text style={styles.sectionTitle}>More</Text>
         <View style={styles.sectionContainer}>
           {moreItems.map((item, index) => (
-            <TouchableOpacity key={index} style={styles.listItem}>
+            <TouchableOpacity
+              key={index}
+              style={styles.listItem}
+              onPress={() => {
+                // Navigate to the specified screen
+                if (item.screen) {
+                  navigation.navigate(item.screen);
+                }
+              }}
+            >
               <MaterialCommunityIcons name={item.icon} size={24} color="#555" />
               <Text style={styles.itemText}>{item.title}</Text>
               <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
@@ -133,7 +150,6 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 20,
   },
-  // Adds bottom padding so the logout button isn't hidden by tab bar
   contentContainer: {
     paddingBottom: 100,
   },
@@ -166,7 +182,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   logoutButton: {
-    backgroundColor: '#FF4B8C', // Pink color
+    backgroundColor: '#FF4B8C',
     marginHorizontal: 60,
     marginTop: 30,
     marginBottom: 20,
@@ -174,7 +190,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     elevation: 3,
-    // Optional shadow for iOS
     shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowOffset: { width: 0, height: 2 },
