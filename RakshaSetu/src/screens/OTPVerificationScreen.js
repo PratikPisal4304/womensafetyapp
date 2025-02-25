@@ -8,10 +8,8 @@ import {
   TouchableOpacity,
   Alert,
   Dimensions,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
@@ -52,17 +50,12 @@ export default function OTPVerificationScreen({ navigation }) {
   // "Change Number"
   const handleChangeNumber = () => {
     Alert.alert('Change Number', 'Logic to change phone number goes here.');
-    // e.g. navigation.goBack() or navigate to "EnterPhoneScreen"
+    // e.g. navigation.replace('Login') or some other route
   };
 
   // "Resend Code"
   const handleResendCode = () => {
     Alert.alert('Resend Code', 'Logic to resend OTP goes here.');
-  };
-
-  // "Back arrow" pressed
-  const handleBack = () => {
-    navigation.goBack();
   };
 
   return (
@@ -74,12 +67,7 @@ export default function OTPVerificationScreen({ navigation }) {
           style={styles.gradientBackground}
         >
           <View style={styles.topSection}>
-            {/* Back Arrow */}
-            <TouchableOpacity onPress={handleBack} style={styles.backArrow}>
-              <Ionicons name="arrow-back" size={24} color="#fff" />
-            </TouchableOpacity>
-
-            {/* Title */}
+            {/* Title only, no back arrow */}
             <Text style={styles.title}>Phone Verification</Text>
           </View>
 
@@ -107,12 +95,15 @@ export default function OTPVerificationScreen({ navigation }) {
             </View>
 
             {/* Change Number link */}
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <TouchableOpacity onPress={() => navigation.replace('Login')}>
               <Text style={styles.changeNumberText}>Change Number</Text>
             </TouchableOpacity>
 
             {/* Verify OTP button */}
-            <TouchableOpacity style={styles.verifyButton} onPress={() => navigation.replace('MainTabs')}>
+            <TouchableOpacity
+              style={styles.verifyButton}
+              onPress={() => navigation.replace('MainTabs')}
+            >
               <Text style={styles.verifyButtonText}>Verify OTP</Text>
             </TouchableOpacity>
 
@@ -139,22 +130,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   topSection: {
-    paddingTop: 40,
+    paddingTop: 60, // extra space since no back arrow
     paddingHorizontal: 20,
     height: height * 0.25,
     justifyContent: 'flex-end',
-  },
-  backArrow: {
-    position: 'absolute',
-    top: 40,
-    left: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
     color: '#fff',
     marginBottom: 20,
-    marginTop: 60, // extra space to accommodate arrow
   },
   formCard: {
     backgroundColor: '#fff',

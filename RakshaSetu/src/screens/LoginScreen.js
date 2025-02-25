@@ -111,7 +111,7 @@ export default function LoginScreen({ navigation }) {
             </TouchableOpacity>
 
             {/* Send OTP */}
-            <TouchableOpacity style={styles.sendOtpButton} onPress={() => navigation.navigate('OTPVerificationScreen')}>
+            <TouchableOpacity style={styles.sendOtpButton} onPress={() => navigation.replace('OTPVerificationScreen')}>
               <Text style={styles.sendOtpButtonText}>Send OTP</Text>
             </TouchableOpacity>
 
@@ -124,7 +124,7 @@ export default function LoginScreen({ navigation }) {
               </Text>
               <View style={styles.signupContainer}>
                 <Text style={styles.footerText}>Don't have an account? </Text>
-                <TouchableOpacity onPress={() => navigation.navigate('SignUpScreen')}>
+                <TouchableOpacity onPress={() => navigation.replace('SignUpScreen')}>
                   <Text style={[styles.footerText, styles.linkText]}>Sign up</Text>
                 </TouchableOpacity>
               </View>
