@@ -5,6 +5,7 @@ import { createStackNavigator } from "@react-navigation/stack";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated from "react-native-reanimated";
 import KeyboardAwareWrapper from "./components/KeyboardAwareWrapper";
+
 import SplashScreen from "./screens/SplashScreen";
 import HomeScreen from "./screens/HomeScreen";
 import TrackMeScreen from "./screens/TrackMeScreen";
@@ -12,38 +13,47 @@ import ProfileScreen from "./screens/ProfileScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
 import SettingScreen from "./screens/SettingScreen";
 import CommunityScreen from "./screens/CommunityScreen";
-import FrostedTabBar from "./components/FrostedTabBar"; // <-- Our new custom bar
+import FrostedTabBar from "./components/FrostedTabBar"; // Our custom bar
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-// Wrapper function to add KeyboardAwareWrapper to screens
+// Wrap screens in KeyboardAwareWrapper if needed
 const withKeyboardAwareWrapper = (Component) => (props) => (
   <KeyboardAwareWrapper>
     <Component {...props} />
   </KeyboardAwareWrapper>
 );
 
-// HomeStack
+// 1) HomeStack
 const HomeStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="HomeMain" component={withKeyboardAwareWrapper(HomeScreen)} />
+    <Stack.Screen
+      name="HomeMain"
+      component={withKeyboardAwareWrapper(HomeScreen)}
+    />
   </Stack.Navigator>
 );
 
-// ProfileStack
+// 2) ProfileStack
 const ProfileStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="ProfileMain" component={withKeyboardAwareWrapper(ProfileScreen)} />
-    <Stack.Screen name="EditProfile" component={withKeyboardAwareWrapper(EditProfileScreen)} />
+    <Stack.Screen
+      name="ProfileMain"
+      component={withKeyboardAwareWrapper(ProfileScreen)}
+    />
+    <Stack.Screen
+      name="EditProfile"
+      component={withKeyboardAwareWrapper(EditProfileScreen)}
+    />
   </Stack.Navigator>
 );
 
-export default function Routes() {
+// 3) Define the Tab Navigator as MainTabs
+function MainTabs() {
   return (
     <Tab.Navigator
-      // Use our custom frosted tab bar
-      tabBar={(props) => <FrostedTabBar {...props} />}
+      tabBar={(props) => <FrostedTabBar {...props} />} // custom bar
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: "#FF4B8C",
@@ -51,11 +61,11 @@ export default function Routes() {
         tabBarShowLabel: true,
         tabBarLabelStyle: {
           fontSize: 12,
-          marginTop: 2,   // reduce the gap between icons & labels
+          marginTop: 2,
           fontWeight: "500",
         },
         tabBarItemStyle: {
-          padding: 0,    // reduce padding so icons & labels are closer
+          padding: 0,
         },
         tabBarIcon: ({ color, size, focused }) => {
           let iconName;
@@ -78,8 +88,10 @@ export default function Routes() {
             <Animated.View
               style={{
                 transform: [{ scale: focused ? 1 : 1 }],
-                backgroundColor: focused ? "rgba(255, 75, 140, 0.1)" : "transparent",
-                padding: 5, // smaller padding around icon
+                backgroundColor: focused
+                  ? "rgba(255, 75, 140, 0.1)"
+                  : "transparent",
+                padding: 5,
                 borderRadius: 15,
                 width: 40,
                 height: 40,
@@ -91,76 +103,72 @@ export default function Routes() {
                 name={iconName}
                 size={size}
                 color={color}
-                style={{
-                  transform: [{ translateY: focused ? -2 : 0 }],
-                }}
+                style={{ transform: [{ translateY: focused ? -2 : 0 }] }}
               />
             </Animated.View>
           );
         },
       })}
     >
-      {/* 1) Home */}
-      <Tab.Screen
-        name="Home"
-        component={HomeStack}
-        options={{
-          tabBarLabel: ({ focused }) => (
-            <Animated.Text
-              style={{
-                color: focused ? "#FF4B8C" : "#8e8e8e",
-                fontSize: 12,
-                fontWeight: focused ? "600" : "400",
-                opacity: focused ? 1 : 0.8,
-              }}
-            >
+      {/* Tab 1) Home */}
+      <Tab.Screen 
+        name="Home" 
+        component={HomeStack} 
+          options={{
+            tabBarLabel: ({ focused }) => (
+              <Animated.Text
+                  style={{
+                    color: focused ? "#FF4B8C" : "#8e8e8e",
+                    fontSize: 12,
+                    fontWeight: focused ? "600" : "400",
+                    opacity: focused ? 1 : 0.8,
+                  }}
+              >
               Home
-            </Animated.Text>
-          ),
-        }}
+              </Animated.Text>
+            ),
+          }}
       />
 
-      {/* 2) Navigation */}
-      <Tab.Screen
-        name="Navigation"
-        component={TrackMeScreen}
+      {/* Tab 2) TrackMe */}
+      <Tab.Screen 
+       name="Navigation"
+       component={TrackMeScreen}
         options={{
-          tabBarLabel: ({ focused }) => (
-            <Animated.Text
-              style={{
-                color: focused ? "#FF4B8C" : "#8e8e8e",
-                fontSize: 12,
-                fontWeight: focused ? "600" : "400",
-                opacity: focused ? 1 : 0.8,
-              }}
-            >
-              Track Me
-            </Animated.Text>
-          ),
-        }}
+           title: "Track Me", 
+              tabBarLabel: ({ focused }) => (
+                <Animated.Text
+                  style={{
+                    color: focused ? "#FF4B8C" : "#8e8e8e",
+                    fontSize: 12,
+                    fontWeight: focused ? "600" : "400",
+                    opacity: focused ? 1 : 0.8,
+                  }}
+                >
+                Track Me
+                </Animated.Text>
+              ),
+          }}
       />
 
-      {/* 3) SOS */}
-      <Tab.Screen
-        name="SOS"
-        component={HomeStack}
-        options={{
-          tabBarLabel: ({ focused }) => (
-            <Animated.Text
-              style={{
-                color: focused ? "#FF4B8C" : "#8e8e8e",
-                fontSize: 12,
-                fontWeight: focused ? "600" : "400",
-                opacity: focused ? 1 : 0.8,
-              }}
-            >
-              SOS
-            </Animated.Text>
-          ),
-        }}
-      />
+      {/* Tab 3) SOS */}
+      <Tab.Screen name="SOS" component={HomeStack} 
+              options={{
+                tabBarLabel: ({ focused }) => (
+                  <Animated.Text
+                    style={{
+                      color: focused ? "#FF4B8C" : "#8e8e8e",
+                      fontSize: 12,
+                      fontWeight: focused ? "600" : "400",
+                      opacity: focused ? 1 : 0.8,
+                    }}
+                  >
+                  SOS
+                  </Animated.Text>
+                ),
+              }}/>
 
-      {/* 4) Community */}
+      {/* Tab 4) Community */}
       <Tab.Screen
         name="Community"
         component={withKeyboardAwareWrapper(CommunityScreen)}
@@ -180,10 +188,10 @@ export default function Routes() {
         }}
       />
 
-      {/* 5) Profile */}
-      <Tab.Screen
-        name="Profile"
-        component={ProfileStack}
+      {/* Tab 5) Profile */}
+      <Tab.Screen 
+        name="Profile" 
+        component={ProfileStack} 
         options={{
           tabBarLabel: ({ focused }) => (
             <Animated.Text
@@ -197,8 +205,21 @@ export default function Routes() {
               Profile
             </Animated.Text>
           ),
-        }}
+        }}        
       />
     </Tab.Navigator>
+  );
+}
+
+// 4) Root stack with Splash as initial route
+export default function Routes() {
+  return (
+    <Stack.Navigator
+      initialRouteName="Splash"
+      screenOptions={{ headerShown: false }}
+    >
+      <Stack.Screen name="Splash" component={SplashScreen} />
+      <Stack.Screen name="MainTabs" component={MainTabs} />
+    </Stack.Navigator>
   );
 }
