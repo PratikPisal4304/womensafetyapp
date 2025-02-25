@@ -148,7 +148,7 @@ export default function SignUpScreen({ navigation }) {
             </TouchableOpacity>
 
             {/* Sign Up Button */}
-            <TouchableOpacity style={styles.signUpButton} onPress={() => navigation.navigate('CreatePinScreen')}>
+            <TouchableOpacity style={styles.signUpButton} onPress={() => navigation.replace('CreatePinScreen')}>
               <Text style={styles.signUpButtonText}>Sign Up</Text>
             </TouchableOpacity>
 
@@ -161,7 +161,7 @@ export default function SignUpScreen({ navigation }) {
               </Text>
               <View style={styles.signupContainer}>
                 <Text style={styles.footerText}>Already have an account? </Text>
-                <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                <TouchableOpacity onPress={() => navigation.replace('Login')}>
                   <Text style={[styles.footerText, styles.linkText]}>Log in</Text>
                 </TouchableOpacity>
               </View>

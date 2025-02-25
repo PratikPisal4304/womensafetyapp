@@ -116,7 +116,7 @@ const EditProfileScreen = ({ navigation }) => {
         />
 
         {/* Save Button */}
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+        <TouchableOpacity style={styles.saveButton} onPress={() => navigation.navigate('Login')}>
           <Text style={styles.saveButtonText}>Save Changes</Text>
         </TouchableOpacity>
       </ScrollView>

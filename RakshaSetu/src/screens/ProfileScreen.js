@@ -5,7 +5,8 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Image
+  Image,
+  Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -25,9 +26,20 @@ const ProfileScreen = ({ navigation }) => {
   ];  
 
   const handleLogout = () => {
-    // Replace with your actual logout logic
-    console.log('Logging out...');
-    // e.g., navigation.replace('Login');
+    Alert.alert(
+      'Logout',
+      'You have been logged out successfully.',
+      [
+        {
+          text: 'OK',
+          onPress: () => {
+            // Place any logout logic here (e.g., clear tokens, etc.)
+            navigation.replace('Login');
+          },
+        },
+      ],
+      { cancelable: false }
+    );
   };
 
   return (
@@ -55,7 +67,7 @@ const ProfileScreen = ({ navigation }) => {
         <Text style={styles.sectionTitle}>Preferences</Text>
         <View style={styles.sectionContainer}>
           {preferences.map((item, index) => (
-            <TouchableOpacity
+            <TouchableOpacity 
               key={index}
               style={styles.listItem}
               onPress={() => navigation.navigate(item.screen)}
@@ -71,11 +83,8 @@ const ProfileScreen = ({ navigation }) => {
         <Text style={styles.sectionTitle}>More</Text>
         <View style={styles.sectionContainer}>
           {moreItems.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.listItem}
+            <TouchableOpacity key={index} style={styles.listItem}
               onPress={() => {
-                // Navigate to the specified screen
                 if (item.screen) {
                   navigation.navigate(item.screen);
                 }

@@ -150,7 +150,7 @@ export default function CreatePinScreen({ navigation }) {
             </View>
 
             {/* Create PIN Button */}
-            <TouchableOpacity style={styles.createButton} onPress={handleCreatePin}>
+            <TouchableOpacity style={styles.createButton} onPress={() => navigation.replace('TellUsAboutYourselfScreen')}>
               <Text style={styles.createButtonText}>Create PIN</Text>
             </TouchableOpacity>
           </View>

@@ -111,7 +111,7 @@ export default function LoginScreen({ navigation }) {
             </TouchableOpacity>
 
             {/* Send OTP */}
-            <TouchableOpacity style={styles.sendOtpButton} onPress={handleSendOTP}>
+            <TouchableOpacity style={styles.sendOtpButton} onPress={() => navigation.navigate('OTPVerificationScreen')}>
               <Text style={styles.sendOtpButtonText}>Send OTP</Text>
             </TouchableOpacity>
 

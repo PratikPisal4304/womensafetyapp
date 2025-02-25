@@ -8,8 +8,10 @@ import KeyboardAwareWrapper from "./components/KeyboardAwareWrapper";
 
 import SplashScreen from "./screens/SplashScreen";
 import LoginScreen from "./screens/LoginScreen";
+import OTPVerificationScreen from "./screens/OTPVerificationScreen";
 import SignUpScreen from "./screens/SignUpScreen";
 import CreatePinScreen from "./screens/CreatePinScreen";
+import TellUsAboutYourselfScreen from "./screens/TellUsAboutYourselfScreen";
 import HomeScreen from "./screens/HomeScreen";
 import TrackMeScreen from "./screens/TrackMeScreen";
 import ProfileScreen from "./screens/ProfileScreen";
@@ -239,6 +241,12 @@ export default function Routes() {
 
       {/* Added CreatePin screen */}
       <Stack.Screen name="CreatePinScreen" component={CreatePinScreen} /> 
+
+      {/* Added TellUsAboutYourself screen */}
+      <Stack.Screen name="TellUsAboutYourselfScreen" component={TellUsAboutYourselfScreen} />
+
+      {/* Added OTPVerification screen */}
+      <Stack.Screen name="OTPVerificationScreen" component={OTPVerificationScreen} />
 
       {/* Then main tabs */}
       <Stack.Screen name="MainTabs" component={MainTabs} />
