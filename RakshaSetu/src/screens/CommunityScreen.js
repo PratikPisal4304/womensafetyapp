@@ -27,6 +27,7 @@ import {
   arrayRemove,
   addDoc,
   serverTimestamp,
+  getDoc,
 } from 'firebase/firestore';
 
 import * as ImagePicker from 'expo-image-picker';
@@ -156,24 +157,35 @@ export default function CommunityScreen() {
       Alert.alert('Error', 'Title and content are required.');
       return;
     }
+
+    if (!auth.currentUser) {
+      Alert.alert('Error', 'You must be logged in to create a post.');
+      return;
+    }
+
     try {
       setUploading(true);
 
-      let userName = 'Unknown User';
-      if (auth.currentUser?.displayName) {
-        userName = auth.currentUser.displayName;
-      }
-      // If you store username in Firestore user doc, you could fetch it here.
+      // 1) Fetch user doc to get name
+      const userDocRef = doc(db, 'users', auth.currentUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
 
-      // If there's an image, upload it
+      let userName = 'Unknown User';
+      if (userDocSnap.exists()) {
+        const userData = userDocSnap.data();
+        userName = userData.name || 'Unknown User'; 
+        // or use whatever field you store name as
+      }
+
+      // 2) If there's an image, upload it
       let imageUrl = null;
       if (imageUri) {
         imageUrl = await uploadImageAsync(imageUri);
       }
 
-      // Save post to Firestore
+      // 3) Save post to Firestore
       await addDoc(collection(db, 'communityPosts'), {
-        userId: auth.currentUser?.uid || 'anon',
+        userId: auth.currentUser.uid,
         userName: userName,
         title: title,
         content: content,
@@ -269,7 +281,7 @@ export default function CommunityScreen() {
                 <Text style={styles.postTitle}>{post.title}</Text>
                 <Text style={styles.postContent}>{post.content}</Text>
 
-                {/* If there's an imageUrl */}
+                {/* If there's an imageUrl, show media */}
                 {post.imageUrl ? (
                   <Image source={{ uri: post.imageUrl }} style={styles.postImage} />
                 ) : null}
@@ -436,8 +448,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     marginTop: 20,
   },
-
-  // The row containing "Recent Posts" + "Create Post"
   recentPostsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
