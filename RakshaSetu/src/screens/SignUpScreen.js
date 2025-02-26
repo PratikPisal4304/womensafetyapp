@@ -17,6 +17,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
+// 1) Import needed from Firebase
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../../config/firebaseConfig'; // <-- Adjust path
+
 const { width, height } = Dimensions.get('window');
 const PINK = '#ff5f96';
 
@@ -43,14 +48,14 @@ export default function SignUpScreen({ navigation }) {
     Alert.alert('Google Sign-In', 'Implement your Google sign-in logic here.');
   };
 
-  // Sign up logic placeholder
-  const handleSignUp = () => {
+  // 2) Sign up logic with Firestore
+  const handleSignUp = async () => {
     // Basic validation
     if (!email.trim() || !phone.trim() || !password.trim()) {
       Alert.alert('Error', 'All fields are required.');
       return;
     }
-    // Within handleSignUp (or wherever you validate the phone):
+    // Must be +91XXXXXXXXXX => 13 chars total
     if (!phone.startsWith('+91') || phone.length !== 13) {
       Alert.alert(
         'Error',
@@ -59,13 +64,27 @@ export default function SignUpScreen({ navigation }) {
       return;
     }
 
-    // Implement real sign-up logic
-    Alert.alert('Sign Up', `Email: ${email}\nPhone: ${phone}`);
+    try {
+      // Create user in Firebase Auth with email + password
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // 3) Save phone to Firestore (or any other profile data)
+      await setDoc(doc(db, 'users', user.uid), {
+        phone: phone,
+        email: email,
+        createdAt: new Date(),
+      });
+
+      Alert.alert('Sign Up', `User created successfully: ${email}`);
+      navigation.replace('CreatePinScreen');
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    }
   };
 
   // If user already has an account
   const handleGoToLogin = () => {
-    // e.g. navigation.replace('Login') or navigation.navigate('Login')
     Alert.alert('Already have an account', 'Navigate to login screen.');
   };
 
@@ -144,7 +163,7 @@ export default function SignUpScreen({ navigation }) {
             {/* Sign Up Button */}
             <TouchableOpacity
               style={styles.signUpButton}
-              onPress={() => navigation.replace('CreatePinScreen')}
+              onPress={handleSignUp}
             >
               <Text style={styles.signUpButtonText}>Sign Up</Text>
             </TouchableOpacity>
@@ -253,8 +272,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginRight: 4,
   },
-
-  // White container with top & bottom curves
   formCard: {
     backgroundColor: '#fff',
     borderRadius: 40,
@@ -332,8 +349,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginTop: 10,
   },
-
-  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.3)',
