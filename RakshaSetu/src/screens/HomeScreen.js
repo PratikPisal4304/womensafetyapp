@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// HomeScreen.js
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,25 +12,54 @@ import {
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+// 1) Import Firestore + Auth (example)
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../../config/firebaseConfig'; // adjust path if needed
+
 const PINK = '#ff5f96';
 
 const HomeScreen = ({ navigation }) => {
+  // 2) State for user info
+  const [username, setUsername] = useState('Lucy Patil'); // fallback
+  const [avatarUrl, setAvatarUrl] = useState(null);
+
+  // 3) useEffect to fetch from Firestore on mount
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    (async () => {
+      try {
+        const docRef = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.name) setUsername(data.name);
+          if (data.avatarUrl) setAvatarUrl(data.avatarUrl);
+          // add other fields as needed
+        }
+      } catch (error) {
+        console.log('Error fetching user data:', error.message);
+      }
+    })();
+  }, []);
+
   return (
-    // We omit 'top' from edges so pink extends behind the iOS status bar
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
       <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}>
-        
-        {/* Pink Header with Curve (like CommunityScreen) */}
+        {/* Pink Header with Curve */}
         <View style={styles.header}>
           <View style={styles.userInfo}>
+            {/* 4) If we have an avatarUrl, display that. Otherwise use local icon. */}
             <Image
-              source={require('../../assets/icon.png')} // Make sure to add an avatar image
+              source={avatarUrl ? { uri: avatarUrl } : require('../../assets/icon.png')}
               style={styles.avatar}
             />
             <Text style={styles.greeting}>Hey there👋,</Text>
-            <Text style={styles.username}>Lucy Patil</Text>
+            {/* Display from state */}
+            <Text style={styles.username}>{username}</Text>
           </View>
           <View style={styles.headerIcons}>
             <TouchableOpacity>
@@ -101,21 +131,14 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.emergencyText}>Hospital near me </Text>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
-
-        {/* Bottom Navigation (commented out) */}
-        {/* <View style={styles.bottomNav}>
-          ...
-        </View> */}
-      </ScrollView> 
+      </ScrollView>
     </SafeAreaView>
   );
 };
 
 export default HomeScreen;
 
-// =======================
-//     STYLES
-// =======================
+/* ============ STYLES (unchanged) ============ */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -126,9 +149,9 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
     paddingHorizontal: 20,
-    paddingTop: 70, // Enough space for iOS status bar area
+    paddingTop: 70,
     paddingBottom: 40,
-    marginBottom: 20, // Creates space below the pink area
+    marginBottom: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -218,6 +241,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 25,
     gap: 10,
+    marginTop: 10,
   },
   addButtonText: {
     color: '#FFF',
@@ -283,50 +307,5 @@ const styles = StyleSheet.create({
     marginLeft: 15,
     fontSize: 16,
     color: '#000',
-  },
-  sosContainer: {
-    position: 'absolute',
-    bottom: 65,
-    alignSelf: 'center',
-  },
-  sosButton: {
-    backgroundColor: '#FF4B8C',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#FF4B8C',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 6,
-  },
-  sosText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#EEE',
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-  },
-  navItem: {
-    alignItems: 'center',
-  },
-  navText: {
-    fontSize: 12,
-    color: '#FF4B8C',
-    marginTop: 4,
   },
 });

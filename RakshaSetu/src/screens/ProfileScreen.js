@@ -1,4 +1,5 @@
-import React from 'react';
+// ProfileScreen.js
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,7 +11,17 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
+// 1) Import Firestore + Auth
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../../config/firebaseConfig'; // <-- Adjust path if needed
+
 const ProfileScreen = ({ navigation }) => {
+  // 2) State for user profile data
+  //    Provide initial fallback (e.g., 'Lucy') so UI doesn't break before data loads
+  const [name, setName] = useState('Lucy');
+  const [phone, setPhone] = useState('+91 12345 678910');
+
+  // The rest of your existing arrays
   const preferences = [
     { title: 'Manage Friends', icon: 'account-group', screen: 'ManageFriends' },
     { title: 'Change Language', icon: 'translate', screen: 'ChangeLanguage' },
@@ -18,12 +29,33 @@ const ProfileScreen = ({ navigation }) => {
     { title: 'Customize / Themes', icon: 'palette', screen: 'CustomiseThemes' },
   ];
 
-  // Add the `screen` property to the Help Line Numbers item
   const moreItems = [
     { title: 'Help Line Numbers', icon: 'phone', screen: 'EmergencyHelpline' },
     { title: 'Help & Support', icon: 'lifebuoy', screen: 'HelpSupport' },
     { title: 'About Us', icon: 'information', screen: 'AboutUs' },
-  ];  
+  ];
+
+  // 3) On mount, fetch Firestore doc for current user
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return; // If not logged in, skip
+
+    (async () => {
+      try {
+        const docRef = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          // If fields exist, set them into local state
+          if (data.name) setName(data.name);
+          if (data.phone) setPhone(data.phone);
+          // add others as needed
+        }
+      } catch (error) {
+        Alert.alert('Error', error.message);
+      }
+    })();
+  }, []);
 
   const handleLogout = () => {
     Alert.alert(
@@ -47,14 +79,12 @@ const ProfileScreen = ({ navigation }) => {
       {/* Header */}
       <View style={styles.headerContainer}>
         <View style={styles.headerCurve} />
-        <Image
-          source={{ uri: 'https://via.placeholder.com/80' }}
-          style={styles.avatar}
-        />
-        <Text style={styles.name}>Lucy</Text>
-        <Text style={styles.phone}>+91 12345 678910</Text>
-        
-        {/* EDIT PROFILE BUTTON - updated */}
+        {/* Display name & phone from state */}
+        <Image source={{ uri: 'https://via.placeholder.com/80' }} style={styles.avatar} />
+        <Text style={styles.name}>{name}</Text>
+        <Text style={styles.phone}>{phone}</Text>
+
+        {/* EDIT PROFILE BUTTON */}
         <TouchableOpacity
           style={styles.editButton}
           onPress={() => navigation.navigate('EditProfile')}
@@ -69,7 +99,7 @@ const ProfileScreen = ({ navigation }) => {
         <Text style={styles.sectionTitle}>Preferences</Text>
         <View style={styles.sectionContainer}>
           {preferences.map((item, index) => (
-            <TouchableOpacity 
+            <TouchableOpacity
               key={index}
               style={styles.listItem}
               onPress={() => navigation.navigate(item.screen)}
@@ -85,8 +115,8 @@ const ProfileScreen = ({ navigation }) => {
         <Text style={styles.sectionTitle}>More</Text>
         <View style={styles.sectionContainer}>
           {moreItems.map((item, index) => (
-            <TouchableOpacity 
-              key={index} 
+            <TouchableOpacity
+              key={index}
               style={styles.listItem}
               onPress={() => {
                 if (item.screen) {
@@ -110,11 +140,9 @@ const ProfileScreen = ({ navigation }) => {
   );
 };
 
-/* 
-  =========================
+/* =========================
           STYLES
-  =========================
-*/
+   ========================= */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -154,17 +182,14 @@ const styles = StyleSheet.create({
     color: '#fff',
     opacity: 0.8,
   },
-
-  // UPDATED EDIT BUTTON
   editButton: {
     position: 'absolute',
     right: 20,
-    top: 70, 
-    backgroundColor: 'rgba(255,255,255,0.4)', 
+    top: 70,
+    backgroundColor: 'rgba(255,255,255,0.4)',
     padding: 8,
     borderRadius: 20,
   },
-
   content: {
     flex: 1,
     marginTop: 20,

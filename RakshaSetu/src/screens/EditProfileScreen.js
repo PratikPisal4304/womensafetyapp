@@ -8,8 +8,13 @@ import {
   Image,
   TextInput,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+
+// 1) Import Firestore and Auth
+import { doc, updateDoc } from 'firebase/firestore';
+import { auth, db } from '../../config/firebaseConfig'; // <-- Adjust path
 
 const EditProfileScreen = ({ navigation }) => {
   // Example local state for editing
@@ -20,11 +25,30 @@ const EditProfileScreen = ({ navigation }) => {
   const [gender, setGender] = useState('');
   const [birthday, setBirthday] = useState('');
 
-  const handleSave = () => {
-    // TODO: Save logic here (API call, Redux dispatch, etc.)
-    console.log('Saving changes:', { name, phone, email, address, gender, birthday });
-    // After saving, you could navigate back:
-    navigation.goBack();
+  // 2) Make handleSave async, update Firestore
+  const handleSave = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        Alert.alert('Error', 'No user found. Please sign in first.');
+        return;
+      }
+
+      // Update the user's doc in Firestore
+      await updateDoc(doc(db, 'users', user.uid), {
+        name,
+        phone,
+        email,
+        address,
+        gender,
+        birthday,
+      });
+
+      Alert.alert('Success', 'Profile updated successfully!');
+      navigation.replace('ProfileMain'); // or navigation.goBack()
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    }
   };
 
   return (
@@ -34,7 +58,10 @@ const EditProfileScreen = ({ navigation }) => {
         <View style={styles.headerCurve} />
 
         {/* Avatar */}
-        <Image source={{ uri: 'https://via.placeholder.com/80' }} style={styles.avatar} />
+        <Image
+          source={{ uri: 'https://via.placeholder.com/80' }}
+          style={styles.avatar}
+        />
 
         {/* Edit avatar icon (optional) */}
         <TouchableOpacity style={styles.avatarEditButton}>
@@ -116,7 +143,7 @@ const EditProfileScreen = ({ navigation }) => {
         />
 
         {/* Save Button */}
-        <TouchableOpacity style={styles.saveButton} onPress={() => navigation.replace('ProfileMain')}>
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Save Changes</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -124,14 +151,9 @@ const EditProfileScreen = ({ navigation }) => {
   );
 };
 
-/* 
-  =========================
+/* =========================
         STYLES
-  =========================
-  - Maintains the pink header style
-  - Includes new gender & birthday fields
-  - Removes bio
-*/
+========================= */
 const styles = StyleSheet.create({
   container: {
     flex: 1,

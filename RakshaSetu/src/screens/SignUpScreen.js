@@ -77,7 +77,7 @@ export default function SignUpScreen({ navigation }) {
       });
 
       Alert.alert('Sign Up', `User created successfully: ${email}`);
-      navigation.replace('CreatePinScreen');
+      navigation.replace('CreatePinScreen'); // Or wherever you want to go next
     } catch (error) {
       Alert.alert('Error', error.message);
     }
@@ -85,6 +85,7 @@ export default function SignUpScreen({ navigation }) {
 
   // If user already has an account
   const handleGoToLogin = () => {
+    // e.g. navigation.replace('Login') or navigation.navigate('Login')
     Alert.alert('Already have an account', 'Navigate to login screen.');
   };
 
@@ -177,7 +178,7 @@ export default function SignUpScreen({ navigation }) {
               </Text>
               <View style={styles.signupContainer}>
                 <Text style={styles.footerText}>Already have an account? </Text>
-                <TouchableOpacity onPress={() => navigation.replace('Login')}>
+                <TouchableOpacity onPress={handleGoToLogin}>
                   <Text style={[styles.footerText, styles.linkText]}>Log in</Text>
                 </TouchableOpacity>
               </View>

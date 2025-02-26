@@ -8,24 +8,29 @@ import {
   TouchableOpacity,
   Alert,
   Dimensions,
-  Platform,
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { LinearGradient } from 'expo-linear-gradient';
 
+// 1) Firebase imports
+import { auth, db } from '../../config/firebaseConfig';  // <-- Adjust path
+import { doc, updateDoc } from 'firebase/firestore';      // For writing to Firestore
+
 const { width, height } = Dimensions.get('window');
 const PINK = '#ff5f96';
 
-// Pink gradient from #ff9dbf to #ff5f96 (like CreatePinScreen)
 export default function TellUsAboutYourselfScreen({ navigation }) {
   const [name, setName] = useState('');
   const [day, setDay] = useState('');
   const [month, setMonth] = useState('');
   const [year, setYear] = useState('');
 
-  const handleContinue = () => {
+  const allowDigitsOnly = (text) => text.replace(/[^0-9]/g, '');
+
+  // 2) Updated handleContinue to store data in Firestore
+  const handleContinue = async () => {
     if (!name.trim()) {
       Alert.alert('Error', 'Please enter your name.');
       return;
@@ -34,14 +39,35 @@ export default function TellUsAboutYourselfScreen({ navigation }) {
       Alert.alert('Error', 'Please enter a valid date of birth.');
       return;
     }
-    Alert.alert(
-      'Info',
-      `Name: ${name}\nDOB: ${day}/${month}/${year}\nProceeding...`
-    );
-    // e.g. navigation.navigate('NextScreen')
-  };
 
-  const allowDigitsOnly = (text) => text.replace(/[^0-9]/g, '');
+    try {
+      // Ensure we have a current user from Firebase Auth
+      const user = auth.currentUser;
+      if (!user) {
+        Alert.alert('Error', 'No user found. Please sign in first.');
+        return;
+      }
+
+      // 3) Update user doc in Firestore with name & DOB
+      await updateDoc(doc(db, 'users', user.uid), {
+        name: name,
+        dob: {
+          day: day,
+          month: month,
+          year: year,
+        },
+      });
+
+      Alert.alert(
+        'Info',
+        `Name: ${name}\nDOB: ${day}/${month}/${year}\nData saved!`
+      );
+      // e.g. navigate to your MainTabs or next screen
+      navigation.replace('MainTabs');
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
@@ -51,7 +77,7 @@ export default function TellUsAboutYourselfScreen({ navigation }) {
           colors={['#ff9dbf', PINK]}
           style={styles.gradientBackground}
         >
-          {/* Top section: Title & Subtitle */}
+          {/* Top section: Title */}
           <View style={styles.topSection}>
             <Text style={styles.headerTitle}>Tell us about yourself</Text>
           </View>
@@ -102,7 +128,7 @@ export default function TellUsAboutYourselfScreen({ navigation }) {
             </View>
 
             {/* Continue button */}
-            <TouchableOpacity style={styles.continueButton} onPress={() => navigation.replace('MainTabs')}>
+            <TouchableOpacity style={styles.continueButton} onPress={handleContinue}>
               <Text style={styles.continueButtonText}>Continue</Text>
             </TouchableOpacity>
           </View>
