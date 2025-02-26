@@ -20,6 +20,7 @@ import ProfileScreen from "./screens/ProfileScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
 import EmergencyHelplineScreen from "./screens/EmergencyHelplineScreen";
 import CommunityScreen from "./screens/CommunityScreen";
+import GeminiChatScreen from "./screens/GeminiChatScreen";
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -51,6 +52,15 @@ function ProfileStack() {
   );
 }
 
+function CommunityStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="CommunityMain" component={CommunityScreen} />
+      <Stack.Screen name="GeminiChat" component={GeminiChatScreen} />
+    </Stack.Navigator>
+  );
+}
+
 /** ========== Example Floating Tab Bar ========== **/
 function FloatingTabBar({ state, descriptors, navigation }) {
   // Decide if we hide the bar, e.g. on FakeCall or EditProfile
@@ -71,7 +81,12 @@ function FloatingTabBar({ state, descriptors, navigation }) {
       hideTabBar = true;
     }
   }
-
+  else if (currentRouteName === "Community") {
+    const childRoute = getFocusedRouteNameFromRoute(state.routes[state.index]) ?? "CommunityMain";
+    if (childRoute === "GeminiChat") {
+      hideTabBar = true;
+    }
+  }
   if (hideTabBar) {
     return null;
   }
@@ -161,7 +176,7 @@ function MainTabs() {
       <Tab.Screen name="Home" component={HomeStack} />
       <Tab.Screen name="Navigation" component={TrackMeScreen} options={{ title: "Track Me" }} />
       <Tab.Screen name="SOS" component={HomeStack} />
-      <Tab.Screen name="Community" component={CommunityScreen} />
+      <Tab.Screen name="Community" component={CommunityStack} />
       <Tab.Screen name="Profile" component={ProfileStack} />
     </Tab.Navigator>
   );
