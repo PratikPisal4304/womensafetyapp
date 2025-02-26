@@ -65,41 +65,47 @@ const ProfileStack = () => (
 
 /** ========== Custom Tab Bar (inline) ========== **/
 function CustomTabBar(props) {
-  // Get the current tab route (e.g., "Home", "Navigation", "Profile", etc.)
-  const currentTabRoute = props.state.routes[props.state.index].name;
+  // Determine which top-level tab is active:
+  const currentTabRouteName = props.state.routes[props.state.index].name;
 
-  // We'll hide the tab bar if the user is on certain child routes
+  // We'll hide the tab bar on certain child routes:
   let hideTabBar = false;
 
-  // If user is on "Home" tab, check if child route is "FakeCall"
-  if (currentTabRoute === "Home") {
-    const childRouteName =
-      getFocusedRouteNameFromRoute(props.state.routes[props.state.index]) ??
+  // 1) If on "Home" tab, check if child route is "FakeCall"
+  if (currentTabRouteName === "Home") {
+    const childRoute =
+      getFocusedRouteNameFromRoute(props.state.routes[props.state.index]) ||
       "HomeMain";
-    if (childRouteName === "FakeCall") {
-      hideTabBar = true;
-    }
+    if (childRoute === "FakeCall") hideTabBar = true;
   }
-  // If user is on "Profile" tab, check if child route is "EditProfile" or "EmergencyHelpline"
-  else if (currentTabRoute === "Profile") {
-    const childRouteName =
-      getFocusedRouteNameFromRoute(props.state.routes[props.state.index]) ??
+  // 2) If on "Profile" tab, check if child route is "EditProfile" or "EmergencyHelpline"
+  else if (currentTabRouteName === "Profile") {
+    const childRoute =
+      getFocusedRouteNameFromRoute(props.state.routes[props.state.index]) ||
       "ProfileMain";
-    if (childRouteName === "EditProfile" || childRouteName === "EmergencyHelpline") {
+    if (childRoute === "EditProfile" || childRoute === "EmergencyHelpline") {
       hideTabBar = true;
     }
   }
 
-  // If we want to hide the tab bar, return null so it doesn't render at all
+  // If we decided to hide the tab bar, return null
   if (hideTabBar) {
     return null;
   }
 
-  // Otherwise, render a white tab bar with a slight shadow
+  // Otherwise, render a white, elevated container with the default BottomTabBar inside
   return (
     <View style={styles.tabBarContainer}>
       <View style={styles.tabBarBackground}>
-        <BottomTabBar {...props} />
+        <BottomTabBar
+          {...props}
+          style={{
+            backgroundColor: "transparent",
+            borderTopWidth: 0,
+            // Force the default bar to fill our container
+            height: "100%",
+          }}
+        />
       </View>
     </View>
   );
@@ -109,9 +115,11 @@ function CustomTabBar(props) {
 function MainTabs() {
   return (
     <Tab.Navigator
+      // Use our inline custom tab bar
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
+        // The default style for the actual bar
         tabBarStyle: {
           backgroundColor: "transparent",
           position: "absolute",
@@ -121,6 +129,7 @@ function MainTabs() {
         tabBarActiveTintColor: "#FF4B8C",
         tabBarInactiveTintColor: "#8e8e8e",
         tabBarShowLabel: true,
+
         // Icon above label
         tabBarLabelPosition: "below-icon",
         tabBarLabelStyle: {
@@ -133,7 +142,7 @@ function MainTabs() {
         },
       }}
     >
-      {/** 1) Home Tab */}
+      {/* 1) Home Tab */}
       <Tab.Screen
         name="Home"
         component={HomeStack}
@@ -176,7 +185,7 @@ function MainTabs() {
         }}
       />
 
-      {/** 2) Track Me Tab */}
+      {/* 2) Track Me Tab */}
       <Tab.Screen
         name="Navigation"
         component={TrackMeScreen}
@@ -220,7 +229,7 @@ function MainTabs() {
         }}
       />
 
-      {/** 3) SOS Tab */}
+      {/* 3) SOS Tab */}
       <Tab.Screen
         name="SOS"
         component={HomeStack}
@@ -263,7 +272,7 @@ function MainTabs() {
         }}
       />
 
-      {/** 4) Community Tab */}
+      {/* 4) Community Tab */}
       <Tab.Screen
         name="Community"
         component={CommunityScreen}
@@ -306,7 +315,7 @@ function MainTabs() {
         }}
       />
 
-      {/** 5) Profile Tab */}
+      {/* 5) Profile Tab */}
       <Tab.Screen
         name="Profile"
         component={ProfileStack}
@@ -386,19 +395,26 @@ export default function Routes() {
 /** ========== STYLES FOR CUSTOM TAB BAR ========== **/
 const styles = StyleSheet.create({
   tabBarContainer: {
+    // White background
+    backgroundColor: "#fff",
+    // No gap at the bottom
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    height: 60,
-    // White background for the tab bar
-    backgroundColor: "#fff",
-    // Minimal shadow/elevation so it looks like a standard bottom bar
+
+    // Enough height to hold icons + labels nicely on iOS
+    height: 70,
+
+    // Subtle shadow for iOS + Android
     shadowColor: "#000",
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowOffset: { width: 0, height: -2 },
     shadowRadius: 4,
     elevation: 4,
+
+    // So icons won't overflow the container
+    overflow: "hidden",
   },
   tabBarBackground: {
     flex: 1,
