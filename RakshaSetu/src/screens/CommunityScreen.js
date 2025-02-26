@@ -32,14 +32,19 @@ import {
 
 import * as ImagePicker from 'expo-image-picker';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
+import { useNavigation } from '@react-navigation/native';
+
 
 import { auth, db, storage } from '../../config/firebaseConfig'; 
 // Make sure 'storage' is exported from firebaseConfig if using Firebase Storage
+
+
 
 const PINK = '#ff5f96';
 const CARD_RADIUS = 10;
 
 export default function CommunityScreen() {
+  const navigation = useNavigation();
   const [searchTerm, setSearchTerm] = useState('');
   const [posts, setPosts] = useState([]);
 
@@ -401,6 +406,12 @@ export default function CommunityScreen() {
           </View>
         </View>
       </Modal>
+      <TouchableOpacity
+        style={styles.floatingButton}
+        onPress={() => navigation.navigate('GeminiChat')}
+      >
+        <Ionicons name="sparkles" size={28} color="#fff" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -579,5 +590,22 @@ const styles = StyleSheet.create({
   modalButtonText: {
     color: '#fff',
     fontWeight: '600',
+  },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 80,
+    right: 20,
+    backgroundColor: PINK,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    zIndex: 100,
   },
 });
