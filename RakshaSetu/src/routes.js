@@ -1,17 +1,12 @@
-// Routes.js
 import React from "react";
-import { View, StyleSheet } from "react-native";
-import {
-  createBottomTabNavigator,
-  BottomTabBar,
-} from "@react-navigation/bottom-tabs";
+import { View, Text, TouchableOpacity, StyleSheet, Animated } from "react-native";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import Animated from "react-native-reanimated";
 import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
+
 import KeyboardAwareWrapper from "./components/KeyboardAwareWrapper";
 
-/** Import your screens below **/
 import SplashScreen from "./screens/SplashScreen";
 import LoginScreen from "./screens/LoginScreen";
 import OTPVerificationScreen from "./screens/OTPVerificationScreen";
@@ -26,398 +21,204 @@ import EditProfileScreen from "./screens/EditProfileScreen";
 import EmergencyHelplineScreen from "./screens/EmergencyHelplineScreen";
 import CommunityScreen from "./screens/CommunityScreen";
 
-// Create navigators
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-// Wrap screens in KeyboardAwareWrapper if needed
 const withKeyboardAwareWrapper = (Component) => (props) => (
   <KeyboardAwareWrapper>
     <Component {...props} />
   </KeyboardAwareWrapper>
 );
 
-/** ========== 1) Home Stack ========== **/
-const HomeStack = () => (
-  <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="HomeMain" component={HomeScreen} />
-    <Stack.Screen name="FakeCall" component={FakeCallScreen} />
-  </Stack.Navigator>
-);
+/** ========== Home Stack ========== **/
+function HomeStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="HomeMain" component={HomeScreen} />
+      <Stack.Screen name="FakeCall" component={FakeCallScreen} />
+    </Stack.Navigator>
+  );
+}
 
-/** ========== 2) Profile Stack ========== **/
-const ProfileStack = () => (
-  <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen
-      name="ProfileMain"
-      component={withKeyboardAwareWrapper(ProfileScreen)}
-    />
-    <Stack.Screen
-      name="EditProfile"
-      component={withKeyboardAwareWrapper(EditProfileScreen)}
-    />
-    <Stack.Screen
-      name="EmergencyHelpline"
-      component={withKeyboardAwareWrapper(EmergencyHelplineScreen)}
-    />
-  </Stack.Navigator>
-);
+/** ========== Profile Stack ========== **/
+function ProfileStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="ProfileMain" component={withKeyboardAwareWrapper(ProfileScreen)} />
+      <Stack.Screen name="EditProfile" component={withKeyboardAwareWrapper(EditProfileScreen)} />
+      <Stack.Screen name="EmergencyHelpline" component={withKeyboardAwareWrapper(EmergencyHelplineScreen)} />
+    </Stack.Navigator>
+  );
+}
 
-/** ========== Custom Tab Bar (inline) ========== **/
-function CustomTabBar(props) {
-  // Determine which top-level tab is active:
-  const currentTabRouteName = props.state.routes[props.state.index].name;
-
-  // We'll hide the tab bar on certain child routes:
+/** ========== Example Floating Tab Bar ========== **/
+function FloatingTabBar({ state, descriptors, navigation }) {
+  // Decide if we hide the bar, e.g. on FakeCall or EditProfile
+  const currentRouteName = state.routes[state.index].name;
   let hideTabBar = false;
 
-  // 1) If on "Home" tab, check if child route is "FakeCall"
-  if (currentTabRouteName === "Home") {
-    const childRoute =
-      getFocusedRouteNameFromRoute(props.state.routes[props.state.index]) ||
-      "HomeMain";
-    if (childRoute === "FakeCall") hideTabBar = true;
+  // Example: If inside HomeStack => FakeCall
+  if (currentRouteName === "Home") {
+    const childRoute = getFocusedRouteNameFromRoute(state.routes[state.index]) ?? "HomeMain";
+    if (childRoute === "FakeCall") {
+      hideTabBar = true;
+    }
   }
-  // 2) If on "Profile" tab, check if child route is "EditProfile" or "EmergencyHelpline"
-  else if (currentTabRouteName === "Profile") {
-    const childRoute =
-      getFocusedRouteNameFromRoute(props.state.routes[props.state.index]) ||
-      "ProfileMain";
+  // Example: If inside ProfileStack => EditProfile or EmergencyHelpline
+  else if (currentRouteName === "Profile") {
+    const childRoute = getFocusedRouteNameFromRoute(state.routes[state.index]) ?? "ProfileMain";
     if (childRoute === "EditProfile" || childRoute === "EmergencyHelpline") {
       hideTabBar = true;
     }
   }
 
-  // If we decided to hide the tab bar, return null
   if (hideTabBar) {
     return null;
   }
 
-  // Otherwise, render a white, elevated container with the default BottomTabBar inside
   return (
-    <View style={styles.tabBarContainer}>
-      <View style={styles.tabBarBackground}>
-        <BottomTabBar
-          {...props}
-          style={{
-            backgroundColor: "transparent",
-            borderTopWidth: 0,
-            // Force the default bar to fill our container
-            height: "100%",
-          }}
-        />
-      </View>
+    <View style={styles.floatingContainer}>
+      {state.routes.map((route, index) => {
+        const { options } = descriptors[route.key];
+        const isFocused = state.index === index;
+        const label = options.title !== undefined ? options.title : route.name;
+
+        let iconName = "";
+        let IconComponent = Ionicons;
+
+        if (route.name === "Home") {
+          iconName = isFocused ? "home" : "home-outline";
+        } else if (route.name === "Navigation") {
+          IconComponent = MaterialCommunityIcons;
+          iconName = "navigation-variant-outline";
+        } else if (route.name === "SOS") {
+          iconName = "alert-circle-outline";
+        } else if (route.name === "Community") {
+          iconName = isFocused ? "people" : "people-outline";
+        } else if (route.name === "Profile") {
+          iconName = isFocused ? "person" : "person-outline";
+        }
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: "tabPress",
+            target: route.key,
+            canPreventDefault: true,
+          });
+          if (!event.defaultPrevented) {
+            navigation.navigate(route.name);
+          }
+        };
+
+        return (
+          <TouchableOpacity
+            key={route.name}
+            accessibilityRole="button"
+            accessibilityState={isFocused ? { selected: true } : {}}
+            accessibilityLabel={options.tabBarAccessibilityLabel}
+            testID={options.tabBarTestID}
+            onPress={onPress}
+            style={styles.tabItem}
+          >
+            <Animated.View
+              style={[
+                styles.iconContainer,
+                isFocused && styles.iconFocused,
+              ]}
+            >
+              <IconComponent
+                name={iconName}
+                size={24}
+                color={isFocused ? "#FF4B8C" : "#8e8e8e"}
+                style={{ transform: [{ translateY: isFocused ? -2 : 0 }] }}
+              />
+            </Animated.View>
+            <Text
+              style={[
+                styles.tabLabel,
+                { color: isFocused ? "#FF4B8C" : "#8e8e8e" },
+              ]}
+            >
+              {label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
 
-/** ========== 3) Main Tabs ========== **/
+/** ========== Main Tabs ========== **/
 function MainTabs() {
   return (
     <Tab.Navigator
-      // Use our inline custom tab bar
-      tabBar={(props) => <CustomTabBar {...props} />}
+      // Our custom floating tab bar
+      tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        // The default style for the actual bar
-        tabBarStyle: {
-          backgroundColor: "transparent",
-          position: "absolute",
-          elevation: 0,
-          borderTopWidth: 0,
-        },
-        tabBarActiveTintColor: "#FF4B8C",
-        tabBarInactiveTintColor: "#8e8e8e",
-        tabBarShowLabel: true,
-
-        // Icon above label
-        tabBarLabelPosition: "below-icon",
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "500",
-        },
-        tabBarItemStyle: {
-          justifyContent: "center",
-          alignItems: "center",
-        },
       }}
     >
-      {/* 1) Home Tab */}
-      <Tab.Screen
-        name="Home"
-        component={HomeStack}
-        options={{
-          tabBarLabel: ({ focused }) => (
-            <Animated.Text
-              style={{
-                color: focused ? "#FF4B8C" : "#8e8e8e",
-                fontSize: 12,
-                fontWeight: focused ? "600" : "400",
-                opacity: focused ? 1 : 0.8,
-              }}
-            >
-              Home
-            </Animated.Text>
-          ),
-          tabBarIcon: ({ color, size, focused }) => (
-            <Animated.View
-              style={{
-                transform: [{ scale: focused ? 1 : 1 }],
-                backgroundColor: focused
-                  ? "rgba(255, 75, 140, 0.1)"
-                  : "transparent",
-                padding: 5,
-                borderRadius: 15,
-                width: 40,
-                height: 40,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Ionicons
-                name={focused ? "home" : "home-outline"}
-                size={size}
-                color={color}
-                style={{ transform: [{ translateY: focused ? -2 : 0 }] }}
-              />
-            </Animated.View>
-          ),
-        }}
-      />
-
-      {/* 2) Track Me Tab */}
-      <Tab.Screen
-        name="Navigation"
-        component={TrackMeScreen}
-        options={{
-          title: "Track Me",
-          tabBarLabel: ({ focused }) => (
-            <Animated.Text
-              style={{
-                color: focused ? "#FF4B8C" : "#8e8e8e",
-                fontSize: 12,
-                fontWeight: focused ? "600" : "400",
-                opacity: focused ? 1 : 0.8,
-              }}
-            >
-              Track Me
-            </Animated.Text>
-          ),
-          tabBarIcon: ({ color, size, focused }) => (
-            <Animated.View
-              style={{
-                transform: [{ scale: focused ? 1 : 1 }],
-                backgroundColor: focused
-                  ? "rgba(255, 75, 140, 0.1)"
-                  : "transparent",
-                padding: 5,
-                borderRadius: 15,
-                width: 40,
-                height: 40,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <MaterialCommunityIcons
-                name="navigation-variant-outline"
-                size={size}
-                color={color}
-                style={{ transform: [{ translateY: focused ? -2 : 0 }] }}
-              />
-            </Animated.View>
-          ),
-        }}
-      />
-
-      {/* 3) SOS Tab */}
-      <Tab.Screen
-        name="SOS"
-        component={HomeStack}
-        options={{
-          tabBarLabel: ({ focused }) => (
-            <Animated.Text
-              style={{
-                color: focused ? "#FF4B8C" : "#8e8e8e",
-                fontSize: 12,
-                fontWeight: focused ? "600" : "400",
-                opacity: focused ? 1 : 0.8,
-              }}
-            >
-              SOS
-            </Animated.Text>
-          ),
-          tabBarIcon: ({ color, size, focused }) => (
-            <Animated.View
-              style={{
-                transform: [{ scale: focused ? 1 : 1 }],
-                backgroundColor: focused
-                  ? "rgba(255, 75, 140, 0.1)"
-                  : "transparent",
-                padding: 5,
-                borderRadius: 15,
-                width: 40,
-                height: 40,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Ionicons
-                name="alert-circle-outline"
-                size={size}
-                color={color}
-                style={{ transform: [{ translateY: focused ? -2 : 0 }] }}
-              />
-            </Animated.View>
-          ),
-        }}
-      />
-
-      {/* 4) Community Tab */}
-      <Tab.Screen
-        name="Community"
-        component={CommunityScreen}
-        options={{
-          tabBarLabel: ({ focused }) => (
-            <Animated.Text
-              style={{
-                color: focused ? "#FF4B8C" : "#8e8e8e",
-                fontSize: 12,
-                fontWeight: focused ? "600" : "400",
-                opacity: focused ? 1 : 0.8,
-              }}
-            >
-              Community
-            </Animated.Text>
-          ),
-          tabBarIcon: ({ color, size, focused }) => (
-            <Animated.View
-              style={{
-                transform: [{ scale: focused ? 1 : 1 }],
-                backgroundColor: focused
-                  ? "rgba(255, 75, 140, 0.1)"
-                  : "transparent",
-                padding: 5,
-                borderRadius: 15,
-                width: 40,
-                height: 40,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Ionicons
-                name={focused ? "people" : "people-outline"}
-                size={size}
-                color={color}
-                style={{ transform: [{ translateY: focused ? -2 : 0 }] }}
-              />
-            </Animated.View>
-          ),
-        }}
-      />
-
-      {/* 5) Profile Tab */}
-      <Tab.Screen
-        name="Profile"
-        component={ProfileStack}
-        options={{
-          tabBarLabel: ({ focused }) => (
-            <Animated.Text
-              style={{
-                color: focused ? "#FF4B8C" : "#8e8e8e",
-                fontSize: 12,
-                fontWeight: focused ? "600" : "400",
-                opacity: focused ? 1 : 0.8,
-              }}
-            >
-              Profile
-            </Animated.Text>
-          ),
-          tabBarIcon: ({ color, size, focused }) => (
-            <Animated.View
-              style={{
-                transform: [{ scale: focused ? 1 : 1 }],
-                backgroundColor: focused
-                  ? "rgba(255, 75, 140, 0.1)"
-                  : "transparent",
-                padding: 5,
-                borderRadius: 15,
-                width: 40,
-                height: 40,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Ionicons
-                name={focused ? "person" : "person-outline"}
-                size={size}
-                color={color}
-                style={{ transform: [{ translateY: focused ? -2 : 0 }] }}
-              />
-            </Animated.View>
-          ),
-        }}
-      />
+      <Tab.Screen name="Home" component={HomeStack} />
+      <Tab.Screen name="Navigation" component={TrackMeScreen} options={{ title: "Track Me" }} />
+      <Tab.Screen name="SOS" component={HomeStack} />
+      <Tab.Screen name="Community" component={CommunityScreen} />
+      <Tab.Screen name="Profile" component={ProfileStack} />
     </Tab.Navigator>
   );
 }
 
-/** ========== 4) Root Stack with Splash as initial route ========== **/
+/** ========== Root Stack ========== **/
 export default function Routes() {
   return (
-    <Stack.Navigator
-      initialRouteName="Splash"
-      screenOptions={{ headerShown: false }}
-    >
-      {/* Splash as first */}
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
       <Stack.Screen name="Splash" component={SplashScreen} />
-
-      {/* Login screen */}
       <Stack.Screen name="Login" component={LoginScreen} />
-
-      {/* SignUp screen */}
       <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
-
-      {/* CreatePin screen */}
       <Stack.Screen name="CreatePinScreen" component={CreatePinScreen} />
-
-      {/* TellUsAboutYourself screen */}
       <Stack.Screen name="TellUsAboutYourselfScreen" component={TellUsAboutYourselfScreen} />
-
-      {/* OTPVerification screen */}
       <Stack.Screen name="OTPVerificationScreen" component={OTPVerificationScreen} />
-
-      {/* Then main tabs */}
       <Stack.Screen name="MainTabs" component={MainTabs} />
     </Stack.Navigator>
   );
 }
 
-/** ========== STYLES FOR CUSTOM TAB BAR ========== **/
+/** ========== STYLES ========== **/
 const styles = StyleSheet.create({
-  tabBarContainer: {
-    // White background
+  floatingContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    height: 60,
     backgroundColor: "#fff",
-    // No gap at the bottom
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-
-    // Enough height to hold icons + labels nicely on iOS
-    height: 70,
-
-    // Subtle shadow for iOS + Android
+    // shadow for iOS
     shadowColor: "#000",
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: -2 },
-    shadowRadius: 4,
-    elevation: 4,
-
-    // So icons won't overflow the container
-    overflow: "hidden",
+    shadowRadius: 6,
+    // elevation for Android
+    elevation: 8,
   },
-  tabBarBackground: {
+  tabItem: {
     flex: 1,
-    backgroundColor: "transparent",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconFocused: {
+    backgroundColor: "rgba(255, 75, 140, 0.1)",
+  },
+  tabLabel: {
+    fontSize: 11,
+    marginTop: 2,
   },
 });
