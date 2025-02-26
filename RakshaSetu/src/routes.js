@@ -1,7 +1,10 @@
 // Routes.js
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import { createBottomTabNavigator, BottomTabBar } from "@react-navigation/bottom-tabs";
+import {
+  createBottomTabNavigator,
+  BottomTabBar,
+} from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated from "react-native-reanimated";
@@ -45,18 +48,57 @@ const HomeStack = () => (
 /** ========== 2) Profile Stack ========== **/
 const ProfileStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="ProfileMain" component={withKeyboardAwareWrapper(ProfileScreen)} />
-    <Stack.Screen name="EditProfile" component={withKeyboardAwareWrapper(EditProfileScreen)} />
-    <Stack.Screen name="EmergencyHelpline" component={withKeyboardAwareWrapper(EmergencyHelplineScreen)} />
+    <Stack.Screen
+      name="ProfileMain"
+      component={withKeyboardAwareWrapper(ProfileScreen)}
+    />
+    <Stack.Screen
+      name="EditProfile"
+      component={withKeyboardAwareWrapper(EditProfileScreen)}
+    />
+    <Stack.Screen
+      name="EmergencyHelpline"
+      component={withKeyboardAwareWrapper(EmergencyHelplineScreen)}
+    />
   </Stack.Navigator>
 );
 
 /** ========== Custom Tab Bar (inline) ========== **/
 function CustomTabBar(props) {
+  // Get the current tab route (e.g., "Home", "Navigation", "Profile", etc.)
+  const currentTabRoute = props.state.routes[props.state.index].name;
+
+  // We'll hide the tab bar if the user is on certain child routes
+  let hideTabBar = false;
+
+  // If user is on "Home" tab, check if child route is "FakeCall"
+  if (currentTabRoute === "Home") {
+    const childRouteName =
+      getFocusedRouteNameFromRoute(props.state.routes[props.state.index]) ??
+      "HomeMain";
+    if (childRouteName === "FakeCall") {
+      hideTabBar = true;
+    }
+  }
+  // If user is on "Profile" tab, check if child route is "EditProfile" or "EmergencyHelpline"
+  else if (currentTabRoute === "Profile") {
+    const childRouteName =
+      getFocusedRouteNameFromRoute(props.state.routes[props.state.index]) ??
+      "ProfileMain";
+    if (childRouteName === "EditProfile" || childRouteName === "EmergencyHelpline") {
+      hideTabBar = true;
+    }
+  }
+
+  // If we want to hide the tab bar, return null so it doesn't render at all
+  if (hideTabBar) {
+    return null;
+  }
+
+  // Otherwise, render a white tab bar with a slight shadow
   return (
     <View style={styles.tabBarContainer}>
       <View style={styles.tabBarBackground}>
-        {/* The default tab bar from React Navigation */}
         <BottomTabBar {...props} />
       </View>
     </View>
@@ -67,7 +109,6 @@ function CustomTabBar(props) {
 function MainTabs() {
   return (
     <Tab.Navigator
-      // Use the inline custom tab bar
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
@@ -80,10 +121,8 @@ function MainTabs() {
         tabBarActiveTintColor: "#FF4B8C",
         tabBarInactiveTintColor: "#8e8e8e",
         tabBarShowLabel: true,
-
         // Icon above label
         tabBarLabelPosition: "below-icon",
-
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: "500",
@@ -98,55 +137,42 @@ function MainTabs() {
       <Tab.Screen
         name="Home"
         component={HomeStack}
-        options={({ route }) => {
-          // Hide tab bar if inside 'FakeCall'
-          const routeName = getFocusedRouteNameFromRoute(route) ?? "HomeMain";
-          const isFakeCall = routeName === "FakeCall";
-
-          return {
-            tabBarStyle: {
-              backgroundColor: "transparent",
-              position: "absolute",
-              elevation: 0,
-              borderTopWidth: 0,
-              display: isFakeCall ? "none" : "flex",
-            },
-            tabBarLabel: ({ focused }) => (
-              <Animated.Text
-                style={{
-                  color: focused ? "#FF4B8C" : "#8e8e8e",
-                  fontSize: 12,
-                  fontWeight: focused ? "600" : "400",
-                  opacity: focused ? 1 : 0.8,
-                }}
-              >
-                Home
-              </Animated.Text>
-            ),
-            tabBarIcon: ({ color, size, focused }) => (
-              <Animated.View
-                style={{
-                  transform: [{ scale: focused ? 1 : 1 }],
-                  backgroundColor: focused
-                    ? "rgba(255, 75, 140, 0.1)"
-                    : "transparent",
-                  padding: 5,
-                  borderRadius: 15,
-                  width: 40,
-                  height: 40,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Ionicons
-                  name={focused ? "home" : "home-outline"}
-                  size={size}
-                  color={color}
-                  style={{ transform: [{ translateY: focused ? -2 : 0 }] }}
-                />
-              </Animated.View>
-            ),
-          };
+        options={{
+          tabBarLabel: ({ focused }) => (
+            <Animated.Text
+              style={{
+                color: focused ? "#FF4B8C" : "#8e8e8e",
+                fontSize: 12,
+                fontWeight: focused ? "600" : "400",
+                opacity: focused ? 1 : 0.8,
+              }}
+            >
+              Home
+            </Animated.Text>
+          ),
+          tabBarIcon: ({ color, size, focused }) => (
+            <Animated.View
+              style={{
+                transform: [{ scale: focused ? 1 : 1 }],
+                backgroundColor: focused
+                  ? "rgba(255, 75, 140, 0.1)"
+                  : "transparent",
+                padding: 5,
+                borderRadius: 15,
+                width: 40,
+                height: 40,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons
+                name={focused ? "home" : "home-outline"}
+                size={size}
+                color={color}
+                style={{ transform: [{ translateY: focused ? -2 : 0 }] }}
+              />
+            </Animated.View>
+          ),
         }}
       />
 
@@ -365,12 +391,14 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     height: 60,
-    // Make background transparent so it doesn't show a white strip behind the bar:
-    backgroundColor: "transparent",
-    // Remove any shadow or elevation to avoid a line or shadow:
-    shadowColor: "white",
-    shadowOpacity: 0,
-    elevation: 0,
+    // White background for the tab bar
+    backgroundColor: "#fff",
+    // Minimal shadow/elevation so it looks like a standard bottom bar
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: -2 },
+    shadowRadius: 4,
+    elevation: 4,
   },
   tabBarBackground: {
     flex: 1,
