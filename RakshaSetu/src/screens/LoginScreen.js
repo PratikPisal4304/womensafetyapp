@@ -42,11 +42,14 @@ export default function LoginScreen({ navigation }) {
 
   // Send OTP placeholder
   const handleSendOTP = () => {
-    // Must be exactly 10 digits
-    if (mobileNumber.length < 10) {
-      Alert.alert('Error', 'Please enter a valid 10-digit mobile number.');
-      return;
-    }
+  // Must start with +91 and be exactly 13 chars total
+  if (!mobileNumber.startsWith('+91') || mobileNumber.length !== 13) {
+    Alert.alert(
+      'Error',
+      'Please enter a valid phone number in +91XXXXXXXXXX format.'
+    );
+    return;
+  }
     Alert.alert('OTP Sent', `OTP has been sent to ${mobileNumber}`);
   };
 
@@ -93,9 +96,9 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.label}>Mobile Number</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. 9876543210"
+              placeholder="e.g. +91XXXXXXXXXX"
               keyboardType="phone-pad"
-              maxLength={10}  // Limit to 10 characters
+              maxLength={13}  // Limit to 13 characters
               value={mobileNumber}
               onChangeText={(text) => {
                 // Only allow digits & max length 10

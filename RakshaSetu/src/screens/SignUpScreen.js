@@ -22,7 +22,6 @@ const PINK = '#ff5f96';
 
 export default function SignUpScreen({ navigation }) {
   // Form fields
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -47,16 +46,21 @@ export default function SignUpScreen({ navigation }) {
   // Sign up logic placeholder
   const handleSignUp = () => {
     // Basic validation
-    if (!name.trim() || !email.trim() || !phone.trim() || !password.trim()) {
+    if (!email.trim() || !phone.trim() || !password.trim()) {
       Alert.alert('Error', 'All fields are required.');
       return;
     }
-    if (phone.length < 10) {
-      Alert.alert('Error', 'Please enter a valid 10-digit phone number.');
+    // Within handleSignUp (or wherever you validate the phone):
+    if (!phone.startsWith('+91') || phone.length !== 13) {
+      Alert.alert(
+        'Error',
+        'Please enter a valid phone number in +91XXXXXXXXXX format.'
+      );
       return;
     }
+
     // Implement real sign-up logic
-    Alert.alert('Sign Up', `Name: ${name}\nEmail: ${email}\nPhone: ${phone}`);
+    Alert.alert('Sign Up', `Email: ${email}\nPhone: ${phone}`);
   };
 
   // If user already has an account
@@ -96,15 +100,6 @@ export default function SignUpScreen({ navigation }) {
 
           {/* White pill container for form */}
           <View style={styles.formCard}>
-            {/* Name field */}
-            <Text style={styles.label}>Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Your full name"
-              value={name}
-              onChangeText={setName}
-            />
-
             {/* Email field */}
             <Text style={styles.label}>Email</Text>
             <TextInput
@@ -116,17 +111,16 @@ export default function SignUpScreen({ navigation }) {
               onChangeText={setEmail}
             />
 
-            {/* Phone field (10-digit restriction) */}
+            {/* Phone field (+91 format) */}
             <Text style={styles.label}>Phone Number</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. 9876543210"
+              placeholder="e.g. +91XXXXXXXXXX"
               keyboardType="phone-pad"
-              maxLength={10}
               value={phone}
               onChangeText={(text) => {
-                // Only digits
-                const cleaned = text.replace(/[^0-9]/g, '');
+                // Only digits plus '+' sign
+                const cleaned = text.replace(/[^0-9+]/g, '');
                 setPhone(cleaned);
               }}
             />
@@ -148,7 +142,10 @@ export default function SignUpScreen({ navigation }) {
             </TouchableOpacity>
 
             {/* Sign Up Button */}
-            <TouchableOpacity style={styles.signUpButton} onPress={() => navigation.replace('CreatePinScreen')}>
+            <TouchableOpacity
+              style={styles.signUpButton}
+              onPress={() => navigation.replace('CreatePinScreen')}
+            >
               <Text style={styles.signUpButtonText}>Sign Up</Text>
             </TouchableOpacity>
 
