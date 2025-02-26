@@ -1,5 +1,5 @@
 // LoginScreen.js
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
+// ============ Firebase + Recaptcha imports ============
+import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
+import { auth } from '../../config/firebaseConfig';  // <-- Your firebaseConfig (must export `auth`)
+import { signInWithPhoneNumber } from 'firebase/auth';
+
 const { width, height } = Dimensions.get('window');
 const PINK = '#ff5f96';
 
@@ -24,6 +29,10 @@ export default function LoginScreen({ navigation }) {
   const [mobileNumber, setMobileNumber] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('English');
   const [showLanguageModal, setShowLanguageModal] = useState(false);
+
+  // Recaptcha
+  const recaptchaVerifier = useRef(null);
+  const [verificationId, setVerificationId] = useState(null);
 
   // Sample languages for the modal
   const languages = ['English', 'Hindi', 'Spanish', 'French'];
@@ -40,17 +49,42 @@ export default function LoginScreen({ navigation }) {
     Alert.alert('Google Sign-In', 'Implement your Google sign-in logic here.');
   };
 
-  // Send OTP placeholder
-  const handleSendOTP = () => {
-  // Must start with +91 and be exactly 13 chars total
-  if (!mobileNumber.startsWith('+91') || mobileNumber.length !== 13) {
-    Alert.alert(
-      'Error',
-      'Please enter a valid phone number in +91XXXXXXXXXX format.'
-    );
-    return;
-  }
-    Alert.alert('OTP Sent', `OTP has been sent to ${mobileNumber}`);
+  // Send OTP with reCAPTCHA + phone auth
+  const handleSendOTP = async () => {
+    // Must start with +91 and be exactly 13 chars total (e.g. +911234567890)
+    if (!mobileNumber.startsWith('+91') || mobileNumber.length !== 13) {
+      Alert.alert(
+        'Error',
+        'Please enter a valid phone number in +91XXXXXXXXXX format.'
+      );
+      return;
+    }
+
+    // Check if recaptcha is ready
+    if (!recaptchaVerifier.current) {
+      Alert.alert('Error', 'Recaptcha not initialized. Try again.');
+      return;
+    }
+
+    try {
+      // signInWithPhoneNumber from firebase/auth
+      const confirmationResult = await signInWithPhoneNumber(
+        auth,
+        mobileNumber,
+        recaptchaVerifier.current
+      );
+
+      setVerificationId(confirmationResult.verificationId);
+      Alert.alert('Success', `OTP has been sent to ${mobileNumber}`);
+
+      // Navigate to your OTP screen, pass verificationId & phone
+      navigation.replace('OTPVerificationScreen', {
+        verificationId: confirmationResult.verificationId,
+        mobileNumber,
+      });
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    }
   };
 
   // Sign up placeholder
@@ -60,6 +94,22 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      {/* 1) The Recaptcha Modal (must be outside any scrollable content) */}
+      <FirebaseRecaptchaVerifierModal
+        ref={recaptchaVerifier}
+        firebaseConfig={{
+          // Paste your web config here, same as in firebaseConfig.js
+          apiKey: "AIzaSyBRD6pmrMCcuAksz8hqxXAkP8hV3jih47c",
+          authDomain: "rakshasetu-c9e0b.firebaseapp.com",
+          projectId: "rakshasetu-c9e0b",
+          storageBucket: "rakshasetu-c9e0b.firebasestorage.app",
+          messagingSenderId: "704291591905",
+          appId: "1:704291591905:web:ffde7bd519cfad3106c9a0",
+          measurementId: "G-JJ881F4VBQ"
+        }}
+        attemptInvisibleVerification={false}
+      />
+
       {/* Wrap content in KeyboardAwareScrollView so inputs remain visible */}
       <KeyboardAwareScrollView
         contentContainerStyle={{ flexGrow: 1 }}
@@ -91,7 +141,7 @@ export default function LoginScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* White container for form (with top & bottom curves) */}
+          {/* White container for form */}
           <View style={styles.formCard}>
             <Text style={styles.label}>Mobile Number</Text>
             <TextInput
@@ -101,8 +151,8 @@ export default function LoginScreen({ navigation }) {
               maxLength={13}  // Limit to 13 characters
               value={mobileNumber}
               onChangeText={(text) => {
-                // Only allow digits & max length 10
-                const cleaned = text.replace(/[^0-9]/g, '');
+                // Only allow digits & plus sign
+                const cleaned = text.replace(/[^0-9+]/g, '');
                 setMobileNumber(cleaned);
               }}
             />
@@ -114,7 +164,7 @@ export default function LoginScreen({ navigation }) {
             </TouchableOpacity>
 
             {/* Send OTP */}
-            <TouchableOpacity style={styles.sendOtpButton} onPress={() => navigation.replace('OTPVerificationScreen')}>
+            <TouchableOpacity style={styles.sendOtpButton} onPress={handleSendOTP}>
               <Text style={styles.sendOtpButtonText}>Send OTP</Text>
             </TouchableOpacity>
 
@@ -155,7 +205,10 @@ export default function LoginScreen({ navigation }) {
                 <TouchableOpacity
                   key={index}
                   style={styles.languageItem}
-                  onPress={() => handleSelectLanguage(lang)}
+                  onPress={() => {
+                    setSelectedLanguage(lang);
+                    setShowLanguageModal(false);
+                  }}
                 >
                   <Text style={styles.languageItemText}>{lang}</Text>
                 </TouchableOpacity>
@@ -168,7 +221,8 @@ export default function LoginScreen({ navigation }) {
   );
 }
 
-// ============== STYLES =============
+// ============== STYLES ==============
+
 const CARD_HEIGHT = 420; // Adjust as needed
 
 const styles = StyleSheet.create({
@@ -219,8 +273,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginRight: 4,
   },
-
-  // White container with top & bottom curves
   formCard: {
     backgroundColor: '#fff',
     borderRadius: 40, // Curves on all corners
@@ -289,15 +341,13 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   linkText: {
-    color: PINK,
+    color: '#ff5f96',
     fontWeight: '600',
   },
   signupContainer: {
     flexDirection: 'row',
     marginTop: 10,
   },
-
-  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.3)',

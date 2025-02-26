@@ -7,6 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -21,8 +22,24 @@
         "backgroundColor": "#ffffff"
       }
     },
+
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+
+      
+      "config": {
+        "firebase": {
+          "apiKey": "AIzaSyBRD6pmrMCcuAksz8hqxXAkP8hV3jih47c",
+          "authDomain": "rakshasetu-c9e0b.firebaseapp.com",
+          "projectId": "rakshasetu-c9e0b",
+          "storageBucket": "rakshasetu-c9e0b.firebasestorage.app",
+          "messagingSenderId": "704291591905",
+          "appId": "1:704291591905:web:ffde7bd519cfad3106c9a0",
+          "measurementId": "G-JJ881F4VBQ"
+          
+        }
+      }
+      
     }
   }
 }
