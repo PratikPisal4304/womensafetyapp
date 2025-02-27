@@ -1,4 +1,3 @@
-// TrackMeScreen.js (JavaScript only)
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
@@ -9,33 +8,92 @@ import {
   Alert,
   Keyboard,
   Dimensions,
+  Modal,
+  ScrollView,
 } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
+import PolylineDecoder from '@mapbox/polyline';
+import { Ionicons } from '@expo/vector-icons';
 
-// ============ ORS API Key (Replace with your own) ============
-const OPENROUTESERVICE_API_KEY = '5b3ce3597851110001cf6248079f5240b1ee4709bfc685d799ea21fc';
+// ============ Google API Key ============
+const GOOGLE_MAPS_API_KEY = 'AIzaSyBzqSJUt0MVs3xFjFWTvLwiyjXwnzbkXok';
 
 // Basic UI constants
 const PINK = '#ff5f96';
 const { width, height } = Dimensions.get('window');
 
+// Mock safety data service - in a real app, you would use an actual API
+const fetchSafetyData = async (coordinates) => {
+  // This simulates an API call to safety data services
+  // You would replace this with actual API calls to services like:
+  // - SpotCrime API
+  // - City Data APIs
+  // - SafeTrek API
+  // - National Crime Information Center
+  
+  // Mock response based on time of day and location
+  const hour = new Date().getHours();
+  const isNightTime = hour < 6 || hour > 19;
+  
+  // For demo purposes, we'll use the midpoint of the route to determine safety
+  const midPointIndex = Math.floor(coordinates.length / 2);
+  const midPoint = coordinates[midPointIndex];
+  
+  // Mock data - you'd replace this with actual API responses
+  const mockResponse = {
+    safety: Math.random() > 0.3 ? 'Safe' : 'Caution advised',
+    lighting: isNightTime ? (Math.random() > 0.4 ? 'Well lit' : 'Poorly lit') : 'Daylight',
+    visibility: Math.random() > 0.3 ? 'Good' : 'Limited',
+    recentCrimes: [
+      isNightTime && Math.random() > 0.7 ? {
+        type: 'Theft',
+        date: '2 days ago',
+        time: '9:45 PM',
+      } : null,
+      Math.random() > 0.8 ? {
+        type: 'Vandalism',
+        date: '1 week ago',
+        time: '11:30 PM',
+      } : null,
+    ].filter(Boolean),
+    safetyScore: Math.floor(Math.random() * 40) + 60, // 60-100 score
+  };
+  
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  return mockResponse;
+};
+
+// Safety rating component
+const SafetyRatingIndicator = ({ score }) => {
+  let color = '#4CAF50'; // green for high safety
+  
+  if (score < 70) {
+    color = '#FFC107'; // yellow for medium
+  }
+  if (score < 60) {
+    color = '#F44336'; // red for low safety
+  }
+  
+  return (
+    <View style={[styles.safetyScore, { backgroundColor: color }]}>
+      <Text style={styles.safetyScoreText}>{score}</Text>
+    </View>
+  );
+};
+
 export default function TrackMeScreen() {
   const mapRef = useRef(null);
-
-  // Current user location
   const [location, setLocation] = useState(null);
-
-  // Destination typed by user
   const [destination, setDestination] = useState('');
-
-  // Coordinates for the found destination
   const [destinationCoord, setDestinationCoord] = useState(null);
-
-  // The route from user location to destination
   const [routeCoords, setRouteCoords] = useState([]);
+  const [safetyData, setSafetyData] = useState(null);
+  const [safetyModalVisible, setSafetyModalVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // Request location on mount
   useEffect(() => {
     requestLocationPermission();
   }, []);
@@ -54,91 +112,112 @@ export default function TrackMeScreen() {
     }
   };
 
-  // Handle searching & routing
   const handleSearch = async () => {
     if (!destination.trim()) {
       Alert.alert('Please enter a destination');
       return;
     }
     Keyboard.dismiss();
+    setLoading(true);
     try {
-      // 1) Geocode the destination via ORS
+      // Geocode using Google Maps Geocoding API
       const geoResponse = await fetch(
-        `https://api.openrouteservice.org/geocode/search?api_key=${OPENROUTESERVICE_API_KEY}&text=${destination}`
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(destination)}&key=${GOOGLE_MAPS_API_KEY}`
       );
       const geoData = await geoResponse.json();
 
-      if (!geoData.features || geoData.features.length === 0) {
+      if (geoData.status !== 'OK' || !geoData.results[0]) {
         Alert.alert('Location not found');
+        setLoading(false);
         return;
       }
 
-      // Extract lon/lat
-      const [lon, lat] = geoData.features[0].geometry.coordinates;
-      const destCoord = { latitude: lat, longitude: lon };
+      const { lat, lng } = geoData.results[0].geometry.location;
+      const destCoord = { latitude: lat, longitude: lng };
       setDestinationCoord(destCoord);
 
-      // 2) Fetch the route from user location => destination
       if (location) {
-        fetchRoute(location, destCoord);
+        await fetchRoute(location, destCoord);
       }
     } catch (error) {
       console.error('Geocoding Error:', error);
       Alert.alert('Failed to find location');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Actually fetch the route from ORS
   const fetchRoute = async (start, end) => {
     if (!start || !end) return;
 
-    const bodyData = {
-      coordinates: [
-        [start.longitude, start.latitude],
-        [end.longitude, end.latitude],
-      ],
-      format: 'geojson',
-    };
-
     try {
-      const response = await fetch('https://api.openrouteservice.org/v2/directions/driving-car', {
-        method: 'POST',
-        headers: {
-          Authorization: OPENROUTESERVICE_API_KEY,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(bodyData),
-      });
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/directions/json?origin=${start.latitude},${start.longitude}&destination=${end.latitude},${end.longitude}&mode=driving&key=${GOOGLE_MAPS_API_KEY}`
+      );
+      const data = await response.json();
 
-      if (!response.ok) {
-        console.log('ORS error:', response.status, response.statusText);
+      if (data.status !== 'OK') {
         Alert.alert('Failed to fetch route');
         return;
       }
 
-      const data = await response.json();
-      if (!data.features || data.features.length === 0) {
-        Alert.alert('No route found');
-        return;
-      }
-
-      // Convert the route geometry to lat/long pairs
-      const route = data.features[0].geometry.coordinates.map(([lon, lat]) => ({
-        latitude: lat,
-        longitude: lon,
+      const points = PolylineDecoder.decode(data.routes[0].overview_polyline.points);
+      const route = points.map(point => ({
+        latitude: point[0],
+        longitude: point[1],
       }));
+      
       setRouteCoords(route);
 
-      // Optionally animate camera to show entire route
       if (mapRef.current && route.length > 1) {
         mapRef.current.fitToCoordinates(route, {
           edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
           animated: true,
         });
       }
+      
+      // Fetch safety data after route is plotted
+      const safety = await fetchSafetyData(route);
+      setSafetyData(safety);
+      setSafetyModalVisible(true);
     } catch (error) {
       console.error('Route Fetch Error:', error);
       Alert.alert('Failed to fetch route');
+    }
+  };
+
+  const getSafetyIcon = (type) => {
+    switch (type) {
+      case 'Safe':
+        return 'shield-checkmark';
+      case 'Caution advised':
+        return 'warning';
+      default:
+        return 'information-circle';
+    }
+  };
+
+  const getLightingIcon = (type) => {
+    switch (type) {
+      case 'Well lit':
+        return 'sunny';
+      case 'Poorly lit':
+        return 'moon';
+      case 'Daylight':
+        return 'sunny';
+      default:
+        return 'flashlight';
+    }
+  };
+
+  const getVisibilityIcon = (type) => {
+    switch (type) {
+      case 'Good':
+        return 'eye';
+      case 'Limited':
+        return 'eye-off';
+      default:
+        return 'eye';
     }
   };
 
@@ -188,10 +267,101 @@ export default function TrackMeScreen() {
             value={destination}
             onChangeText={setDestination}
           />
-          <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-            <Text style={styles.searchButtonText}>Search & Route</Text>
+          <TouchableOpacity 
+            style={styles.searchButton} 
+            onPress={handleSearch}
+            disabled={loading}
+          >
+            <Text style={styles.searchButtonText}>
+              {loading ? 'Loading...' : 'Search & Route'}
+            </Text>
           </TouchableOpacity>
         </View>
+        
+        {/* Safety Data Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={safetyModalVisible}
+          onRequestClose={() => setSafetyModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Route Safety Assessment</Text>
+                <TouchableOpacity 
+                  onPress={() => setSafetyModalVisible(false)}
+                  style={styles.closeButton}
+                >
+                  <Ionicons name="close" size={24} color="#333" />
+                </TouchableOpacity>
+              </View>
+              
+              {safetyData && (
+                <ScrollView style={styles.safetyContent}>
+                  <View style={styles.safetyHeaderRow}>
+                    <Text style={styles.safetyTitle}>Overall Safety</Text>
+                    <SafetyRatingIndicator score={safetyData.safetyScore} />
+                  </View>
+                  
+                  <View style={styles.safetyDetailRow}>
+                    <View style={styles.safetyIconContainer}>
+                      <Ionicons name={getSafetyIcon(safetyData.safety)} size={24} color={safetyData.safety === "Safe" ? "#4CAF50" : "#FFC107"} />
+                    </View>
+                    <View style={styles.safetyDetailContent}>
+                      <Text style={styles.safetyDetailTitle}>Safety Status</Text>
+                      <Text style={styles.safetyDetailText}>{safetyData.safety}</Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.safetyDetailRow}>
+                    <View style={styles.safetyIconContainer}>
+                      <Ionicons name={getLightingIcon(safetyData.lighting)} size={24} color="#2196F3" />
+                    </View>
+                    <View style={styles.safetyDetailContent}>
+                      <Text style={styles.safetyDetailTitle}>Lighting Conditions</Text>
+                      <Text style={styles.safetyDetailText}>{safetyData.lighting}</Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.safetyDetailRow}>
+                    <View style={styles.safetyIconContainer}>
+                      <Ionicons name={getVisibilityIcon(safetyData.visibility)} size={24} color="#9C27B0" />
+                    </View>
+                    <View style={styles.safetyDetailContent}>
+                      <Text style={styles.safetyDetailTitle}>Area Visibility</Text>
+                      <Text style={styles.safetyDetailText}>{safetyData.visibility}</Text>
+                    </View>
+                  </View>
+                  
+                  <Text style={styles.crimeTitle}>Recent Incidents</Text>
+                  {safetyData.recentCrimes.length > 0 ? (
+                    safetyData.recentCrimes.map((crime, index) => (
+                      <View key={index} style={styles.crimeItem}>
+                        <View style={styles.crimeIconContainer}>
+                          <Ionicons name="alert-circle" size={20} color="#F44336" />
+                        </View>
+                        <View style={styles.crimeContent}>
+                          <Text style={styles.crimeType}>{crime.type}</Text>
+                          <Text style={styles.crimeDate}>{crime.date} at {crime.time}</Text>
+                        </View>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.noCrimeText}>No recent incidents reported in this area</Text>
+                  )}
+                  
+                  <TouchableOpacity 
+                    style={styles.acknowledgeButton}
+                    onPress={() => setSafetyModalVisible(false)}
+                  >
+                    <Text style={styles.acknowledgeButtonText}>Got It</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              )}
+            </View>
+          </View>
+        </Modal>
       </View>
     </View>
   );
@@ -271,5 +441,141 @@ const styles = StyleSheet.create({
   searchButtonText: {
     color: '#fff',
     fontWeight: '600',
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    paddingVertical: 20,
+    maxHeight: height * 0.7,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333',
+  },
+  closeButton: {
+    padding: 5,
+  },
+  safetyContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  safetyHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  safetyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  safetyScore: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  safetyScoreText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 18,
+  },
+  safetyDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  safetyIconContainer: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 20,
+    marginRight: 15,
+  },
+  safetyDetailContent: {
+    flex: 1,
+  },
+  safetyDetailTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 3,
+  },
+  safetyDetailText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  crimeTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 20,
+    marginBottom: 15,
+  },
+  crimeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f9f9f9',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  crimeIconContainer: {
+    marginRight: 10,
+  },
+  crimeContent: {
+    flex: 1,
+  },
+  crimeType: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  crimeDate: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+  },
+  noCrimeText: {
+    fontSize: 14,
+    color: '#4CAF50',
+    fontStyle: 'italic',
+    padding: 10,
+  },
+  acknowledgeButton: {
+    backgroundColor: PINK,
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  acknowledgeButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
   },
 });
