@@ -83,7 +83,7 @@ const HomeScreen = ({ navigation }) => {
 
           <TouchableOpacity style={styles.actionButton}>
             <Image
-              source={require('../../assets/icon.png')}
+              source={require('../../assets/livelocation.png')}
               style={styles.actionIcon}
             />
             <Text style={styles.actionText}>Share live{'\n'}location</Text>
@@ -106,7 +106,7 @@ const HomeScreen = ({ navigation }) => {
         <TouchableOpacity style={styles.journeySection}>
           <View style={styles.journeyContent}>
             <Image
-              source={require('../../assets/icon.png')}
+              source={require('../../assets/journey.png')}
               style={styles.journeyIcon}
             />
             <View>
@@ -129,6 +129,12 @@ const HomeScreen = ({ navigation }) => {
         <TouchableOpacity style={styles.emergencyButton}>
           <FontAwesome5 name="hospital" size={20} color="black" />
           <Text style={styles.emergencyText}>Hospital near me </Text>
+          <Ionicons name="chevron-forward" size={24} color="black" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.emergencyButton}>
+          <FontAwesome5 name="clinic-medical" size={20} color="black" />
+          <Text style={styles.emergencyText}>Pharmacy near me </Text>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
       </ScrollView>

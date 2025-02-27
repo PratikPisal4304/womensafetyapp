@@ -10,10 +10,10 @@ import {
 } from 'react-native';
 
 const HELPLINES = [
-  { id: '1', number: '112', label: 'Local Police', icon: require('../../assets/adaptive-icon.png') },
-  { id: '2', number: '181', label: 'Women Helpline', icon: require('../../assets/adaptive-icon.png') },
-  { id: '3', number: '108', label: 'Local Ambulance', icon: require('../../assets/adaptive-icon.png') },
-  { id: '4', number: '101', label: 'Fire & Rescue Services', icon: require('../../assets/adaptive-icon.png') },
+  { id: '1', number: '112', label: 'Local Police', icon: require('../../assets/localpolice.png') },
+  { id: '2', number: '181', label: 'Women Helpline', icon: require('../../assets/womenhelp.png') },
+  { id: '3', number: '108', label: 'Local Ambulance', icon: require('../../assets/ambulance.png') },
+  { id: '4', number: '101', label: 'Fire & Rescue Services', icon: require('../../assets/firerescue.png') },
 ];
 
 const EmergencyHelplineScreen = () => {
@@ -45,7 +45,7 @@ const EmergencyHelplineScreen = () => {
               onPress={() => handleCall(item.number)}
             >
               <Image
-                source={require('../../assets/adaptive-icon.png')}
+                source={require('../../assets/call.png')}
                 style={styles.callIcon}
               />
             </TouchableOpacity>
