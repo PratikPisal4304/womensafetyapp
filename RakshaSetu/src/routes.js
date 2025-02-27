@@ -45,9 +45,9 @@ function HomeStack() {
 function ProfileStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="ProfileMain" component={withKeyboardAwareWrapper(ProfileScreen)} />
-      <Stack.Screen name="EditProfile" component={withKeyboardAwareWrapper(EditProfileScreen)} />
-      <Stack.Screen name="EmergencyHelpline" component={withKeyboardAwareWrapper(EmergencyHelplineScreen)} />
+      <Stack.Screen name="ProfileMain" component={(ProfileScreen)} />
+      <Stack.Screen name="EditProfile" component={(EditProfileScreen)} />
+      <Stack.Screen name="EmergencyHelpline" component={(EmergencyHelplineScreen)} />
     </Stack.Navigator>
   );
 }
