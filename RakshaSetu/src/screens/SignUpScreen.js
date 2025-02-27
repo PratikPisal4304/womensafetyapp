@@ -1,5 +1,5 @@
 // SignUpScreen.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,24 +17,66 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
-// 1) Import needed from Firebase
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+// Firebase Auth & Firestore imports
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../../config/firebaseConfig'; // <-- Adjust path
+import { auth, db } from '../../config/firebaseConfig'; // <-- Adjust path as needed
+
+// Expo Auth Session & WebBrowser for Google Sign-In
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
 
 const { width, height } = Dimensions.get('window');
 const PINK = '#ff5f96';
 
+// Complete any pending auth sessions
+WebBrowser.maybeCompleteAuthSession();
+
 export default function SignUpScreen({ navigation }) {
-  // Form fields
+  // Form fields for email sign up
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
 
-  // Language dropdown
+  // Language dropdown state
   const [selectedLanguage, setSelectedLanguage] = useState('English');
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const languages = ['English', 'Hindi', 'Spanish', 'French'];
+
+  // Google sign-in hook (Replace placeholder client IDs with your actual ones)
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    expoClientId: 'YOUR_EXPO_CLIENT_ID.apps.googleusercontent.com',
+    iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com',
+    androidClientId: 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com',
+    webClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+  });
+
+  // Monitor Google sign-in response
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { idToken, accessToken } = response.authentication;
+      const credential = GoogleAuthProvider.credential(idToken, accessToken);
+      signInWithCredential(auth, credential)
+        .then(async (userCredential) => {
+          const user = userCredential.user;
+          // Optionally, create/update user profile in Firestore
+          await setDoc(
+            doc(db, 'users', user.uid),
+            {
+              email: user.email,
+              phone: user.phoneNumber || '',
+              createdAt: new Date(),
+            },
+            { merge: true }
+          );
+          Alert.alert('Success', 'Signed up with Google!');
+          navigation.replace('CreatePinScreen');
+        })
+        .catch((error) => {
+          Alert.alert('Error', error.message);
+        });
+    }
+  }, [response]);
 
   // Toggle language modal
   const handleLanguagePress = () => setShowLanguageModal(true);
@@ -43,19 +85,19 @@ export default function SignUpScreen({ navigation }) {
     setShowLanguageModal(false);
   };
 
-  // Google sign-in placeholder
+  // Google Sign-In handler
   const handleGoogleSignIn = () => {
-    Alert.alert('Google Sign-In', 'Implement your Google sign-in logic here.');
+    promptAsync();
   };
 
-  // 2) Sign up logic with Firestore
+  // Email/Password Sign Up Logic
   const handleSignUp = async () => {
     // Basic validation
     if (!email.trim() || !phone.trim() || !password.trim()) {
       Alert.alert('Error', 'All fields are required.');
       return;
     }
-    // Must be +91XXXXXXXXXX => 13 chars total
+    // Must be in +91XXXXXXXXXX format (13 characters total)
     if (!phone.startsWith('+91') || phone.length !== 13) {
       Alert.alert(
         'Error',
@@ -65,11 +107,11 @@ export default function SignUpScreen({ navigation }) {
     }
 
     try {
-      // Create user in Firebase Auth with email + password
+      // Create user in Firebase Authentication with email and password
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 3) Save phone to Firestore (or any other profile data)
+      // Save additional user data (e.g., phone number) in Firestore
       await setDoc(doc(db, 'users', user.uid), {
         phone: phone,
         email: email,
@@ -77,26 +119,23 @@ export default function SignUpScreen({ navigation }) {
       });
 
       Alert.alert('Sign Up', `User created successfully: ${email}`);
-      navigation.replace('CreatePinScreen'); // Or wherever you want to go next
+      navigation.replace('CreatePinScreen'); // Navigate to the next screen
     } catch (error) {
       Alert.alert('Error', error.message);
     }
   };
 
-  // If user already has an account
+  // Navigation for users who already have an account
   const handleGoToLogin = () => {
-    // e.g. navigation.replace('Login') or navigation.navigate('Login')
     Alert.alert('Already have an account', 'Navigate to login screen.');
+    // e.g., navigation.replace('LoginScreen');
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <KeyboardAwareScrollView contentContainerStyle={{ flexGrow: 1 }} bounces={false}>
         {/* Pink gradient background */}
-        <LinearGradient
-          colors={['#ff9dbf', PINK]}
-          style={styles.gradientBackground}
-        >
+        <LinearGradient colors={['#ff9dbf', PINK]} style={styles.gradientBackground}>
           {/* Top Section: Title & Language */}
           <View style={styles.topSection}>
             <Text style={styles.headerTitle}>Create Account</Text>
@@ -105,12 +144,9 @@ export default function SignUpScreen({ navigation }) {
             </Text>
 
             {/* Language dropdown */}
-            <TouchableOpacity
-              style={styles.languageContainer}
-              onPress={handleLanguagePress}
-            >
+            <TouchableOpacity style={styles.languageContainer} onPress={handleLanguagePress}>
               <Image
-                source={require('../../assets/adaptive-icon.png')} // Replace with your own
+                source={require('../../assets/adaptive-icon.png')} // Replace with your own asset
                 style={styles.flagIcon}
               />
               <Text style={styles.languageText}>{selectedLanguage}</Text>
@@ -131,7 +167,7 @@ export default function SignUpScreen({ navigation }) {
               onChangeText={setEmail}
             />
 
-            {/* Phone field (+91 format) */}
+            {/* Phone field */}
             <Text style={styles.label}>Phone Number</Text>
             <TextInput
               style={styles.input}
@@ -139,7 +175,7 @@ export default function SignUpScreen({ navigation }) {
               keyboardType="phone-pad"
               value={phone}
               onChangeText={(text) => {
-                // Only digits plus '+' sign
+                // Only allow digits and '+'
                 const cleaned = text.replace(/[^0-9+]/g, '');
                 setPhone(cleaned);
               }}
@@ -162,14 +198,11 @@ export default function SignUpScreen({ navigation }) {
             </TouchableOpacity>
 
             {/* Sign Up Button */}
-            <TouchableOpacity
-              style={styles.signUpButton}
-              onPress={handleSignUp}
-            >
+            <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp}>
               <Text style={styles.signUpButtonText}>Sign Up</Text>
             </TouchableOpacity>
 
-            {/* Footer text: T&Cs, Privacy, Already have an account? */}
+            {/* Footer text */}
             <View style={styles.footerContainer}>
               <Text style={styles.footerText}>
                 By continuing, you have read and accepted our{' '}
@@ -223,7 +256,7 @@ export default function SignUpScreen({ navigation }) {
 }
 
 // ============== STYLES ==============
-const CARD_HEIGHT = 500; // A bit taller for more fields
+const CARD_HEIGHT = 500; // Adjust height as needed
 
 const styles = StyleSheet.create({
   container: {
@@ -277,7 +310,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 40,
     padding: 25,
-    paddingBottom: 65, // Extra bottom padding
+    paddingBottom: 65,
     minHeight: CARD_HEIGHT,
     marginTop: 20,
     marginHorizontal: 15,

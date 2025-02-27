@@ -1,5 +1,5 @@
 // LoginScreen.js
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,10 +20,17 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 // ============ Firebase + Recaptcha imports ============
 import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 import { auth } from '../../config/firebaseConfig';  // <-- Your firebaseConfig (must export `auth`)
-import { signInWithPhoneNumber } from 'firebase/auth';
+import { signInWithPhoneNumber, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
+
+// ============ Expo Auth Session Imports ============
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
 
 const { width, height } = Dimensions.get('window');
 const PINK = '#ff5f96';
+
+// Complete any pending auth sessions
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen({ navigation }) {
   const [mobileNumber, setMobileNumber] = useState('');
@@ -37,6 +44,31 @@ export default function LoginScreen({ navigation }) {
   // Sample languages for the modal
   const languages = ['English', 'Hindi', 'Spanish', 'French'];
 
+  // Google sign-in hook (Replace the client IDs with your own)
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    expoClientId: 'YOUR_EXPO_CLIENT_ID.apps.googleusercontent.com',
+    iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com',
+    androidClientId: 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com',
+    webClientId: '704291591905-l12877n9vn4koms6lj9un8fvanb6av0u.apps.googleusercontent.com',
+  });
+
+  // Monitor Google sign-in response
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { idToken, accessToken } = response.authentication;
+      const credential = GoogleAuthProvider.credential(idToken, accessToken);
+      signInWithCredential(auth, credential)
+        .then((userCredential) => {
+          Alert.alert('Success', 'Signed in with Google!');
+          // Optionally navigate to your app’s main screen:
+           navigation.replace('HomeScreen');
+        })
+        .catch((error) => {
+          Alert.alert('Error', error.message);
+        });
+    }
+  }, [response]);
+
   // Toggle language modal
   const handleLanguagePress = () => setShowLanguageModal(true);
   const handleSelectLanguage = (lang) => {
@@ -44,9 +76,10 @@ export default function LoginScreen({ navigation }) {
     setShowLanguageModal(false);
   };
 
-  // Google sign-in placeholder
-  const handleGoogleSignIn = () => {
-    Alert.alert('Google Sign-In', 'Implement your Google sign-in logic here.');
+  // Google sign-in logic
+  const handleGoogleSignIn = async () => {
+    // Initiates the Google sign-in prompt
+    promptAsync();
   };
 
   // Send OTP with reCAPTCHA + phone auth
