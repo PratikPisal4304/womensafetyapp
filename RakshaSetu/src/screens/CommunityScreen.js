@@ -27,6 +27,7 @@ import {
   arrayUnion,
   arrayRemove,
   addDoc,
+  deleteDoc,
   serverTimestamp,
   getDoc,
 } from 'firebase/firestore';
@@ -53,6 +54,11 @@ export default function CommunityScreen() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [imageUri, setImageUri] = useState(null);
+
+  // Comment modal states
+  const [commentModalVisible, setCommentModalVisible] = useState(false);
+  const [selectedPost, setSelectedPost] = useState(null);
+  const [commentText, setCommentText] = useState('');
 
   // 1) Listen to Firestore for community posts in real time
   useEffect(() => {
@@ -111,9 +117,53 @@ export default function CommunityScreen() {
     }
   };
 
-  // 5) Comment placeholder
+  // 5) Comment feature: Open comment modal
   const handleCommentPost = (post) => {
-    Alert.alert('Comment', 'Open a comment screen or show a comment modal.');
+    setSelectedPost(post);
+    setCommentText('');
+    setCommentModalVisible(true);
+  };
+
+  // Submit comment: Save comment in subcollection 'comments' of the post document
+  const handleSubmitComment = async () => {
+    if (!auth.currentUser) {
+      Alert.alert('Error', 'You must be logged in to comment.');
+      return;
+    }
+    if (!commentText.trim()) {
+      Alert.alert('Error', 'Comment cannot be empty.');
+      return;
+    }
+    try {
+      // Fetch user name
+      const userDocRef = doc(db, 'users', auth.currentUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      let userName = 'Anonymous';
+      if (userDocSnap.exists()) {
+        userName = userDocSnap.data().name || 'Anonymous';
+      }
+      await addDoc(collection(db, 'communityPosts', selectedPost.id, 'comments'), {
+        userId: auth.currentUser.uid,
+        userName: userName,
+        comment: commentText,
+        createdAt: serverTimestamp(),
+      });
+      Alert.alert('Success', 'Comment posted!');
+      setCommentModalVisible(false);
+      setCommentText('');
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    }
+  };
+
+  // Delete a post (only if current user owns the post)
+  const handleDeletePost = async (post) => {
+    try {
+      await deleteDoc(doc(db, 'communityPosts', post.id));
+      Alert.alert("Post deleted successfully");
+    } catch (error) {
+      Alert.alert("Error deleting post", error.message);
+    }
   };
 
   // =============== CREATE POST MODAL LOGIC ===============
@@ -145,7 +195,6 @@ export default function CommunityScreen() {
       console.log("Blob created:", blob);
       const filename = `communityImages/${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const storageRef = ref(storage, filename);
-
       const uploadTask = uploadBytesResumable(storageRef, blob);
       await uploadTask; // wait until finished
       const downloadURL = await getDownloadURL(storageRef);
@@ -163,32 +212,26 @@ export default function CommunityScreen() {
       Alert.alert('Error', 'Title and content are required.');
       return;
     }
-
     if (!auth.currentUser) {
       Alert.alert('Error', 'You must be logged in to create a post.');
       return;
     }
-
     try {
       setUploading(true);
-
       // 1) Fetch user doc to get name
       const userDocRef = doc(db, 'users', auth.currentUser.uid);
       const userDocSnap = await getDoc(userDocRef);
-
       let userName = 'Unknown User';
       if (userDocSnap.exists()) {
         const userData = userDocSnap.data();
         userName = userData.name || 'Unknown User';
       }
-
       // 2) If there's an image, upload it
       let imageUrl = null;
       if (imageUri) {
         imageUrl = await uploadImageAsync(imageUri);
         console.log("Image URL to store:", imageUrl);
       }
-
       // 3) Save post to Firestore
       await addDoc(collection(db, 'communityPosts'), {
         userId: auth.currentUser.uid,
@@ -199,7 +242,6 @@ export default function CommunityScreen() {
         likedBy: [],
         createdAt: serverTimestamp(),
       });
-
       Alert.alert('Success', 'Post created!');
       // Reset fields
       setTitle('');
@@ -216,7 +258,6 @@ export default function CommunityScreen() {
   // Cancel the post creation
   const handleCancelPost = () => {
     setIsModalVisible(false);
-    // Clear any form data
     setTitle('');
     setContent('');
     setImageUri(null);
@@ -229,7 +270,6 @@ export default function CommunityScreen() {
       {/* Pink Header */}
       <View style={styles.headerContainer}>
         <Text style={styles.headerTitle}>My Community</Text>
-
         {/* Search Bar */}
         <View style={styles.searchBar}>
           <MaterialIcons name="search" size={24} color="#666" style={{ marginRight: 8 }} />
@@ -267,20 +307,26 @@ export default function CommunityScreen() {
           {posts.map((post) => {
             const likedBy = post.likedBy || [];
             const isLiked = auth.currentUser && likedBy.includes(auth.currentUser.uid);
-
             return (
               <View key={post.id} style={styles.postCard}>
-                {/* Post Header: avatar + userName */}
+                {/* Post Header: avatar, userName, and delete icon if owner */}
                 <View style={styles.postHeader}>
-                  <Image
-                    source={{ uri: "https://via.placeholder.com/40" }}
-                    style={styles.userAvatar}
-                  />
-                  <View style={{ marginLeft: 10 }}>
-                    <Text style={styles.userName}>
-                      {post.userName || "Unknown User"}
-                    </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <Image
+                      source={{ uri: "https://via.placeholder.com/40" }}
+                      style={styles.userAvatar}
+                    />
+                    <View style={{ marginLeft: 10 }}>
+                      <Text style={styles.userName}>
+                        {post.userName || "Unknown User"}
+                      </Text>
+                    </View>
                   </View>
+                  {auth.currentUser && post.userId === auth.currentUser.uid && (
+                    <TouchableOpacity onPress={() => handleDeletePost(post)}>
+                      <Ionicons name="trash" size={20} color="red" />
+                    </TouchableOpacity>
+                  )}
                 </View>
 
                 {/* Title & Content */}
@@ -410,6 +456,46 @@ export default function CommunityScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* COMMENT MODAL */}
+      <Modal
+        visible={commentModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setCommentModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Add a Comment</Text>
+            <TextInput
+              style={[styles.modalInput, { height: 80 }]}
+              placeholder="Enter your comment"
+              placeholderTextColor="#999"
+              value={commentText}
+              onChangeText={setCommentText}
+              multiline
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: "#ccc" }]}
+                onPress={() => setCommentModalVisible(false)}
+              >
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: PINK }]}
+                onPress={handleSubmitComment}
+              >
+                <Text style={styles.modalButtonText}>Submit</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
       <TouchableOpacity
         style={styles.floatingButton}
         onPress={() => navigation.navigate("GeminiChat")}
@@ -454,10 +540,8 @@ const styles = StyleSheet.create({
     color: "#666",
     fontSize: 15,
   },
-
   scrollContainer: { flex: 1, backgroundColor: "#f8f8f8" },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 100 },
-
   section: { marginBottom: 24, marginTop: 20 },
   recentPostsHeader: {
     flexDirection: "row",
@@ -477,7 +561,6 @@ const styles = StyleSheet.create({
     borderColor: PINK,
   },
   createPostButtonText: { color: PINK, fontWeight: "600" },
-
   postCard: {
     backgroundColor: "#fff",
     borderRadius: CARD_RADIUS,
@@ -515,7 +598,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   actionButtonText: { fontSize: 14, color: "#666" },
-
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.3)",
@@ -565,10 +647,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 20,
   },
-  pickImageText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
+  pickImageText: { color: "#fff", fontWeight: "600" },
   modalActions: {
     flexDirection: "row",
     justifyContent: "flex-end",
@@ -579,10 +658,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginLeft: 10,
   },
-  modalButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
+  modalButtonText: { color: "#fff", fontWeight: "600" },
   floatingButton: {
     position: "absolute",
     bottom: 80,
