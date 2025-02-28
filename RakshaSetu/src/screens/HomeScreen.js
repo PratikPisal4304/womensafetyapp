@@ -96,7 +96,7 @@ const HomeScreen = ({ navigation }) => {
             <Text style={styles.sectionTitle}>Add Close people</Text>
             <Text style={styles.sectionSubtitle}>Add close people and friends for sos</Text>
           </View>
-          <TouchableOpacity style={styles.addButton}>
+          <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AddFriends')}>
             <Text style={styles.addButtonText}>Add friends</Text>
             <Ionicons name="person-add" size={20} color="white" />
           </TouchableOpacity>
