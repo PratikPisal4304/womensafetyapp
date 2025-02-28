@@ -23,6 +23,7 @@ const ProfileScreen = ({ navigation }) => {
 
   // The rest of your existing arrays
   const preferences = [
+    { title: 'My Posts', icon: 'account', screen: 'MyPosts' },
     { title: 'Manage Friends', icon: 'account-group', screen: 'ManageFriends' },
     { title: 'Change Language', icon: 'translate', screen: 'ChangeLanguage' },
     { title: 'Notification Settings', icon: 'bell', screen: 'NotificationSettings' },

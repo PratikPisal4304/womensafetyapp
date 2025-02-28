@@ -18,6 +18,7 @@ import FakeCallScreen from "./screens/FakeCallScreen";
 import TrackMeScreen from "./screens/TrackMeScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
+import MyPostsScreen from "./screens/MyPostsScreen";
 import EmergencyHelplineScreen from "./screens/EmergencyHelplineScreen";
 import CommunityScreen from "./screens/CommunityScreen";
 import GeminiChatScreen from "./screens/GeminiChatScreen";
@@ -47,6 +48,7 @@ function ProfileStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="ProfileMain" component={(ProfileScreen)} />
       <Stack.Screen name="EditProfile" component={(EditProfileScreen)} />
+      <Stack.Screen name="MyPosts" component={(MyPostsScreen)} />
       <Stack.Screen name="EmergencyHelpline" component={(EmergencyHelplineScreen)} />
     </Stack.Navigator>
   );
@@ -77,7 +79,7 @@ function FloatingTabBar({ state, descriptors, navigation }) {
   // Example: If inside ProfileStack => EditProfile or EmergencyHelpline
   else if (currentRouteName === "Profile") {
     const childRoute = getFocusedRouteNameFromRoute(state.routes[state.index]) ?? "ProfileMain";
-    if (childRoute === "EditProfile" || childRoute === "EmergencyHelpline") {
+    if (childRoute === "EditProfile" || childRoute === "EmergencyHelpline" || childRoute === "MyPosts") {
       hideTabBar = true;
     }
   }
