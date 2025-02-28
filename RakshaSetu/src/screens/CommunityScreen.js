@@ -59,6 +59,7 @@ export default function CommunityScreen() {
   const [commentModalVisible, setCommentModalVisible] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
   const [commentText, setCommentText] = useState('');
+  const [comments, setComments] = useState([]);
 
   // 1) Listen to Firestore for community posts in real time
   useEffect(() => {
@@ -72,6 +73,24 @@ export default function CommunityScreen() {
     });
     return () => unsubscribe(); // cleanup
   }, []);
+
+  // Subscribe to comments when a post is selected for commenting
+  useEffect(() => {
+    if (selectedPost) {
+      const commentQuery = query(
+        collection(db, 'communityPosts', selectedPost.id, 'comments'),
+        orderBy('createdAt', 'asc')
+      );
+      const unsubscribeComments = onSnapshot(commentQuery, (snapshot) => {
+        const loadedComments = [];
+        snapshot.forEach((docSnap) => {
+          loadedComments.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        setComments(loadedComments);
+      });
+      return () => unsubscribeComments();
+    }
+  }, [selectedPost]);
 
   // 2) Search
   const handleSearchSubmit = () => {
@@ -91,15 +110,9 @@ export default function CommunityScreen() {
       const postRef = doc(db, 'communityPosts', post.id);
 
       if (alreadyLiked) {
-        // remove userId from likedBy
-        await updateDoc(postRef, {
-          likedBy: arrayRemove(userId),
-        });
+        await updateDoc(postRef, { likedBy: arrayRemove(userId) });
       } else {
-        // add userId to likedBy
-        await updateDoc(postRef, {
-          likedBy: arrayUnion(userId),
-        });
+        await updateDoc(postRef, { likedBy: arrayUnion(userId) });
       }
     } catch (error) {
       Alert.alert('Error', error.message);
@@ -124,7 +137,7 @@ export default function CommunityScreen() {
     setCommentModalVisible(true);
   };
 
-  // Submit comment: Save comment in subcollection 'comments' of the post document
+  // Submit comment: Save comment in subcollection 'comments'
   const handleSubmitComment = async () => {
     if (!auth.currentUser) {
       Alert.alert('Error', 'You must be logged in to comment.');
@@ -135,7 +148,6 @@ export default function CommunityScreen() {
       return;
     }
     try {
-      // Fetch user name
       const userDocRef = doc(db, 'users', auth.currentUser.uid);
       const userDocSnap = await getDoc(userDocRef);
       let userName = 'Anonymous';
@@ -149,14 +161,23 @@ export default function CommunityScreen() {
         createdAt: serverTimestamp(),
       });
       Alert.alert('Success', 'Comment posted!');
-      setCommentModalVisible(false);
       setCommentText('');
     } catch (error) {
       Alert.alert('Error', error.message);
     }
   };
 
-  // Delete a post (only if current user owns the post)
+  // Delete comment (only if current user posted the comment)
+  const handleDeleteComment = async (commentId) => {
+    try {
+      await deleteDoc(doc(db, 'communityPosts', selectedPost.id, 'comments', commentId));
+      Alert.alert('Comment deleted');
+    } catch (error) {
+      Alert.alert('Error deleting comment', error.message);
+    }
+  };
+
+  // Delete post (only if current user owns the post)
   const handleDeletePost = async (post) => {
     try {
       await deleteDoc(doc(db, 'communityPosts', post.id));
@@ -167,7 +188,6 @@ export default function CommunityScreen() {
   };
 
   // =============== CREATE POST MODAL LOGIC ===============
-  // Pick image from gallery
   const handlePickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -185,7 +205,6 @@ export default function CommunityScreen() {
     }
   };
 
-  // Upload image to Firebase Storage, get URL
   const uploadImageAsync = async (uri) => {
     if (!uri) return null;
     try {
@@ -196,7 +215,7 @@ export default function CommunityScreen() {
       const filename = `communityImages/${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const storageRef = ref(storage, filename);
       const uploadTask = uploadBytesResumable(storageRef, blob);
-      await uploadTask; // wait until finished
+      await uploadTask;
       const downloadURL = await getDownloadURL(storageRef);
       console.log("Download URL:", downloadURL);
       return downloadURL;
@@ -206,7 +225,6 @@ export default function CommunityScreen() {
     }
   };
 
-  // Actually create the post
   const handleCreatePost = async () => {
     if (!title.trim() || !content.trim()) {
       Alert.alert('Error', 'Title and content are required.');
@@ -218,7 +236,6 @@ export default function CommunityScreen() {
     }
     try {
       setUploading(true);
-      // 1) Fetch user doc to get name
       const userDocRef = doc(db, 'users', auth.currentUser.uid);
       const userDocSnap = await getDoc(userDocRef);
       let userName = 'Unknown User';
@@ -226,13 +243,11 @@ export default function CommunityScreen() {
         const userData = userDocSnap.data();
         userName = userData.name || 'Unknown User';
       }
-      // 2) If there's an image, upload it
       let imageUrl = null;
       if (imageUri) {
         imageUrl = await uploadImageAsync(imageUri);
         console.log("Image URL to store:", imageUrl);
       }
-      // 3) Save post to Firestore
       await addDoc(collection(db, 'communityPosts'), {
         userId: auth.currentUser.uid,
         userName: userName,
@@ -243,7 +258,6 @@ export default function CommunityScreen() {
         createdAt: serverTimestamp(),
       });
       Alert.alert('Success', 'Post created!');
-      // Reset fields
       setTitle('');
       setContent('');
       setImageUri(null);
@@ -255,7 +269,6 @@ export default function CommunityScreen() {
     }
   };
 
-  // Cancel the post creation
   const handleCancelPost = () => {
     setIsModalVisible(false);
     setTitle('');
@@ -270,7 +283,6 @@ export default function CommunityScreen() {
       {/* Pink Header */}
       <View style={styles.headerContainer}>
         <Text style={styles.headerTitle}>My Community</Text>
-        {/* Search Bar */}
         <View style={styles.searchBar}>
           <MaterialIcons name="search" size={24} color="#666" style={{ marginRight: 8 }} />
           <TextInput
@@ -292,7 +304,6 @@ export default function CommunityScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.section}>
-          {/* Row with 'Recent Posts' and 'Create Post' button */}
           <View style={styles.recentPostsHeader}>
             <Text style={styles.sectionTitle}>Recent Posts</Text>
             <TouchableOpacity
@@ -303,13 +314,11 @@ export default function CommunityScreen() {
               <Text style={styles.createPostButtonText}>Create Post</Text>
             </TouchableOpacity>
           </View>
-
           {posts.map((post) => {
             const likedBy = post.likedBy || [];
             const isLiked = auth.currentUser && likedBy.includes(auth.currentUser.uid);
             return (
               <View key={post.id} style={styles.postCard}>
-                {/* Post Header: avatar, userName, and delete icon if owner */}
                 <View style={styles.postHeader}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                     <Image
@@ -328,19 +337,12 @@ export default function CommunityScreen() {
                     </TouchableOpacity>
                   )}
                 </View>
-
-                {/* Title & Content */}
                 <Text style={styles.postTitle}>{post.title}</Text>
                 <Text style={styles.postContent}>{post.content}</Text>
-
-                {/* If there's an imageUrl, show media */}
                 {post.imageUrl ? (
                   <Image source={{ uri: post.imageUrl }} style={styles.postImage} />
                 ) : null}
-
-                {/* Like/Comment/Share row */}
                 <View style={styles.actionRow}>
-                  {/* Like */}
                   <TouchableOpacity
                     style={styles.actionButton}
                     onPress={() => handleLikeToggle(post)}
@@ -355,8 +357,6 @@ export default function CommunityScreen() {
                       {likedBy.length > 0 ? likedBy.length : ""}
                     </Text>
                   </TouchableOpacity>
-
-                  {/* Comment */}
                   <TouchableOpacity
                     style={styles.actionButton}
                     onPress={() => handleCommentPost(post)}
@@ -369,8 +369,6 @@ export default function CommunityScreen() {
                     />
                     <Text style={styles.actionButtonText}>Comment</Text>
                   </TouchableOpacity>
-
-                  {/* Share */}
                   <TouchableOpacity
                     style={styles.actionButton}
                     onPress={() => handleSharePost(post)}
@@ -403,8 +401,6 @@ export default function CommunityScreen() {
         >
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Create New Post</Text>
-
-            {/* Title input */}
             <TextInput
               style={styles.modalInput}
               placeholder="Title"
@@ -412,8 +408,6 @@ export default function CommunityScreen() {
               value={title}
               onChangeText={setTitle}
             />
-
-            {/* Content input */}
             <TextInput
               style={[styles.modalInput, { height: 80 }]}
               placeholder="What's on your mind?"
@@ -422,19 +416,13 @@ export default function CommunityScreen() {
               onChangeText={setContent}
               multiline
             />
-
-            {/* Image preview (if any) */}
             {imageUri ? (
               <Image source={{ uri: imageUri }} style={styles.previewImage} />
             ) : null}
-
-            {/* Pick image button */}
             <TouchableOpacity style={styles.pickImageButton} onPress={handlePickImage}>
               <Ionicons name="image-outline" size={20} color="#fff" style={{ marginRight: 6 }} />
               <Text style={styles.pickImageText}>Pick an Image</Text>
             </TouchableOpacity>
-
-            {/* Action buttons row */}
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: "#ccc" }]}
@@ -442,7 +430,6 @@ export default function CommunityScreen() {
               >
                 <Text style={styles.modalButtonText}>Cancel</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: PINK, opacity: uploading ? 0.6 : 1 }]}
                 onPress={handleCreatePost}
@@ -457,7 +444,7 @@ export default function CommunityScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* COMMENT MODAL */}
+      {/* COMMENT MODAL with KeyboardAvoidingView */}
       <Modal
         visible={commentModalVisible}
         transparent
@@ -469,29 +456,44 @@ export default function CommunityScreen() {
           style={styles.modalOverlay}
         >
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Add a Comment</Text>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Comments</Text>
+              <TouchableOpacity
+                onPress={() => setCommentModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.safetyContent}>
+              {comments.map((comment) => (
+                <View key={comment.id} style={styles.commentItem}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.commentUser}>{comment.userName}</Text>
+                    <Text style={styles.commentText}>{comment.comment}</Text>
+                  </View>
+                  {auth.currentUser && comment.userId === auth.currentUser.uid && (
+                    <TouchableOpacity onPress={() => handleDeleteComment(comment.id)}>
+                      <Ionicons name="trash" size={18} color="red" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+            </ScrollView>
             <TextInput
-              style={[styles.modalInput, { height: 80 }]}
-              placeholder="Enter your comment"
+              style={styles.modalInput}
+              placeholder="Add a comment..."
               placeholderTextColor="#999"
               value={commentText}
               onChangeText={setCommentText}
               multiline
             />
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: "#ccc" }]}
-                onPress={() => setCommentModalVisible(false)}
-              >
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: PINK }]}
-                onPress={handleSubmitComment}
-              >
-                <Text style={styles.modalButtonText}>Submit</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: PINK }]}
+              onPress={handleSubmitComment}
+            >
+              <Text style={styles.modalButtonText}>Submit Comment</Text>
+            </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -588,37 +590,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     resizeMode: "cover",
   },
-  actionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 6,
-  },
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
+  actionRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 6 },
+  actionButton: { flexDirection: "row", alignItems: "center" },
   actionButtonText: { fontSize: 14, color: "#666" },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.3)",
-    justifyContent: "center",
-    padding: 20,
-  },
-  modalContainer: {
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 20,
-    maxHeight: "90%",
-    alignSelf: "center",
-    width: "100%",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 15,
-    color: "#333",
-    textAlign: "center",
-  },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.3)", justifyContent: "center", padding: 20 },
+  modalContainer: { backgroundColor: "#fff", borderRadius: 15, padding: 20, maxHeight: "90%", alignSelf: "center", width: "100%" },
+  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 15, color: "#333", textAlign: "center" },
   modalInput: {
     backgroundColor: "#f8f8f8",
     borderRadius: 8,
@@ -630,13 +607,7 @@ const styles = StyleSheet.create({
     borderColor: "#eee",
     marginBottom: 10,
   },
-  previewImage: {
-    width: "100%",
-    height: 200,
-    borderRadius: 8,
-    resizeMode: "cover",
-    marginBottom: 10,
-  },
+  previewImage: { width: "100%", height: 200, borderRadius: 8, resizeMode: "cover", marginBottom: 10 },
   pickImageButton: {
     backgroundColor: "#999",
     flexDirection: "row",
@@ -648,16 +619,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   pickImageText: { color: "#fff", fontWeight: "600" },
-  modalActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-  },
-  modalButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    marginLeft: 10,
-  },
+  modalActions: { flexDirection: "row", justifyContent: "flex-end" },
+  modalButton: { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, marginLeft: 10 },
   modalButtonText: { color: "#fff", fontWeight: "600" },
   floatingButton: {
     position: "absolute",
@@ -676,4 +639,15 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     zIndex: 100,
   },
+  commentItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+    marginBottom: 4,
+  },
+  commentUser: { fontWeight: "bold", color: "#333" },
+  commentText: { flex: 1, marginLeft: 10, color: "#555" },
 });
