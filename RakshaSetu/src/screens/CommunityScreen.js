@@ -1,4 +1,3 @@
-// CommunityScreen.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -12,6 +11,8 @@ import {
   Alert,
   Share,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
@@ -29,16 +30,12 @@ import {
   serverTimestamp,
   getDoc,
 } from 'firebase/firestore';
-
 import * as ImagePicker from 'expo-image-picker';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { useNavigation } from '@react-navigation/native';
 
-
 import { auth, db, storage } from '../../config/firebaseConfig'; 
 // Make sure 'storage' is exported from firebaseConfig if using Firebase Storage
-
-
 
 const PINK = '#ff5f96';
 const CARD_RADIUS = 10;
@@ -132,8 +129,9 @@ export default function CommunityScreen() {
       allowsEditing: true,
       quality: 0.7,
     });
-    if (!result.cancelled) {
-      setImageUri(result.uri);
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      console.log("Picked image URI:", result.assets[0].uri);
+      setImageUri(result.assets[0].uri);
     }
   };
 
@@ -141,14 +139,17 @@ export default function CommunityScreen() {
   const uploadImageAsync = async (uri) => {
     if (!uri) return null;
     try {
+      console.log("Uploading image from URI:", uri);
       const response = await fetch(uri);
       const blob = await response.blob();
+      console.log("Blob created:", blob);
       const filename = `communityImages/${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const storageRef = ref(storage, filename);
 
       const uploadTask = uploadBytesResumable(storageRef, blob);
       await uploadTask; // wait until finished
       const downloadURL = await getDownloadURL(storageRef);
+      console.log("Download URL:", downloadURL);
       return downloadURL;
     } catch (error) {
       Alert.alert('Upload Error', error.message);
@@ -178,14 +179,14 @@ export default function CommunityScreen() {
       let userName = 'Unknown User';
       if (userDocSnap.exists()) {
         const userData = userDocSnap.data();
-        userName = userData.name || 'Unknown User'; 
-        // or use whatever field you store name as
+        userName = userData.name || 'Unknown User';
       }
 
       // 2) If there's an image, upload it
       let imageUrl = null;
       if (imageUri) {
         imageUrl = await uploadImageAsync(imageUri);
+        console.log("Image URL to store:", imageUrl);
       }
 
       // 3) Save post to Firestore
@@ -272,12 +273,12 @@ export default function CommunityScreen() {
                 {/* Post Header: avatar + userName */}
                 <View style={styles.postHeader}>
                   <Image
-                    source={{ uri: 'https://via.placeholder.com/40' }} // or user’s avatar
+                    source={{ uri: "https://via.placeholder.com/40" }}
                     style={styles.userAvatar}
                   />
                   <View style={{ marginLeft: 10 }}>
                     <Text style={styles.userName}>
-                      {post.userName || 'Unknown User'}
+                      {post.userName || "Unknown User"}
                     </Text>
                   </View>
                 </View>
@@ -299,13 +300,13 @@ export default function CommunityScreen() {
                     onPress={() => handleLikeToggle(post)}
                   >
                     <Ionicons
-                      name={isLiked ? 'heart' : 'heart-outline'}
+                      name={isLiked ? "heart" : "heart-outline"}
                       size={20}
-                      color={isLiked ? 'red' : '#666'}
+                      color={isLiked ? "red" : "#666"}
                       style={{ marginRight: 5 }}
                     />
                     <Text style={styles.actionButtonText}>
-                      {likedBy.length > 0 ? likedBy.length : ''}
+                      {likedBy.length > 0 ? likedBy.length : ""}
                     </Text>
                   </TouchableOpacity>
 
@@ -343,14 +344,17 @@ export default function CommunityScreen() {
         </View>
       </KeyboardAwareScrollView>
 
-      {/* CREATE POST MODAL */}
+      {/* CREATE POST MODAL with KeyboardAvoidingView */}
       <Modal
         visible={isModalVisible}
         transparent
         animationType="slide"
         onRequestClose={handleCancelPost}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Create New Post</Text>
 
@@ -387,7 +391,7 @@ export default function CommunityScreen() {
             {/* Action buttons row */}
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: '#ccc' }]}
+                style={[styles.modalButton, { backgroundColor: "#ccc" }]}
                 onPress={handleCancelPost}
               >
                 <Text style={styles.modalButtonText}>Cancel</Text>
@@ -399,16 +403,16 @@ export default function CommunityScreen() {
                 disabled={uploading}
               >
                 <Text style={styles.modalButtonText}>
-                  {uploading ? 'Posting...' : 'Post'}
+                  {uploading ? "Posting..." : "Post"}
                 </Text>
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
       <TouchableOpacity
         style={styles.floatingButton}
-        onPress={() => navigation.navigate('GeminiChat')}
+        onPress={() => navigation.navigate("GeminiChat")}
       >
         <Ionicons name="sparkles" size={28} color="#fff" />
       </TouchableOpacity>
@@ -416,9 +420,8 @@ export default function CommunityScreen() {
   );
 }
 
-// ================== STYLES ==================
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f8f8' },
+  container: { flex: 1, backgroundColor: "#f8f8f8" },
   headerContainer: {
     backgroundColor: PINK,
     borderBottomLeftRadius: 40,
@@ -429,157 +432,146 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
     marginBottom: 20,
   },
   searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 15,
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
   },
   searchInput: {
     flex: 1,
-    color: '#666',
+    color: "#666",
     fontSize: 15,
   },
 
-  scrollContainer: { flex: 1, backgroundColor: '#f8f8f8' },
+  scrollContainer: { flex: 1, backgroundColor: "#f8f8f8" },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 100 },
 
-  section: {
-    marginBottom: 24,
-    marginTop: 20,
-  },
+  section: { marginBottom: 24, marginTop: 20 },
   recentPostsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
+  sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#333" },
   createPostButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: PINK,
   },
-  createPostButtonText: {
-    color: PINK,
-    fontWeight: '600',
-  },
+  createPostButtonText: { color: PINK, fontWeight: "600" },
 
   postCard: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: CARD_RADIUS,
     padding: 16,
     marginBottom: 16,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
   },
   postHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 10,
   },
   userAvatar: { width: 40, height: 40, borderRadius: 20 },
-  userName: { fontSize: 15, fontWeight: '600', color: '#333' },
-  postTitle: { fontSize: 16, fontWeight: '700', color: '#000', marginBottom: 4 },
-  postContent: { fontSize: 14, color: '#444', marginBottom: 8 },
+  userName: { fontSize: 15, fontWeight: "600", color: "#333" },
+  postTitle: { fontSize: 16, fontWeight: "700", color: "#000", marginBottom: 4 },
+  postContent: { fontSize: 14, color: "#444", marginBottom: 8 },
   postImage: {
-    width: '100%',
+    width: "100%",
     height: 180,
     borderRadius: 8,
     marginBottom: 8,
-    resizeMode: 'cover',
+    resizeMode: "cover",
   },
   actionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: 6,
   },
   actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
-  actionButtonText: { fontSize: 14, color: '#666' },
+  actionButtonText: { fontSize: 14, color: "#666" },
 
-  // ============ Modal Styles ============
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
     padding: 20,
   },
   modalContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 15,
     padding: 20,
-    maxHeight: '90%',
-    alignSelf: 'center',
-    width: '100%',
+    maxHeight: "90%",
+    alignSelf: "center",
+    width: "100%",
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 15,
-    color: '#333',
-    textAlign: 'center',
+    color: "#333",
+    textAlign: "center",
   },
   modalInput: {
-    backgroundColor: '#f8f8f8',
+    backgroundColor: "#f8f8f8",
     borderRadius: 8,
     paddingHorizontal: 15,
     paddingVertical: 10,
     fontSize: 15,
-    color: '#333',
+    color: "#333",
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: "#eee",
     marginBottom: 10,
   },
   previewImage: {
-    width: '100%',
+    width: "100%",
     height: 200,
     borderRadius: 8,
-    resizeMode: 'cover',
+    resizeMode: "cover",
     marginBottom: 10,
   },
   pickImageButton: {
-    backgroundColor: '#999',
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
+    backgroundColor: "#999",
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
     paddingVertical: 10,
     paddingHorizontal: 15,
     borderRadius: 8,
     marginBottom: 20,
   },
   pickImageText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: "#fff",
+    fontWeight: "600",
   },
   modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "flex-end",
   },
   modalButton: {
     paddingVertical: 12,
@@ -588,21 +580,21 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   modalButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: "#fff",
+    fontWeight: "600",
   },
   floatingButton: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 80,
     right: 20,
     backgroundColor: PINK,
     width: 56,
     height: 56,
     borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
