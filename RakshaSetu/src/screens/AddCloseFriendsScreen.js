@@ -19,6 +19,8 @@ import {
   updateDoc 
 } from 'firebase/firestore';
 import { auth, db } from '../../config/firebaseConfig';
+import { Firestore } from 'firebase/firestore';
+
 
 export default function AddFriendsScreen() {
 
@@ -74,16 +76,28 @@ export default function AddFriendsScreen() {
   const saveSelectedContacts = async () => {
     try {
       const user = auth.currentUser;
+      console.log("User ID:", user?.uid);
+      console.log("Selected Contacts:", selectedContacts);
+      
       if (user) {
-        await updateDoc(doc(db, 'users', user.uid), {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (!userDoc.exists()) {
+          console.error('User document does not exist!');
+          return;
+        }
+  
+        await updateDoc(userDocRef, {
           addedFriends: selectedContacts,
         });
-        router.back();
+        console.log("Contacts successfully saved!");
+        alert('Contacts Saved Successfully');
       }
     } catch (error) {
       console.error('Error saving contacts:', error);
     }
   };
+  
 
   const handleSearch = (query) => {
     setSearchQuery(query);
@@ -165,6 +179,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF69B4',
     padding: 16,
     alignItems: 'center',
+    // marginVertical: 70,
+    // bottom: 60,
   },
   saveButtonText: {
     color: '#fff',

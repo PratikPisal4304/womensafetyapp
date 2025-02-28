@@ -74,7 +74,7 @@ function FloatingTabBar({ state, descriptors, navigation }) {
   // Example: If inside HomeStack => FakeCall
   if (currentRouteName === "Home") {
     const childRoute = getFocusedRouteNameFromRoute(state.routes[state.index]) ?? "HomeMain";
-    if (childRoute === "FakeCall") {
+    if (childRoute === "FakeCall" || childRoute === "AddFriends") {
       hideTabBar = true;
     }
   }
