@@ -1,4 +1,3 @@
-// ProfileScreen.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -8,20 +7,19 @@ import {
   StyleSheet,
   Image,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-
-// 1) Import Firestore + Auth
 import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../../config/firebaseConfig'; // <-- Adjust path if needed
+import { auth, db } from '../../config/firebaseConfig'; // Adjust path if needed
 
 const ProfileScreen = ({ navigation }) => {
-  // 2) State for user profile data
-  //    Provide initial fallback (e.g., 'Lucy') so UI doesn't break before data loads
+  // State for user profile data
   const [name, setName] = useState('Lucy');
   const [phone, setPhone] = useState('+91 12345 678910');
+  const [isLoading, setIsLoading] = useState(true);
 
-  // The rest of your existing arrays
+  // Preferences and More arrays remain unchanged
   const preferences = [
     { title: 'My Posts', icon: 'account', screen: 'MyPosts' },
     { title: 'Manage Friends', icon: 'account-group', screen: 'ManageFriends' },
@@ -36,26 +34,32 @@ const ProfileScreen = ({ navigation }) => {
     { title: 'About Us', icon: 'information', screen: 'AboutUs' },
   ];
 
-  // 3) On mount, fetch Firestore doc for current user
+  // Fetch Firestore doc for current user on mount
   useEffect(() => {
-    const user = auth.currentUser;
-    if (!user) return; // If not logged in, skip
-
-    (async () => {
+    const fetchUserData = async () => {
+      const user = auth.currentUser;
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
       try {
         const docRef = doc(db, 'users', user.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
-          // If fields exist, set them into local state
           if (data.name) setName(data.name);
           if (data.phone) setPhone(data.phone);
-          // add others as needed
+        } else {
+          Alert.alert('No Data', 'No profile data found for this user.');
         }
       } catch (error) {
         Alert.alert('Error', error.message);
+      } finally {
+        setIsLoading(false);
       }
-    })();
+    };
+
+    fetchUserData();
   }, []);
 
   const handleLogout = () => {
@@ -66,7 +70,7 @@ const ProfileScreen = ({ navigation }) => {
         {
           text: 'OK',
           onPress: () => {
-            // Place any logout logic here (e.g., clear tokens, etc.)
+            // Place any logout logic here (e.g., auth.signOut())
             navigation.replace('Login');
           },
         },
@@ -74,6 +78,15 @@ const ProfileScreen = ({ navigation }) => {
       { cancelable: false }
     );
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#ff5f96" />
+        <Text style={styles.loadingText}>Loading Profile...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -143,12 +156,18 @@ const ProfileScreen = ({ navigation }) => {
 
 /* =========================
           STYLES
-   ========================= */
+========================= */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: { fontSize: 16, color: '#666', marginTop: 10 },
   headerContainer: {
     backgroundColor: '#ff5f96',
     alignItems: 'center',

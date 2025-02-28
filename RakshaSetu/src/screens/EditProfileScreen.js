@@ -1,4 +1,3 @@
-// EditProfileScreen.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -41,7 +40,8 @@ const EditProfileScreen = ({ navigation }) => {
           if (userDoc.exists()) {
             const data = userDoc.data();
             setName(data.name || '');
-            setPhone(data.phone || '');
+            // Use Firestore phone field if available, otherwise fallback to auth.currentUser.phoneNumber
+            setPhone(data.phone || user.phoneNumber || '');
             setEmail(data.email || '');
             setAddress(data.address || '');
             setGender(data.gender || '');
@@ -262,7 +262,6 @@ const EditProfileScreen = ({ navigation }) => {
   );
 };
 
-// Updated Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -297,11 +296,6 @@ const styles = StyleSheet.create({
   selectedGenderText: {
     color: '#fff',
     fontWeight: '500',
-  },
-  // ... keep other styles the same ...
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   headerContainer: {
     backgroundColor: '#ff5f96',
@@ -375,7 +369,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     elevation: 3,
-    // iOS shadow
     shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowOffset: { width: 0, height: 2 },
