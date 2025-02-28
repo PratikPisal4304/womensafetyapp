@@ -30,6 +30,7 @@ import {
   deleteDoc,
   serverTimestamp,
   getDoc,
+  increment,
 } from 'firebase/firestore';
 import * as ImagePicker from 'expo-image-picker';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
@@ -40,6 +41,16 @@ import { auth, db, storage } from '../../config/firebaseConfig';
 
 const PINK = '#ff5f96';
 const CARD_RADIUS = 10;
+
+// Helper function to format Firestore timestamps into local date strings.
+const formatTimestamp = (timestamp) => {
+  if (!timestamp) return "";
+  if (timestamp.seconds) {
+    const date = new Date(timestamp.seconds * 1000);
+    return date.toLocaleDateString();
+  }
+  return new Date(timestamp).toLocaleDateString();
+};
 
 export default function CommunityScreen() {
   const navigation = useNavigation();
@@ -71,7 +82,7 @@ export default function CommunityScreen() {
       });
       setPosts(loadedPosts);
     });
-    return () => unsubscribe(); // cleanup
+    return () => unsubscribe();
   }, []);
 
   // Subscribe to comments when a post is selected for commenting
@@ -108,7 +119,6 @@ export default function CommunityScreen() {
       const userId = auth.currentUser.uid;
       const alreadyLiked = post.likedBy?.includes(userId);
       const postRef = doc(db, 'communityPosts', post.id);
-
       if (alreadyLiked) {
         await updateDoc(postRef, { likedBy: arrayRemove(userId) });
       } else {
@@ -137,7 +147,7 @@ export default function CommunityScreen() {
     setCommentModalVisible(true);
   };
 
-  // Submit comment: Save comment in subcollection 'comments'
+  // Submit comment: Save comment in subcollection 'comments' and increment commentCount
   const handleSubmitComment = async () => {
     if (!auth.currentUser) {
       Alert.alert('Error', 'You must be logged in to comment.');
@@ -154,12 +164,16 @@ export default function CommunityScreen() {
       if (userDocSnap.exists()) {
         userName = userDocSnap.data().name || 'Anonymous';
       }
+      // Add comment to subcollection
       await addDoc(collection(db, 'communityPosts', selectedPost.id, 'comments'), {
         userId: auth.currentUser.uid,
         userName: userName,
         comment: commentText,
         createdAt: serverTimestamp(),
       });
+      // Update post's commentCount field by incrementing it by 1.
+      const postRef = doc(db, 'communityPosts', selectedPost.id);
+      await updateDoc(postRef, { commentCount: increment(1) });
       Alert.alert('Success', 'Comment posted!');
       setCommentText('');
     } catch (error) {
@@ -167,10 +181,12 @@ export default function CommunityScreen() {
     }
   };
 
-  // Delete comment (only if current user posted the comment)
+  // Delete comment: Remove comment document and decrement commentCount
   const handleDeleteComment = async (commentId) => {
     try {
       await deleteDoc(doc(db, 'communityPosts', selectedPost.id, 'comments', commentId));
+      const postRef = doc(db, 'communityPosts', selectedPost.id);
+      await updateDoc(postRef, { commentCount: increment(-1) });
       Alert.alert('Comment deleted');
     } catch (error) {
       Alert.alert('Error deleting comment', error.message);
@@ -248,6 +264,7 @@ export default function CommunityScreen() {
         imageUrl = await uploadImageAsync(imageUri);
         console.log("Image URL to store:", imageUrl);
       }
+      // Save post with initial commentCount of 0.
       await addDoc(collection(db, 'communityPosts'), {
         userId: auth.currentUser.uid,
         userName: userName,
@@ -255,6 +272,7 @@ export default function CommunityScreen() {
         content: content,
         imageUrl: imageUrl,
         likedBy: [],
+        commentCount: 0,
         createdAt: serverTimestamp(),
       });
       Alert.alert('Success', 'Post created!');
@@ -329,6 +347,9 @@ export default function CommunityScreen() {
                       <Text style={styles.userName}>
                         {post.userName || "Unknown User"}
                       </Text>
+                      <Text style={styles.dateText}>
+                        Posted on: {formatTimestamp(post.createdAt)}
+                      </Text>
                     </View>
                   </View>
                   {auth.currentUser && post.userId === auth.currentUser.uid && (
@@ -367,7 +388,9 @@ export default function CommunityScreen() {
                       color="#666"
                       style={{ marginRight: 5 }}
                     />
-                    <Text style={styles.actionButtonText}>Comment</Text>
+                    <Text style={styles.actionButtonText}>
+                      {post.commentCount ? post.commentCount : 0}
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.actionButton}
@@ -471,6 +494,9 @@ export default function CommunityScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.commentUser}>{comment.userName}</Text>
                     <Text style={styles.commentText}>{comment.comment}</Text>
+                    <Text style={styles.commentDate}>
+                      {formatTimestamp(comment.createdAt)}
+                    </Text>
                   </View>
                   {auth.currentUser && comment.userId === auth.currentUser.uid && (
                     <TouchableOpacity onPress={() => handleDeleteComment(comment.id)}>
@@ -537,11 +563,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
   },
-  searchInput: {
-    flex: 1,
-    color: "#666",
-    fontSize: 15,
-  },
+  searchInput: { flex: 1, color: "#666", fontSize: 15 },
   scrollContainer: { flex: 1, backgroundColor: "#f8f8f8" },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 100 },
   section: { marginBottom: 24, marginTop: 20 },
@@ -581,6 +603,7 @@ const styles = StyleSheet.create({
   },
   userAvatar: { width: 40, height: 40, borderRadius: 20 },
   userName: { fontSize: 15, fontWeight: "600", color: "#333" },
+  dateText: { fontSize: 12, color: "#999", marginTop: 4 },
   postTitle: { fontSize: 16, fontWeight: "700", color: "#000", marginBottom: 4 },
   postContent: { fontSize: 14, color: "#444", marginBottom: 8 },
   postImage: {
@@ -650,4 +673,5 @@ const styles = StyleSheet.create({
   },
   commentUser: { fontWeight: "bold", color: "#333" },
   commentText: { flex: 1, marginLeft: 10, color: "#555" },
+  commentDate: { fontSize: 12, color: "#999", marginTop: 4 },
 });
