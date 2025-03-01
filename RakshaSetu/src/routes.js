@@ -17,6 +17,7 @@ import HomeScreen from "./screens/HomeScreen";
 import FakeCallScreen from "./screens/FakeCallScreen";
 import AddFriendsScreen from "./screens/AddCloseFriendsScreen";
 import TrackMeScreen from "./screens/TrackMeScreen";
+import SOSScreen from "./screens/SOSScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
 import MyPostsScreen from "./screens/MyPostsScreen";
@@ -43,6 +44,7 @@ function HomeStack() {
     </Stack.Navigator>
   );
 }
+
 
 /** ========== Profile Stack ========== **/
 function ProfileStack() {
@@ -179,7 +181,7 @@ function MainTabs() {
     >
       <Tab.Screen name="Home" component={HomeStack} />
       <Tab.Screen name="Navigation" component={TrackMeScreen} options={{ title: "Track Me" }} />
-      <Tab.Screen name="SOS" component={HomeStack} />
+      <Tab.Screen name="SOS" component={SOSScreen} />
       <Tab.Screen name="Community" component={CommunityStack} />
       <Tab.Screen name="Profile" component={ProfileStack} />
     </Tab.Navigator>
