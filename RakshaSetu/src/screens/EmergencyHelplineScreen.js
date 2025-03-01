@@ -14,6 +14,7 @@ const HELPLINES = [
   { id: '2', number: '181', label: 'Women Helpline', icon: require('../../assets/womenhelp.png') },
   { id: '3', number: '108', label: 'Local Ambulance', icon: require('../../assets/ambulance.png') },
   { id: '4', number: '101', label: 'Fire & Rescue Services', icon: require('../../assets/firerescue.png') },
+  { id: '5', number: '1930', label: 'Cyber Crime', icon: require('../../assets/cybercrime.png') },
 ];
 
 const EmergencyHelplineScreen = () => {
