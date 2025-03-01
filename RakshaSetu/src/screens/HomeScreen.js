@@ -102,6 +102,23 @@ const HomeScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
+        {/* Skill Development */}        
+        <TouchableOpacity style={styles.journeySection} onPress={() => navigation.navigate('SkillDevelopment')}>
+          <View style={styles.journeyContent}>
+            <Image
+              source={require('../../assets/skill.png')}
+              style={styles.journeyIcon}
+            />
+            <View>
+              <Text style={styles.journeyTitle}>Skill Development</Text>
+              <Text style={styles.journeySubtitle}>
+                Learn Skills
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="black" />
+        </TouchableOpacity>
+
         {/* Journey Section */}
         <TouchableOpacity style={styles.journeySection}>
           <View style={styles.journeyContent}>

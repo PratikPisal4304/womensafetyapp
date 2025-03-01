@@ -16,6 +16,7 @@ import TellUsAboutYourselfScreen from "./screens/TellUsAboutYourselfScreen";
 import HomeScreen from "./screens/HomeScreen";
 import FakeCallScreen from "./screens/FakeCallScreen";
 import AddFriendsScreen from "./screens/AddCloseFriendsScreen";
+import SkillDevelopmentScreen from "./screens/SkillDevelopmentScreen";
 import TrackMeScreen from "./screens/TrackMeScreen";
 import SOSScreen from "./screens/SOSScreen";
 import ProfileScreen from "./screens/ProfileScreen";
@@ -41,6 +42,7 @@ function HomeStack() {
       <Stack.Screen name="HomeMain" component={HomeScreen} />
       <Stack.Screen name="FakeCall" component={FakeCallScreen} />
       <Stack.Screen name="AddFriends" component={AddFriendsScreen} />
+      <Stack.Screen name="SkillDevelopment" component={SkillDevelopmentScreen} />
     </Stack.Navigator>
   );
 }
