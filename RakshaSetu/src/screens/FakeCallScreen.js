@@ -9,6 +9,7 @@ import {
   ScrollView,
   StatusBar,
   Modal,
+  TextInput,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -59,8 +60,8 @@ function ActiveCallScreen({ contact, onEndCall }) {
 }
 
 export default function FakeCallScreen({ navigation }) {
-  // Sample list of contacts
-  const [contacts] = useState([
+  // Contacts state
+  const [contacts, setContacts] = useState([
     {
       id: '1',
       name: 'Mom',
@@ -75,22 +76,66 @@ export default function FakeCallScreen({ navigation }) {
     },
   ]);
 
-  // State to hold the incoming call (if any) and active call status
+  // States for incoming and active call
   const [activeCall, setActiveCall] = useState(null);
   const [inCall, setInCall] = useState(null);
-  // Countdown timer for auto-decline (in seconds)
   const [countdown, setCountdown] = useState(15);
-  // Ringtone reference for playback control
   const ringtoneRef = useRef(null);
 
-  // Navigation and UI actions
-  const handleBack = () => navigation.goBack();
-  const handleAddContact = () =>
-    Alert.alert('Add Contact', 'This would open the add contact screen.');
-  const handleEditContact = (contact) =>
-    Alert.alert('Edit Contact', `Editing contact: ${contact.name}`);
+  // States for add/edit contact modal
+  const [contactModalVisible, setContactModalVisible] = useState(false);
+  const [currentContact, setCurrentContact] = useState({ name: '', phone: '', avatar: '' });
+  const [isEditing, setIsEditing] = useState(false);
 
-  // When "Call now" is pressed, select a random contact and simulate an incoming call
+  // Navigation and basic actions
+  const handleBack = () => navigation.goBack();
+
+  // Open modal to add a new contact
+  const handleAddContact = () => {
+    setIsEditing(false);
+    setCurrentContact({ name: '', phone: '', avatar: '' });
+    setContactModalVisible(true);
+  };
+
+  // Open modal to edit an existing contact
+  const handleEditContact = (contact) => {
+    setIsEditing(true);
+    setCurrentContact(contact);
+    setContactModalVisible(true);
+  };
+
+  // Save the contact (add or update)
+  const handleSaveContact = () => {
+    if (!currentContact.name.trim()) {
+      Alert.alert('Error', 'Name is required.');
+      return;
+    }
+    if (!currentContact.phone.trim()) {
+      Alert.alert('Error', 'Phone is required.');
+      return;
+    }
+    if (isEditing) {
+      setContacts((prev) =>
+        prev.map((c) => (c.id === currentContact.id ? currentContact : c))
+      );
+    } else {
+      const newContact = {
+        ...currentContact,
+        id: Date.now().toString(),
+        avatar:
+          currentContact.avatar ||
+          'https://via.placeholder.com/50/FFC0CB/000000?text=New',
+      };
+      setContacts((prev) => [...prev, newContact]);
+    }
+    setContactModalVisible(false);
+  };
+
+  const handleCancelContact = () => {
+    setContactModalVisible(false);
+  };
+
+  // Fake call logic: select a random contact and simulate incoming call
   const handleCallNow = () => {
     if (contacts.length === 0) {
       Alert.alert('No contacts', 'Please add a contact to simulate a fake call.');
@@ -100,25 +145,22 @@ export default function FakeCallScreen({ navigation }) {
     setActiveCall(contacts[randomIndex]);
   };
 
-  // Answer the incoming call → switch to the active call screen
   const handleAnswerCall = () => {
     setActiveCall(null);
     setInCall(activeCall);
   };
 
-  // Decline the call and clear the incoming call state
   const handleDeclineCall = () => {
     setActiveCall(null);
     Alert.alert('Call Declined', 'You have declined the call.');
   };
 
-  // End an active call
   const handleEndCall = () => {
     setInCall(null);
     Alert.alert('Call Ended', 'The call has ended.');
   };
 
-  // Countdown timer effect for incoming call (auto-decline after 15 seconds)
+  // Countdown timer effect for incoming call
   useEffect(() => {
     let timer;
     if (activeCall) {
@@ -137,12 +179,12 @@ export default function FakeCallScreen({ navigation }) {
     return () => timer && clearInterval(timer);
   }, [activeCall]);
 
-  // Ringtone playback effect using Expo Audio API
+  // Ringtone effect using Expo Audio API
   useEffect(() => {
     async function playRingtone() {
       try {
         const { sound } = await Audio.Sound.createAsync(
-          require('../../assets/ringtone.mp3') // Adjust the path as needed
+          require('../../assets/ringtone.mp3') // Adjust path if needed
         );
         ringtoneRef.current = sound;
         await sound.setIsLoopingAsync(true);
@@ -167,7 +209,7 @@ export default function FakeCallScreen({ navigation }) {
     };
   }, [activeCall]);
 
-  // If an active call is ongoing, display the ActiveCallScreen component
+  // If in active call, show the ActiveCallScreen component
   if (inCall) {
     return <ActiveCallScreen contact={inCall} onEndCall={handleEndCall} />;
   }
@@ -176,7 +218,7 @@ export default function FakeCallScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={PINK_BG} />
 
-      {/* Header with back arrow and title */}
+      {/* Header */}
       <View style={styles.headerRow}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <Ionicons name="arrow-back" size={20} color="#fff" />
@@ -190,7 +232,7 @@ export default function FakeCallScreen({ navigation }) {
         uncomfortable or risky situations.
       </Text>
 
-      {/* Scrollable list of contacts */}
+      {/* Contact List */}
       <ScrollView style={styles.contactList} contentContainerStyle={{ paddingBottom: 140 }}>
         {contacts.map((contact) => (
           <View key={contact.id} style={styles.contactCard}>
@@ -219,9 +261,10 @@ export default function FakeCallScreen({ navigation }) {
         <Text style={styles.callButtonText}>Call now</Text>
       </TouchableOpacity>
 
-      {/* Informational note */}
+      {/* Informational Note */}
       <Text style={styles.note}>
-        Note: The Fake Call feature is designed to help you stay safe by giving you a quick and discreet way to exit any uncomfortable situation.
+        Note: The Fake Call feature is designed to help you stay safe by giving you a quick
+        and discreet way to exit any uncomfortable situation.
       </Text>
 
       {/* Incoming Call Modal */}
@@ -240,6 +283,55 @@ export default function FakeCallScreen({ navigation }) {
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.declineButton} onPress={handleDeclineCall}>
                   <Text style={styles.buttonText}>Decline</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Add/Edit Contact Modal */}
+      {contactModalVisible && (
+        <Modal animationType="slide" transparent={true} visible={contactModalVisible}>
+          <View style={styles.contactModalContainer}>
+            <View style={styles.contactModalContent}>
+              <Text style={styles.modalHeader}>
+                {isEditing ? 'Edit Contact' : 'Add Contact'}
+              </Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Name"
+                value={currentContact.name}
+                onChangeText={(text) =>
+                  setCurrentContact({ ...currentContact, name: text })
+                }
+              />
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Phone"
+                value={currentContact.phone}
+                onChangeText={(text) =>
+                  setCurrentContact({ ...currentContact, phone: text })
+                }
+                keyboardType="phone-pad"
+              />
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Avatar URL (optional)"
+                value={currentContact.avatar}
+                onChangeText={(text) =>
+                  setCurrentContact({ ...currentContact, avatar: text })
+                }
+              />
+              <View style={styles.modalButtonsRow}>
+                <TouchableOpacity style={styles.modalButton} onPress={handleSaveContact}>
+                  <Text style={styles.buttonText}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: '#ccc' }]}
+                  onPress={handleCancelContact}
+                >
+                  <Text style={[styles.buttonText, { color: '#333' }]}>Cancel</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -368,19 +460,27 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 16,
   },
+  // Enhanced Modal styles for incoming call
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 20,
   },
   modalContent: {
     backgroundColor: '#fff',
-    width: '80%',
+    width: '100%',
+    maxWidth: 350,
     paddingVertical: 30,
-    paddingHorizontal: 20,
+    paddingHorizontal: 25,
     borderRadius: 20,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 10,
   },
   modalHeader: {
     fontSize: 22,
@@ -436,6 +536,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  // Enhanced styles for active call screen
   activeCallContainer: {
     flex: 1,
     backgroundColor: '#000',
@@ -488,4 +589,46 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  // Enhanced Modal styles for add/edit contact
+  contactModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  contactModalContent: {
+    backgroundColor: '#fff',
+    width: '100%',
+    maxWidth: 350,
+    padding: 20,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  modalInput: {
+    height: 40,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    marginVertical: 10,
+  },
+  modalButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  modalButton: {
+    flex: 1,
+    backgroundColor: GREEN,
+    padding: 10,
+    marginHorizontal: 5,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
 });
+
