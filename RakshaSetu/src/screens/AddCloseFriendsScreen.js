@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -6,17 +6,15 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ScrollView, 
-  Platform,
-  ActivityIndicator,
+  ActivityIndicator, 
   SafeAreaView,
   StatusBar,
-  Alert
+  Alert,
+  Linking
 } from 'react-native';
 import * as Contacts from 'expo-contacts';
 import { 
   collection, 
-  query, 
-  orderBy, 
   onSnapshot, 
   doc, 
   getDoc, 
@@ -38,7 +36,7 @@ export default function AddFriendsScreen({ navigation }) {
   const [error, setError] = useState(null);
   const [contactsCount, setContactsCount] = useState(0);
 
-  // Function to fetch contacts with error handling and debug logs
+  // Fetch contacts with permission handling
   const fetchContacts = async () => {
     setLoading(true);
     setError(null);
@@ -54,25 +52,26 @@ export default function AddFriendsScreen({ navigation }) {
         });
         
         console.log("Total contacts retrieved:", data.length);
-        
-        // Log sample contact for debugging
         if (data.length > 0) {
           console.log("First contact sample:", JSON.stringify(data[0], null, 2));
         }
-        
         // Filter out contacts without phone numbers
         const validContacts = data.filter(contact => 
           contact.phoneNumbers && contact.phoneNumbers.length > 0
         );
-        
         console.log("Valid contacts after filtering:", validContacts.length);
         setContactsCount(validContacts.length);
-        
+        // Sort valid contacts alphabetically by name
+        validContacts.sort((a, b) => {
+          if (!a.name) return 1;
+          if (!b.name) return -1;
+          return a.name.localeCompare(b.name);
+        });
         setContacts(validContacts);
         setFilteredContacts(validContacts);
       } else {
         console.log("Permission denied for contacts");
-        setError('Permission to access contacts was denied');
+        setError('Permission to access contacts was denied.');
       }
     } catch (err) {
       console.error("Error fetching contacts:", err);
@@ -80,6 +79,13 @@ export default function AddFriendsScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Open device settings so user can grant permission
+  const openContactSettings = () => {
+    Linking.openSettings().catch(() =>
+      Alert.alert('Error', 'Unable to open settings.')
+    );
   };
 
   // Fetch contacts when screen comes into focus
@@ -91,7 +97,7 @@ export default function AddFriendsScreen({ navigation }) {
     }, [])
   );
 
-  // Fetch added friends from Firestore with improved error handling
+  // Fetch added friends from Firestore
   const fetchAddedFriends = async () => {
     const user = auth.currentUser;
     if (!user) {
@@ -108,7 +114,6 @@ export default function AddFriendsScreen({ navigation }) {
           setSelectedContacts(data.addedFriends);
         }
       } else {
-        // Create user document if it doesn't exist
         await setDoc(doc(db, 'users', user.uid), {
           addedFriends: [],
           createdAt: serverTimestamp(),
@@ -130,36 +135,29 @@ export default function AddFriendsScreen({ navigation }) {
     );
   };
 
-  // Save selected contacts with improved error handling and feedback
+  // Save selected contacts to Firestore
   const saveSelectedContacts = async () => {
     setSaving(true);
-    
     try {
       const user = auth.currentUser;
       if (!user) {
         Alert.alert('Error', 'You must be logged in to save contacts');
         return;
       }
-      
       const userDocRef = doc(db, 'users', user.uid);
-      
-      // Try to get the document first
       const userDoc = await getDoc(userDocRef);
-      
       if (userDoc.exists()) {
         await updateDoc(userDocRef, {
           addedFriends: selectedContacts,
           updatedAt: serverTimestamp()
         });
       } else {
-        // Create document if it doesn't exist
         await setDoc(userDocRef, {
           addedFriends: selectedContacts,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         });
       }
-      
       Alert.alert(
         'Success', 
         'Contacts saved successfully',
@@ -173,50 +171,50 @@ export default function AddFriendsScreen({ navigation }) {
     }
   };
 
+  // Enhanced search: normalize query and filter by name and phone
   const handleSearch = (query) => {
     setSearchQuery(query);
     if (query.trim() === '') {
       setFilteredContacts(contacts);
     } else {
-      const filtered = contacts.filter((contact) =>
-        contact.name?.toLowerCase().includes(query.toLowerCase()) ||
-        (contact.phoneNumbers && contact.phoneNumbers.some(phone => 
-          phone.number.replace(/\D/g, '').includes(query.replace(/\D/g, ''))
-        ))
-      );
+      const normalizedQuery = query.toLowerCase().trim();
+      // Only search phone numbers if query contains digits
+      const filtered = contacts.filter((contact) => {
+        const nameMatch = contact.name && contact.name.toLowerCase().includes(normalizedQuery);
+        let phoneMatch = false;
+        if (/\d/.test(query)) {
+          const normalizedDigits = query.replace(/\D/g, '');
+          phoneMatch = contact.phoneNumbers && contact.phoneNumbers.some(phone =>
+            phone.number.replace(/\D/g, '').includes(normalizedDigits)
+          );
+        }
+        return nameMatch || phoneMatch;
+      });
+      filtered.sort((a, b) => {
+        if (!a.name) return 1;
+        if (!b.name) return -1;
+        return a.name.localeCompare(b.name);
+      });
       setFilteredContacts(filtered);
     }
   };
 
-  // Get first letter of name for section header
-  const getInitial = (name) => {
-    return name && name.charAt(0).toUpperCase();
-  };
-
-  // Group contacts by first letter for section list
-  const getGroupedContacts = () => {
+  // Group contacts by the first letter of the name using useMemo for performance
+  const groupedContacts = useMemo(() => {
     const groups = {};
-    
     filteredContacts.forEach(contact => {
       if (contact.name) {
-        const initial = getInitial(contact.name);
+        const initial = contact.name.charAt(0).toUpperCase();
         if (!groups[initial]) {
           groups[initial] = [];
         }
         groups[initial].push(contact);
       }
     });
-    
-    // Convert to array and sort
     return Object.keys(groups)
       .sort()
-      .map(key => ({
-        initial: key,
-        data: groups[key]
-      }));
-  };
-
-  const groupedContacts = getGroupedContacts();
+      .map(key => ({ initial: key, data: groups[key] }));
+  }, [filteredContacts]);
 
   const getContactPhoneNumber = (contact) => {
     if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
@@ -225,10 +223,9 @@ export default function AddFriendsScreen({ navigation }) {
     return '';
   };
 
-  // Render contact list item with improved UI and already added indicator
+  // Render each contact list item
   const renderContactItem = (contact) => {
     const isSelected = selectedContacts.includes(contact.id);
-    
     return (
       <TouchableOpacity
         key={contact.id}
@@ -242,8 +239,8 @@ export default function AddFriendsScreen({ navigation }) {
       >
         <View style={styles.contactInfo}>
           <View style={[
-            styles.contactAvatar, 
-            isSelected ? styles.selectedAvatar : null
+              styles.contactAvatar, 
+              isSelected ? styles.selectedAvatar : null
           ]}>
             <Text style={styles.avatarText}>
               {contact.name ? contact.name.charAt(0).toUpperCase() : '?'}
@@ -268,7 +265,7 @@ export default function AddFriendsScreen({ navigation }) {
       </TouchableOpacity>
     );
   };
-  
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
@@ -302,12 +299,21 @@ export default function AddFriendsScreen({ navigation }) {
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity 
-              style={styles.retryButton}
-              onPress={fetchContacts}
-            >
-              <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
+            {error.includes('denied') ? (
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={openContactSettings}
+              >
+                <Text style={styles.retryButtonText}>Open Settings</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={fetchContacts}
+              >
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
         
@@ -346,29 +352,20 @@ export default function AddFriendsScreen({ navigation }) {
               </View>
             ) : (
               <>
-                <View style={styles.legendContainer}>
-                  <View style={styles.legendItem}>
-                    <View style={styles.selectedAvatar}>
-                      <Text style={styles.avatarText}>A</Text>
-                    </View>
-                    <Text style={styles.legendText}>Already Added</Text>
-                  </View>
-                  <View style={styles.legendItem}>
-                    <View style={styles.contactAvatar}>
-                      <Text style={styles.avatarText}>N</Text>
-                    </View>
-                    <Text style={styles.legendText}>Not Added</Text>
-                  </View>
-                </View>
-                
-                <ScrollView style={styles.contactsList}>
-                  {groupedContacts.map(group => (
-                    <View key={group.initial}>
-                      <Text style={styles.sectionHeader}>{group.initial}</Text>
-                      {group.data.map(contact => renderContactItem(contact))}
-                    </View>
-                  ))}
-                </ScrollView>
+                {searchQuery.trim() !== '' ? (
+                  <ScrollView style={styles.contactsList}>
+                    {filteredContacts.map(contact => renderContactItem(contact))}
+                  </ScrollView>
+                ) : (
+                  <ScrollView style={styles.contactsList}>
+                    {groupedContacts.map(group => (
+                      <View key={group.initial}>
+                        <Text style={styles.sectionHeader}>{group.initial}</Text>
+                        {group.data.map(contact => renderContactItem(contact))}
+                      </View>
+                    ))}
+                  </ScrollView>
+                )}
               </>
             )}
           </>
