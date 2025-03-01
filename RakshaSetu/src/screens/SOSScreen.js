@@ -131,7 +131,7 @@ export default function SOSScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Rakshasetu SOS</Text>
+      <Text style={styles.header}>RakshaSetu SOS</Text>
       <Text style={styles.infoText}>
         If you feel unsafe, press the button below. An alert with your current location will be sent to your emergency contacts.
       </Text>
