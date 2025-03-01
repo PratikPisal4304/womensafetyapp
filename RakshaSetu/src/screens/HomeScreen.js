@@ -112,7 +112,7 @@ const HomeScreen = ({ navigation }) => {
             <View>
               <Text style={styles.journeyTitle}>Start a journey</Text>
               <Text style={styles.journeySubtitle}>
-                Enter your destination, and the app will{'\n'}track your route in real-time.
+                Enter your destination, and the app{'\n'}will track your route in real-time.
               </Text>
             </View>
           </View>
