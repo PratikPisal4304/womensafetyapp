@@ -127,8 +127,8 @@ export default function SignUpScreen({ navigation }) {
 
   // Navigation for users who already have an account
   const handleGoToLogin = () => {
-    Alert.alert('Already have an account', 'Navigate to login screen.');
-    // e.g., navigation.replace('LoginScreen');
+    Alert.alert('Login screen.');
+    navigation.replace('Login');
   };
 
   return (
