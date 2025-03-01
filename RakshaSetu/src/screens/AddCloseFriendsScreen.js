@@ -171,25 +171,28 @@ export default function AddFriendsScreen({ navigation }) {
     }
   };
 
-  // Enhanced search: normalize query and filter by name and phone
+  // Enhanced search: normalize query and filter by name and phone.
+  // If query contains digits, search by number; otherwise search by name.
   const handleSearch = (query) => {
     setSearchQuery(query);
     if (query.trim() === '') {
       setFilteredContacts(contacts);
     } else {
       const normalizedQuery = query.toLowerCase().trim();
-      // Only search phone numbers if query contains digits
-      const filtered = contacts.filter((contact) => {
-        const nameMatch = contact.name && contact.name.toLowerCase().includes(normalizedQuery);
-        let phoneMatch = false;
-        if (/\d/.test(query)) {
-          const normalizedDigits = query.replace(/\D/g, '');
-          phoneMatch = contact.phoneNumbers && contact.phoneNumbers.some(phone =>
+      let filtered;
+      if (/\d/.test(query)) {
+        const normalizedDigits = query.replace(/\D/g, '');
+        filtered = contacts.filter(contact => {
+          const phoneMatch = contact.phoneNumbers && contact.phoneNumbers.some(phone =>
             phone.number.replace(/\D/g, '').includes(normalizedDigits)
           );
-        }
-        return nameMatch || phoneMatch;
-      });
+          return phoneMatch;
+        });
+      } else {
+        filtered = contacts.filter(contact =>
+          contact.name && contact.name.toLowerCase().includes(normalizedQuery)
+        );
+      }
       filtered.sort((a, b) => {
         if (!a.name) return 1;
         if (!b.name) return -1;
@@ -199,10 +202,20 @@ export default function AddFriendsScreen({ navigation }) {
     }
   };
 
-  // Group contacts by the first letter of the name using useMemo for performance
+  // Compute selected friends from the contacts list (even if not in filtered list)
+  const selectedFriends = useMemo(() => {
+    return contacts.filter(contact => selectedContacts.includes(contact.id));
+  }, [contacts, selectedContacts]);
+
+  // Compute remaining contacts (excluding the selected ones)
+  const remainingContacts = useMemo(() => {
+    return filteredContacts.filter(contact => !selectedContacts.includes(contact.id));
+  }, [filteredContacts, selectedContacts]);
+
+  // Group remaining contacts by the first letter
   const groupedContacts = useMemo(() => {
     const groups = {};
-    filteredContacts.forEach(contact => {
+    remainingContacts.forEach(contact => {
       if (contact.name) {
         const initial = contact.name.charAt(0).toUpperCase();
         if (!groups[initial]) {
@@ -214,7 +227,7 @@ export default function AddFriendsScreen({ navigation }) {
     return Object.keys(groups)
       .sort()
       .map(key => ({ initial: key, data: groups[key] }));
-  }, [filteredContacts]);
+  }, [remainingContacts]);
 
   const getContactPhoneNumber = (contact) => {
     if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
@@ -295,6 +308,31 @@ export default function AddFriendsScreen({ navigation }) {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Display selected friends on top */}
+        {selectedFriends.length > 0 && (
+          <View style={styles.selectedFriendsContainer}>
+            <Text style={styles.selectedFriendsHeader}>Selected Close Friends</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {selectedFriends.map(contact => (
+                <TouchableOpacity 
+                  key={contact.id} 
+                  style={styles.selectedFriendItem}
+                  onPress={() => toggleContactSelection(contact.id)}
+                >
+                  <View style={[styles.contactAvatar, styles.selectedAvatar]}>
+                    <Text style={styles.avatarText}>
+                      {contact.name ? contact.name.charAt(0).toUpperCase() : '?'}
+                    </Text>
+                  </View>
+                  <Text style={styles.selectedFriendName} numberOfLines={1}>
+                    {contact.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
         
         {error && (
           <View style={styles.errorContainer}>
@@ -618,5 +656,29 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  // New styles for selected friends displayed on top
+  selectedFriendsContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  selectedFriendsHeader: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 8,
+    fontWeight: 'bold',
+  },
+  selectedFriendItem: {
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  selectedFriendName: {
+    marginTop: 4,
+    fontSize: 14,
+    color: '#333',
+    maxWidth: 70,
+    textAlign: 'center',
   },
 });
