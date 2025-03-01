@@ -40,7 +40,6 @@ const EditProfileScreen = ({ navigation }) => {
           if (userDoc.exists()) {
             const data = userDoc.data();
             setName(data.name || '');
-            // Use Firestore phone field if available, otherwise fallback to auth.currentUser.phoneNumber
             setPhone(data.phone || user.phoneNumber || '');
             setEmail(data.email || '');
             setAddress(data.address || '');
@@ -111,14 +110,6 @@ const EditProfileScreen = ({ navigation }) => {
     }
   };
 
-  const handleDateChange = (event, selectedDate) => {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (selectedDate) {
-      setDate(selectedDate);
-      setBirthday(selectedDate.toLocaleDateString());
-    }
-  };
-
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -168,7 +159,7 @@ const EditProfileScreen = ({ navigation }) => {
 
         {/* Form */}
         <View style={styles.content}>
-          <Text style={styles.label}>Name *</Text>
+          <Text style={styles.label}>Name </Text>
           <TextInput
             style={styles.input}
             value={name}
@@ -187,7 +178,7 @@ const EditProfileScreen = ({ navigation }) => {
             placeholderTextColor="#999"
           />
 
-          <Text style={styles.label}>Email *</Text>
+          <Text style={styles.label}>Email </Text>
           <TextInput
             style={styles.input}
             value={email}
@@ -225,23 +216,30 @@ const EditProfileScreen = ({ navigation }) => {
             ))}
           </View>
 
+          {/* Updated Birthday Section */}
           <Text style={styles.label}>Birthday</Text>
-          <TouchableOpacity onPress={() => setShowDatePicker(true)}>
-            <TextInput
-              style={styles.input}
-              value={birthday}
-              placeholder="Select your birthday"
-              placeholderTextColor="#999"
-              editable={false}
-            />
+          <TouchableOpacity 
+            style={styles.dateInputContainer} 
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text style={[styles.dateText, { color: birthday ? '#333' : '#999' }]}>
+              {birthday ? birthday : 'Select your birthday'}
+            </Text>
           </TouchableOpacity>
 
           {showDatePicker && (
             <DateTimePicker
               value={date}
               mode="date"
-              display="spinner"
-              onChange={handleDateChange}
+              display="default"
+              maximumDate={new Date()}
+              onChange={(event, selectedDate) => {
+                setShowDatePicker(Platform.OS === 'ios');
+                if (selectedDate) {
+                  setDate(selectedDate);
+                  setBirthday(selectedDate.toLocaleDateString());
+                }
+              }}
             />
           )}
 
@@ -359,6 +357,18 @@ const styles = StyleSheet.create({
     color: '#333',
     borderWidth: 1,
     borderColor: '#eee',
+  },
+  dateInputContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 15,
+    marginTop: 5,
+    borderWidth: 1,
+    borderColor: '#eee',
+    justifyContent: 'center',
+  },
+  dateText: {
+    fontSize: 16,
   },
   saveButton: {
     backgroundColor: '#FF4B8C',
