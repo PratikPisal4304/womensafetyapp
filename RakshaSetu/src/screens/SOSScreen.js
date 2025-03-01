@@ -11,36 +11,58 @@ import {
 import * as Location from 'expo-location';
 import * as SMS from 'expo-sms';
 import MapView, { Marker } from 'react-native-maps';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from '../../config/firebaseConfig'; // Adjust the path to your firebase config
+import { doc, onSnapshot } from 'firebase/firestore';
+import { auth, db } from '../../config/firebaseConfig'; // Adjust path if needed
 
 export default function SOSScreen() {
-  // Local state for SOS logic
   const [isSOSActive, setIsSOSActive] = useState(false);
   const [countdown, setCountdown] = useState(10);
   const [isSendingSOS, setIsSendingSOS] = useState(false);
   const [location, setLocation] = useState(null);
+  const [closeFriends, setcloseFriends] = useState([]); // Updated name to reflect your Firestore field
 
-  // State to hold close friends fetched from Firestore
-  const [closeFriends, setCloseFriends] = useState([]);
-
-  // Predefined emergency contacts (fallback or additional)
+  // Fallback contacts in case no closeFriends are found
   const emergencyContacts = [
-    { id: '1', name: 'Close Friend 1', phone: '+9112345678910' },
-    { id: '2', name: 'Close Friend 2', phone: '+9112345678910' },
-    { id: '3', name: 'Police', phone: '100' },
+    { id: '1', name: 'Fallback Friend', phone: '+9112345678910' },
+    { id: '2', name: 'Police', phone: '100' },
   ];
 
-  // Fetch close friends list from Firestore
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'closeFriends'), snapshot => {
-      const friendsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setCloseFriends(friendsData);
-    });
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const userDocRef = doc(db, 'users', user.uid);
+    console.log("Listening for 'closeFriends' in user's doc...");
+
+    // Listen to the user doc, reading the 'closeFriends' array
+    const unsubscribe = onSnapshot(
+      userDocRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          // Make sure to read the 'closeFriends' field exactly as named in Firestore
+          if (data.closeFriends && Array.isArray(data.closeFriends)) {
+            console.log("Fetched closeFriends:", data.closeFriends);
+            setcloseFriends(data.closeFriends);
+          } else {
+            console.log("No 'closeFriends' array found in user doc.");
+            setcloseFriends([]);
+          }
+        } else {
+          console.log("User document does not exist.");
+          setcloseFriends([]);
+        }
+      },
+      (error) => {
+        console.error("Error fetching user doc:", error);
+        Alert.alert("Firestore Error", "Failed to fetch closeFriends data.");
+      }
+    );
+
     return () => unsubscribe();
   }, []);
 
-  // Request location permission when the component mounts
+  // Request location permission on mount
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -50,13 +72,13 @@ export default function SOSScreen() {
     })();
   }, []);
 
-  // Countdown timer with vibration feedback each second
+  // Countdown logic with vibration
   useEffect(() => {
     let timer;
     if (isSOSActive && countdown > 0) {
       timer = setInterval(() => {
         Vibration.vibrate(500);
-        setCountdown(prev => prev - 1);
+        setCountdown((prev) => prev - 1);
       }, 1000);
     }
     if (countdown === 0 && isSOSActive) {
@@ -79,14 +101,16 @@ export default function SOSScreen() {
   const triggerSOS = async () => {
     setIsSendingSOS(true);
     try {
-      // Get the current location
       const loc = await Location.getCurrentPositionAsync({});
       setLocation(loc.coords);
       const { latitude, longitude } = loc.coords;
-      // Construct a message with a Google Maps link
+
       const message = `Emergency! I need help immediately. My location: https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
-      // Merge predefined contacts with close friends from Firestore
-      const allContacts = [...emergencyContacts, ...closeFriends];
+
+      // If we have closeFriends in Firestore, use them; otherwise fallback
+      const allContacts = closeFriends.length > 0 ? closeFriends : emergencyContacts;
+      console.log("Sending SMS to:", allContacts);
+
       const isAvailable = await SMS.isAvailableAsync();
       if (isAvailable) {
         await SMS.sendSMSAsync(
@@ -112,14 +136,12 @@ export default function SOSScreen() {
         If you feel unsafe, press the button below. An alert with your current location will be sent to your emergency contacts.
       </Text>
       
-      {/* SOS Button */}
       {!isSOSActive && !isSendingSOS && (
         <TouchableOpacity style={styles.sosButton} onPress={startSOS}>
           <Text style={styles.sosButtonText}>SOS</Text>
         </TouchableOpacity>
       )}
 
-      {/* Countdown Timer with Cancel Option */}
       {isSOSActive && (
         <View style={styles.countdownContainer}>
           <Text style={styles.countdownText}>
@@ -131,7 +153,6 @@ export default function SOSScreen() {
         </View>
       )}
 
-      {/* Sending Indicator */}
       {isSendingSOS && (
         <View style={styles.sendingContainer}>
           <ActivityIndicator size="large" color="#fff" />
@@ -139,7 +160,6 @@ export default function SOSScreen() {
         </View>
       )}
 
-      {/* Map View to display current location after SOS is triggered */}
       {location && (
         <View style={styles.mapContainer}>
           <MapView
@@ -162,7 +182,7 @@ export default function SOSScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffd1e1', // Light pink background for a gentle look
+    backgroundColor: '#ffd1e1',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
@@ -172,6 +192,7 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 20,
     fontWeight: 'bold',
+    textAlign: 'center',
   },
   infoText: {
     fontSize: 16,
@@ -181,7 +202,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   sosButton: {
-    backgroundColor: '#e60000', // Bold red button for urgency
+    backgroundColor: '#e60000',
     width: 160,
     height: 160,
     borderRadius: 80,
