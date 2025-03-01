@@ -20,7 +20,7 @@ const PINK_BG = '#ffd1e1';  // Soft pink background
 const PINK = '#ff5f96';     // Vibrant pink for icons/floating button
 const GREEN = '#4CAF50';    // "Call now" button color
 
-// Active Call Screen Component
+// Updated Active Call Screen Component (looks more like a real call)
 function ActiveCallScreen({ contact, onEndCall }) {
   const [duration, setDuration] = useState(0);
   useEffect(() => {
@@ -37,24 +37,24 @@ function ActiveCallScreen({ contact, onEndCall }) {
   return (
     <View style={styles.activeCallContainer}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
-      <View style={styles.activeCallHeader}>
-        <Text style={styles.activeCallTitle}>In Call</Text>
+      <View style={styles.activeCallTop}>
         <Text style={styles.activeCallTimer}>{formatTime(duration)}</Text>
       </View>
-      <View style={styles.activeCallBody}>
+      <View style={styles.activeCallContent}>
         <Image source={{ uri: contact.avatar }} style={styles.activeCallAvatar} />
         <Text style={styles.activeCallName}>{contact.name}</Text>
-        <Text style={styles.activeCallPhone}>{contact.phone}</Text>
+        <Text style={styles.activeCallSubText}>Calling...</Text>
       </View>
-      <TouchableOpacity style={styles.endCallButton} onPress={onEndCall}>
-        <Ionicons
-          name="call"
-          size={32}
-          color="#fff"
-          style={{ transform: [{ rotate: '135deg' }] }}
-        />
-        <Text style={styles.endCallText}>End Call</Text>
-      </TouchableOpacity>
+      <View style={styles.activeCallFooter}>
+        <TouchableOpacity style={styles.endCallButton} onPress={onEndCall}>
+          <Ionicons
+            name="call"
+            size={40}
+            color="#fff"
+            style={{ transform: [{ rotate: '135deg' }] }}
+          />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -270,25 +270,26 @@ export default function FakeCallScreen({ navigation }) {
       {/* Incoming Call Modal */}
       {activeCall && (
         <Modal animationType="slide" transparent={true} visible={true}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalHeader}>Incoming Call</Text>
-              <Text style={styles.countdownText}>Ringing... {countdown}s</Text>
-              <Image source={{ uri: activeCall.avatar }} style={styles.modalAvatar} />
-              <Text style={styles.modalName}>{activeCall.name}</Text>
-              <Text style={styles.modalPhone}>{activeCall.phone}</Text>
-              <View style={styles.modalButtons}>
+          <View style={styles.incomingCallModalContainer}>
+            <View style={styles.incomingCallModalContent}>
+              <Text style={styles.incomingCallTitle}>Incoming Call</Text>
+              <Text style={styles.incomingCallCountdown}>{countdown}s</Text>
+              <Image source={{ uri: activeCall.avatar }} style={styles.incomingCallAvatar} />
+              <Text style={styles.incomingCallName}>{activeCall.name}</Text>
+              <Text style={styles.incomingCallSubtitle}>Calling...</Text>
+              <View style={styles.incomingCallButtonsContainer}>
                 <TouchableOpacity style={styles.answerButton} onPress={handleAnswerCall}>
-                  <Text style={styles.buttonText}>Answer</Text>
+                  <Ionicons name="call" size={32} color="#fff" style={{ transform: [{ rotate: '135deg' }] }} />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.declineButton} onPress={handleDeclineCall}>
-                  <Text style={styles.buttonText}>Decline</Text>
+                  <Ionicons name="close" size={32} color="#fff" />
                 </TouchableOpacity>
               </View>
             </View>
           </View>
         </Modal>
       )}
+
 
       {/* Add/Edit Contact Modal */}
       {contactModalVisible && (
@@ -461,82 +462,70 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   // Enhanced Modal styles for incoming call
-  modalContainer: {
+  incomingCallModalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: '#000', // Full screen black background for authenticity
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
   },
-  modalContent: {
-    backgroundColor: '#fff',
-    width: '100%',
-    maxWidth: 350,
-    paddingVertical: 30,
-    paddingHorizontal: 25,
-    borderRadius: 20,
+  incomingCallModalContent: {
+    width: '90%',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 10,
+    paddingVertical: 20,
   },
-  modalHeader: {
-    fontSize: 22,
+  incomingCallTitle: {
+    fontSize: 26,
     fontWeight: '700',
+    color: '#fff',
     marginBottom: 10,
   },
-  countdownText: {
-    fontSize: 16,
-    color: '#ff4b4b',
-    marginBottom: 15,
-  },
-  modalAvatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#ddd',
-    marginBottom: 15,
-  },
-  modalName: {
+  incomingCallCountdown: {
     fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 5,
-  },
-  modalPhone: {
-    fontSize: 18,
-    color: '#666',
+    color: '#ff4b4b',
     marginBottom: 20,
   },
-  modalButtons: {
+  incomingCallAvatar: {
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    borderWidth: 4,
+    borderColor: '#fff',
+    marginBottom: 20,
+  },
+  incomingCallName: {
+    fontSize: 30,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 5,
+  },
+  incomingCallSubtitle: {
+    fontSize: 18,
+    color: '#aaa',
+    marginBottom: 30,
+  },
+  incomingCallButtonsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
+    justifyContent: 'space-around',
+    width: '80%',
   },
   answerButton: {
     backgroundColor: GREEN,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 25,
-    marginRight: 10,
-    flex: 1,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 20,
   },
   declineButton: {
     backgroundColor: '#ff4b4b',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 25,
-    flex: 1,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  // Enhanced styles for active call screen
+  // Enhanced styles for active call screen (realistic look)
   activeCallContainer: {
     flex: 1,
     backgroundColor: '#000',
@@ -544,44 +533,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 50,
   },
-  activeCallHeader: {
+  activeCallTop: {
+    width: '100%',
     alignItems: 'center',
-  },
-  activeCallTitle: {
-    fontSize: 24,
-    color: '#fff',
-    fontWeight: '700',
+    paddingTop: 30,
   },
   activeCallTimer: {
-    fontSize: 18,
+    fontSize: 28,
     color: '#fff',
-    marginTop: 5,
+    fontWeight: '600',
   },
-  activeCallBody: {
+  activeCallContent: {
     alignItems: 'center',
   },
   activeCallAvatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    borderWidth: 3,
+    borderColor: '#fff',
     backgroundColor: '#ddd',
-    marginBottom: 15,
+    marginBottom: 20,
   },
   activeCallName: {
-    fontSize: 22,
+    fontSize: 28,
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 5,
   },
-  activeCallPhone: {
+  activeCallSubText: {
     fontSize: 18,
-    color: '#fff',
+    color: '#aaa',
+  },
+  activeCallFooter: {
+    marginBottom: 30,
   },
   endCallButton: {
     backgroundColor: '#ff4b4b',
     borderRadius: 50,
     padding: 20,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   endCallText: {
     color: '#fff',
@@ -631,4 +623,3 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
-
