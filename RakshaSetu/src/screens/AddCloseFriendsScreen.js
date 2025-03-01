@@ -29,7 +29,7 @@ import { useFocusEffect } from '@react-navigation/native';
 export default function AddFriendsScreen({ navigation }) {
   const [contacts, setContacts] = useState([]);
   const [filteredContacts, setFilteredContacts] = useState([]);
-  const [selectedContacts, setSelectedContacts] = useState([]);
+  const [selectedContacts, setSelectedContacts] = useState([]); // will hold contact IDs
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -92,13 +92,13 @@ export default function AddFriendsScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       fetchContacts();
-      fetchAddedFriends();
+      fetchCloseFriends();
       return () => {};
     }, [])
   );
 
-  // Fetch added friends from Firestore
-  const fetchAddedFriends = async () => {
+  // Fetch close friends from Firestore and mark them as selected (using their IDs)
+  const fetchCloseFriends = async () => {
     const user = auth.currentUser;
     if (!user) {
       setError('You must be logged in to view friends');
@@ -109,20 +109,21 @@ export default function AddFriendsScreen({ navigation }) {
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       if (userDoc.exists()) {
         const data = userDoc.data();
-        if (data.addedFriends) {
-          console.log("Retrieved added friends:", data.addedFriends.length);
-          setSelectedContacts(data.addedFriends);
+        if (data.closeFriends) {
+          console.log("Retrieved close friends:", data.closeFriends.length);
+          // Set selectedContacts to the list of saved friend IDs
+          setSelectedContacts(data.closeFriends.map(friend => friend.id));
         }
       } else {
         await setDoc(doc(db, 'users', user.uid), {
-          addedFriends: [],
+          closeFriends: [],
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         });
         setSelectedContacts([]);
       }
     } catch (error) {
-      console.error("Error fetching added friends:", error);
+      console.error("Error fetching close friends:", error);
       setError('Failed to load your friends list');
     }
   };
@@ -135,7 +136,7 @@ export default function AddFriendsScreen({ navigation }) {
     );
   };
 
-  // Save selected contacts to Firestore
+  // Save selected contacts to Firestore (store name, phone and id)
   const saveSelectedContacts = async () => {
     setSaving(true);
     try {
@@ -145,15 +146,22 @@ export default function AddFriendsScreen({ navigation }) {
         return;
       }
       const userDocRef = doc(db, 'users', user.uid);
+      // Build an array of friend objects from the selected contacts
+      const selectedFriends = contacts.filter(contact => selectedContacts.includes(contact.id));
+      const friendsToSave = selectedFriends.map(contact => ({
+        id: contact.id,
+        name: contact.name,
+        phone: contact.phoneNumbers[0].number
+      }));
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
         await updateDoc(userDocRef, {
-          addedFriends: selectedContacts,
+          closeFriends: friendsToSave,
           updatedAt: serverTimestamp()
         });
       } else {
         await setDoc(userDocRef, {
-          addedFriends: selectedContacts,
+          closeFriends: friendsToSave,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         });
@@ -171,8 +179,7 @@ export default function AddFriendsScreen({ navigation }) {
     }
   };
 
-  // Enhanced search: normalize query and filter by name and phone.
-  // If query contains digits, search by number; otherwise search by name.
+  // Enhanced search: if query contains digits, search by phone; otherwise, search by name.
   const handleSearch = (query) => {
     setSearchQuery(query);
     if (query.trim() === '') {
@@ -207,12 +214,12 @@ export default function AddFriendsScreen({ navigation }) {
     return contacts.filter(contact => selectedContacts.includes(contact.id));
   }, [contacts, selectedContacts]);
 
-  // Compute remaining contacts (excluding the selected ones)
+  // Compute remaining contacts (excluding selected ones)
   const remainingContacts = useMemo(() => {
     return filteredContacts.filter(contact => !selectedContacts.includes(contact.id));
   }, [filteredContacts, selectedContacts]);
 
-  // Group remaining contacts by the first letter
+  // Group remaining contacts by the first letter of the name
   const groupedContacts = useMemo(() => {
     const groups = {};
     remainingContacts.forEach(contact => {
