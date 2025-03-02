@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -11,10 +11,8 @@ import {
   SafeAreaView,
   Platform,
   Dimensions,
-  FlatList,
   Animated
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 import { Feather } from '@expo/vector-icons';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,68 +20,81 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
-export default function SkillDevelopmentScreen({ navigation }) {
+export default function FinancialEmpowermentScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('All');
+  const [skillRecommendations, setSkillRecommendations] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const scrollY = new Animated.Value(0);
 
-  const tabs = ['All', 'Design', 'Technology', 'Business', 'Health'];
+  // Localized financial education tabs with focus on women's economic empowerment
+  const tabs = ['All', 'Financial Basics', 'Investing', 'Entrepreneurship', 'Career Growth', 'Budgeting'];
 
+  // Quick access categories
   const categories = [
-    { id: 1, name: 'My Enrolled Courses', icon: 'graduation-cap', color: '#4caf50', gradient: ['#66BB6A', '#43A047'] },
-    { id: 2, name: 'Upcoming Events', icon: 'calendar-alt', color: '#5e35b1', gradient: ['#7E57C2', '#5E35B1'] },
-    { id: 3, name: 'Utility', icon: 'tools', color: '#ff7043', gradient: ['#FF8A65', '#FF5722'] },
+    { id: 1, name: 'My Learning Path', icon: 'route', color: '#4caf50', gradient: ['#66BB6A', '#43A047'] },
+    { id: 2, name: 'Mentorship Hub', icon: 'users', color: '#5e35b1', gradient: ['#7E57C2', '#5E35B1'] },
+    { id: 3, name: 'Budget Tools', icon: 'calculator', color: '#ff7043', gradient: ['#FF8A65', '#FF5722'] },
   ];
 
-  const articles = [
+  // Micro-learning financial modules
+  const microLearningModules = [
     { 
       id: 1, 
-      title: 'Want to Keep Your Heart and Brain Young?',
-      author: 'Dr. Jane Robinson',
+      title: 'Negotiating Your Worth: Salary Talks',
+      author: 'Dr. Maria Rodriguez',
       image: require('../../assets/icon.png'),
-      tags: ['Health', 'Wellness'],
-      duration: '4 weeks',
+      tags: ['Career', 'Negotiation'],
+      duration: '15 min',
       rating: 4.7,
-      students: 1240
+      students: 1240,
+      completion: '3/5 modules'
     },
     { 
       id: 2, 
-      title: 'The Healthy Power of Making Art',
-      author: 'Dr. Adam Smith',
+      title: 'Emergency Funds: Building Financial Security',
+      author: 'Sarah Johnson, CFP',
       image: require('../../assets/icon.png'),
-      tags: ['Creativity', 'Mental Health'],
-      duration: '3 weeks',
+      tags: ['Finance', 'Planning'],
+      duration: '10 min',
       rating: 4.8,
-      students: 985
+      students: 985,
+      completion: '2/4 modules'
     },
   ];
 
-  const recommendedCourses = [
+  // AI-recommended personalized courses based on user profile
+  const aiRecommendedCourses = [
     {
       id: 1,
-      title: 'Critical Thinking Mastery',
-      author: 'Professor Michael Davis',
-      duration: '6 weeks',
-      level: 'Intermediate',
+      title: 'Investment Fundamentals for Women',
+      author: 'Financial Educator Network',
+      duration: '3 weeks',
+      level: 'Beginner',
       rating: 4.8,
       students: 2540,
       image: require('../../assets/icon.png'),
       progress: 30,
-      label: 'MOST POPULAR'
+      label: 'PERSONALIZED',
+      matchScore: '93% match',
+      localContext: true
     },
     {
       id: 2,
-      title: 'Data Science Fundamentals',
-      author: 'Dr. Lisa Chen',
-      duration: '8 weeks',
-      level: 'Beginner',
+      title: 'Digital Marketing for Small Business',
+      author: 'Women Entrepreneurs Alliance',
+      duration: '4 weeks',
+      level: 'Intermediate',
       rating: 4.9,
       students: 3215,
       image: require('../../assets/icon.png'),
       progress: 0,
-      label: 'NEW'
+      label: 'IN DEMAND',
+      matchScore: '87% match',
+      localContext: true
     }
   ];
 
+  // Header animation
   const headerHeight = scrollY.interpolate({
     inputRange: [0, 100],
     outputRange: [200, 120],
@@ -96,15 +107,42 @@ export default function SkillDevelopmentScreen({ navigation }) {
     extrapolate: 'clamp'
   });
 
+  // Simulate AI skills analysis on component mount
+  useEffect(() => {
+    const getSkillRecommendations = async () => {
+      setIsLoading(true);
+      // Simulating API call to AI skills matching service
+      setTimeout(() => {
+        setSkillRecommendations([
+          {
+            skillName: 'Financial Analysis',
+            relevance: 92,
+            demandGrowth: '+34%',
+            localJobs: 56
+          },
+          {
+            skillName: 'Digital Literacy',
+            relevance: 88,
+            demandGrowth: '+28%',
+            localJobs: 42
+          }
+        ]);
+        setIsLoading(false);
+      }, 1500);
+    };
+
+    getSkillRecommendations();
+  }, []);
+
   return (
     <View style={styles.container}>
-      {/* Pink Status Bar */}
-      <StatusBar barStyle="light-content" backgroundColor="#FF4081" />
+      {/* Status Bar */}
+      <StatusBar barStyle="light-content" backgroundColor="#8E44AD" />
       
-      {/* Pink Header Section with gradient that covers notification panel */}
+      {/* Header Section with gradient */}
       <Animated.View style={[styles.headerContainer, { height: headerHeight }]}>
         <LinearGradient 
-          colors={['#FF6B9C', '#FF4081']} 
+          colors={['#9B59B6', '#8E44AD']} 
           start={[0, 0]} 
           end={[1, 1]}
           style={styles.headerGradient}
@@ -112,14 +150,14 @@ export default function SkillDevelopmentScreen({ navigation }) {
           <SafeAreaView style={styles.headerContent}>
             <View style={styles.headerTop}>
               <View>
-                <Text style={styles.welcomeText}>Hello, Student</Text>
-                <Text style={styles.headerTitle}>Skill Development</Text>
+                <Text style={styles.welcomeText}>Hello, Maria</Text>
+                <Text style={styles.headerTitle}>Financial Skills Hub</Text>
               </View>
               <View style={styles.headerIcons}>
                 <TouchableOpacity style={styles.iconButton}>
                   <Ionicons name="notifications" size={24} color="white" />
                   <View style={styles.notificationBadge}>
-                    <Text style={styles.badgeText}>3</Text>
+                    <Text style={styles.badgeText}>2</Text>
                   </View>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.profileButton}>
@@ -137,11 +175,11 @@ export default function SkillDevelopmentScreen({ navigation }) {
                 <Feather name="search" size={20} color="gray" style={styles.searchIcon} />
                 <TextInput 
                   style={styles.searchInput}
-                  placeholder="What do you want to learn?"
+                  placeholder="Find financial skills and courses..."
                   placeholderTextColor="gray"
                 />
                 <TouchableOpacity style={styles.filterButton}>
-                  <Feather name="sliders" size={18} color="#FF4081" />
+                  <Feather name="sliders" size={18} color="#8E44AD" />
                 </TouchableOpacity>
               </View>
             </Animated.View>
@@ -193,7 +231,7 @@ export default function SkillDevelopmentScreen({ navigation }) {
             <Text style={styles.sectionTitle}>Quick Actions</Text>
             <TouchableOpacity style={styles.seeAllButton}>
               <Text style={styles.seeAllText}>See all</Text>
-              <Feather name="chevron-right" size={16} color="#FF4081" />
+              <Feather name="chevron-right" size={16} color="#8E44AD" />
             </TouchableOpacity>
           </View>
           
@@ -218,48 +256,103 @@ export default function SkillDevelopmentScreen({ navigation }) {
           </View>
         </View>
         
-        {/* Popular Courses Section */}
+        {/* AI Skill Analysis Section */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Popular Courses</Text>
-            <TouchableOpacity style={styles.seeAllButton}>
-              <Text style={styles.seeAllText}>View all</Text>
-              <Feather name="chevron-right" size={16} color="#FF4081" />
+            <Text style={styles.sectionTitle}>Your Skills Analysis</Text>
+            <TouchableOpacity style={styles.refreshButton}>
+              <Text style={styles.refreshText}>Refresh</Text>
+              <Feather name="refresh-cw" size={16} color="#8E44AD" />
             </TouchableOpacity>
           </View>
           
-          <View style={styles.articlesContainer}>
-            {articles.map(article => (
+          <View style={styles.aiAnalysisCard}>
+            <View style={styles.aiCardHeader}>
+              <View style={styles.aiTitleContainer}>
+                <FontAwesome5 name="brain" size={18} color="#8E44AD" style={styles.aiIcon} />
+                <Text style={styles.aiCardTitle}>AI-Powered Skills Match</Text>
+              </View>
+              <Text style={styles.aiCardSubtitle}>Based on your profile, local market, and career goals</Text>
+            </View>
+            
+            {isLoading ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Analyzing your skills profile...</Text>
+              </View>
+            ) : (
+              <View style={styles.skillRecommendationsContainer}>
+                {skillRecommendations.map((skill, index) => (
+                  <View key={index} style={styles.skillRecommendation}>
+                    <View style={styles.skillNameContainer}>
+                      <Text style={styles.skillName}>{skill.skillName}</Text>
+                      <View style={styles.relevanceTag}>
+                        <Text style={styles.relevanceText}>{skill.relevance}% match</Text>
+                      </View>
+                    </View>
+                    <View style={styles.skillMetricsContainer}>
+                      <View style={styles.skillMetric}>
+                        <Text style={styles.metricLabel}>Growth</Text>
+                        <Text style={styles.metricValue}>{skill.demandGrowth}</Text>
+                      </View>
+                      <View style={styles.skillMetric}>
+                        <Text style={styles.metricLabel}>Local Jobs</Text>
+                        <Text style={styles.metricValue}>{skill.localJobs}</Text>
+                      </View>
+                      <TouchableOpacity style={styles.exploreButton}>
+                        <Text style={styles.exploreText}>Explore</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+                <TouchableOpacity style={styles.fullAnalysisButton}>
+                  <Text style={styles.fullAnalysisText}>View Full Skills Analysis</Text>
+                  <Feather name="arrow-right" size={16} color="#8E44AD" />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+        
+        {/* Micro-Learning Section */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Micro-Learning Modules</Text>
+            <TouchableOpacity style={styles.seeAllButton}>
+              <Text style={styles.seeAllText}>View all</Text>
+              <Feather name="chevron-right" size={16} color="#8E44AD" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.microLearningContainer}>
+            {microLearningModules.map(module => (
               <TouchableOpacity 
-                key={article.id} 
-                style={styles.articleCard}
-                onPress={() => navigation.navigate('Article', { title: article.title, article })}
+                key={module.id} 
+                style={styles.microLearningCard}
+                onPress={() => navigation.navigate('MicroLearning', { module })}
               >
-                <Image source={article.image} style={styles.articleImage} />
-                <View style={styles.articleContent}>
+                <View style={styles.moduleImageContainer}>
+                  <Image source={module.image} style={styles.moduleImage} />
+                  <View style={styles.moduleDurationTag}>
+                    <Ionicons name="time-outline" size={12} color="white" />
+                    <Text style={styles.moduleDurationText}>{module.duration}</Text>
+                  </View>
+                </View>
+                <View style={styles.moduleContent}>
                   <View style={styles.tagContainer}>
-                    {article.tags.map((tag, index) => (
+                    {module.tags.map((tag, index) => (
                       <View key={index} style={styles.tag}>
                         <Text style={styles.tagText}>{tag}</Text>
                       </View>
                     ))}
                   </View>
-                  <Text style={styles.articleTitle}>{article.title}</Text>
-                  <Text style={styles.articleAuthor}>{article.author}</Text>
+                  <Text style={styles.moduleTitle}>{module.title}</Text>
+                  <Text style={styles.moduleAuthor}>{module.author}</Text>
                   
-                  <View style={styles.courseMetaContainer}>
-                    <View style={styles.courseMeta}>
-                      <Ionicons name="time-outline" size={14} color="#666" />
-                      <Text style={styles.courseMetaText}>{article.duration}</Text>
+                  <View style={styles.moduleProgressContainer}>
+                    <View style={styles.progressBar}>
+                      <View style={styles.progressFill} />
                     </View>
-                    <View style={styles.courseMeta}>
-                      <Ionicons name="star" size={14} color="#FFB400" />
-                      <Text style={styles.courseMetaText}>{article.rating}</Text>
-                    </View>
-                    <View style={styles.courseMeta}>
-                      <Ionicons name="person-outline" size={14} color="#666" />
-                      <Text style={styles.courseMetaText}>{article.students.toLocaleString()}</Text>
-                    </View>
+                    <Text style={styles.progressText}>{module.completion}</Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -267,23 +360,32 @@ export default function SkillDevelopmentScreen({ navigation }) {
           </View>
         </View>
         
-        {/* Recommended for You Section */}
+        {/* Personalized Recommendations Section */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recommended for You</Text>
+            <Text style={styles.sectionTitle}>Personalized For You</Text>
             <TouchableOpacity style={styles.seeAllButton}>
               <Text style={styles.seeAllText}>More</Text>
-              <Feather name="chevron-right" size={16} color="#FF4081" />
+              <Feather name="chevron-right" size={16} color="#8E44AD" />
             </TouchableOpacity>
           </View>
           
-          {recommendedCourses.map(course => (
+          {aiRecommendedCourses.map(course => (
             <TouchableOpacity key={course.id} style={styles.recommendedCard}>
               <View style={styles.recommendedContent}>
                 <View style={styles.recommendedInfo}>
-                  <View style={styles.recommendedLabelContainer}>
-                    <Text style={styles.recommendedLabel}>{course.label}</Text>
+                  <View style={styles.recommendedTopLabels}>
+                    <View style={styles.recommendedLabelContainer}>
+                      <Text style={styles.recommendedLabel}>{course.label}</Text>
+                    </View>
+                    {course.localContext && (
+                      <View style={styles.localContextTag}>
+                        <Ionicons name="location" size={12} color="#8E44AD" />
+                        <Text style={styles.localContextText}>Local</Text>
+                      </View>
+                    )}
                   </View>
+                  
                   <Text style={styles.recommendedTitle}>{course.title}</Text>
                   <Text style={styles.recommendedAuthor}>{course.author}</Text>
                   
@@ -298,18 +400,15 @@ export default function SkillDevelopmentScreen({ navigation }) {
                     </View>
                   </View>
                   
-                  <View style={styles.ratingContainer}>
-                    <View style={styles.starsContainer}>
-                      {Array(5).fill(0).map((_, index) => (
-                        <Ionicons 
-                          key={index} 
-                          name={index < Math.floor(course.rating) ? "star" : "star-outline"} 
-                          size={16} 
-                          color="#FFB400" 
-                        />
-                      ))}
-                    </View>
-                    <Text style={styles.ratingText}>{course.rating} ({course.students.toLocaleString()})</Text>
+                  <View style={styles.aiMatchContainer}>
+                    <LinearGradient 
+                      colors={['#9B59B6', '#8E44AD']} 
+                      start={[0, 0]} 
+                      end={[1, 0]}
+                      style={styles.aiMatchGradient}
+                    >
+                      <Text style={styles.aiMatchText}>{course.matchScore}</Text>
+                    </LinearGradient>
                   </View>
                   
                   {course.progress > 0 && (
@@ -329,40 +428,96 @@ export default function SkillDevelopmentScreen({ navigation }) {
           ))}
         </View>
         
-        {/* Continue Learning Section */}
+        {/* Budget Challenge Section */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Continue Learning</Text>
+            <Text style={styles.sectionTitle}>Monthly Budget Challenge</Text>
             <TouchableOpacity style={styles.seeAllButton}>
-              <Text style={styles.seeAllText}>View all</Text>
-              <Feather name="chevron-right" size={16} color="#FF4081" />
+              <Text style={styles.seeAllText}>Details</Text>
+              <Feather name="chevron-right" size={16} color="#8E44AD" />
             </TouchableOpacity>
           </View>
           
-          <View style={styles.continueCard}>
+          <View style={styles.budgetChallengeCard}>
             <LinearGradient 
-              colors={['#7E57C2', '#5E35B1']} 
+              colors={['#3498DB', '#2980B9']} 
               start={[0, 0]} 
               end={[1, 1]}
-              style={styles.continueGradient}
+              style={styles.budgetGradient}
             >
-              <View style={styles.continueContent}>
+              <View style={styles.budgetContent}>
                 <View>
-                  <Text style={styles.continueTitle}>Machine Learning Basics</Text>
-                  <Text style={styles.continueSubtitle}>Next: Neural Networks Introduction</Text>
-                  <View style={styles.continueProgress}>
-                    <View style={styles.continueProgressBar}>
-                      <View style={[styles.continueProgressFill, { width: '65%' }]} />
+                  <Text style={styles.budgetTitle}>30-Day Savings Challenge</Text>
+                  <Text style={styles.budgetSubtitle}>Save $300 this month</Text>
+                  <View style={styles.budgetProgress}>
+                    <View style={styles.budgetProgressBar}>
+                      <View style={[styles.budgetProgressFill, { width: '45%' }]} />
                     </View>
-                    <Text style={styles.continueProgressText}>65% Complete</Text>
+                    <Text style={styles.budgetProgressText}>$135 of $300 saved</Text>
+                  </View>
+                  <View style={styles.communityContainer}>
+                    <Text style={styles.communityText}>328 women participating</Text>
                   </View>
                 </View>
-                <TouchableOpacity style={styles.continueButton}>
-                  <Ionicons name="play" size={20} color="white" />
+                <TouchableOpacity style={styles.budgetButton}>
+                  <Text style={styles.budgetButtonText}>Update</Text>
                 </TouchableOpacity>
               </View>
             </LinearGradient>
           </View>
+        </View>
+        
+        {/* Mentor Connection Section */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Connect with Mentors</Text>
+            <TouchableOpacity style={styles.seeAllButton}>
+              <Text style={styles.seeAllText}>Browse all</Text>
+              <Feather name="chevron-right" size={16} color="#8E44AD" />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.mentorsScrollContent}
+          >
+            <TouchableOpacity style={styles.mentorCard}>
+              <Image 
+                source={require('../../assets/icon.png')} 
+                style={styles.mentorImage}
+              />
+              <Text style={styles.mentorName}>Jennifer Taylor</Text>
+              <Text style={styles.mentorTitle}>Financial Advisor</Text>
+              <View style={styles.mentorButton}>
+                <Text style={styles.mentorButtonText}>Connect</Text>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.mentorCard}>
+              <Image 
+                source={require('../../assets/icon.png')} 
+                style={styles.mentorImage}
+              />
+              <Text style={styles.mentorName}>Lisa Washington</Text>
+              <Text style={styles.mentorTitle}>Entrepreneur</Text>
+              <View style={styles.mentorButton}>
+                <Text style={styles.mentorButtonText}>Connect</Text>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.mentorCard}>
+              <Image 
+                source={require('../../assets/icon.png')} 
+                style={styles.mentorImage}
+              />
+              <Text style={styles.mentorName}>Michelle Roberts</Text>
+              <Text style={styles.mentorTitle}>Tech Leader</Text>
+              <View style={styles.mentorButton}>
+                <Text style={styles.mentorButtonText}>Connect</Text>
+              </View>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
         
         {/* Add some padding at the bottom */}
@@ -372,7 +527,7 @@ export default function SkillDevelopmentScreen({ navigation }) {
       {/* Floating Action Button */}
       <TouchableOpacity style={styles.fab}>
         <LinearGradient 
-          colors={['#FF6B9C', '#FF4081']} 
+          colors={['#9B59B6', '#8E44AD']} 
           start={[0, 0]} 
           end={[1, 1]}
           style={styles.fabGradient}
@@ -390,7 +545,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fc',
   },
   headerContainer: {
-    backgroundColor: '#FF4081',
+    backgroundColor: '#8E44AD',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     overflow: 'hidden',
   },
@@ -413,11 +568,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.9)',
     marginBottom: 4,
+    marginHorizontal: 10,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: 'white',
+    marginHorizontal: 10,
   },
   headerIcons: {
     flexDirection: 'row',
@@ -431,7 +588,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -5,
     right: -5,
-    backgroundColor: '#FFB400',
+    backgroundColor: '#FF8C00',
     borderRadius: 10,
     width: 16,
     height: 16,
@@ -488,7 +645,7 @@ const styles = StyleSheet.create({
   filterButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: '#FFF0F5',
+    backgroundColor: '#F5EEF8',
   },
   scrollContainer: {
     flex: 1,
@@ -513,7 +670,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   activeTabItem: {
-    backgroundColor: '#FF4081',
+    backgroundColor: '#8E44AD',
   },
   tabText: {
     fontSize: 14,
@@ -545,9 +702,19 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontSize: 14,
-    color: '#FF4081',
+    color: '#8E44AD',
     fontWeight: '500',
     marginRight: 2,
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  refreshText: {
+    fontSize: 14,
+    color: '#8E44AD',
+    fontWeight: '500',
+    marginRight: 4,
   },
   categoriesContainer: {
     flexDirection: 'row',
@@ -579,74 +746,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#333',
   },
-  articlesContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  articleCard: {
-    width: '48%',
-    backgroundColor: 'white',
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-    overflow: 'hidden',
-  },
-  articleImage: {
-    width: '100%',
-    height: 110,
-    resizeMode: 'cover',
-  },
-  articleContent: {
-    padding: 12,
-  },
-  tagContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 8,
-  },
-  tag: {
-    backgroundColor: '#FFF0F5',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-    marginRight: 6,
-    marginBottom: 4,
-  },
-  tagText: {
-    fontSize: 10,
-    color: '#FF4081',
-    fontWeight: '500',
-  },
-  articleTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 6,
-    color: '#333',
-  },
-  articleAuthor: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 8,
-  },
-  courseMetaContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  courseMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 12,
-    marginBottom: 4,
-  },
-  courseMetaText: {
-    fontSize: 12,
-    color: '#666',
-    marginLeft: 4,
-  },
-  recommendedCard: {
+  aiAnalysisCard: {
     backgroundColor: 'white',
     borderRadius: 16,
     shadowColor: '#000',
@@ -655,154 +755,429 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
     padding: 16,
-    marginBottom: 12,
   },
-  recommendedContent: {
+  aiCardHeader: {
+    marginBottom: 16,
+  },
+  aiTitleContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
   },
-  recommendedInfo: {
-    flex: 1,
-    paddingRight: 12,
+  aiIcon: {
+    marginRight: 8,
   },
-  recommendedLabelContainer: {
-    backgroundColor: '#FFF0F5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-    marginBottom: 8,
-  },
-  recommendedLabel: {
-    fontSize: 10,
-    color: '#FF4081',
-    fontWeight: 'bold',
-  },
-  recommendedTitle: {
+  aiCardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 6,
   },
-  recommendedAuthor: {
+  aiCardSubtitle: {
     fontSize: 13,
     color: '#666',
-    marginBottom: 8,
+    marginLeft: 26,
   },
-  ratingContainer: {
-    flexDirection: 'row',
+  loadingContainer: {
+    padding: 20,
     alignItems: 'center',
-    marginVertical: 8,
   },
-  starsContainer: {
-    flexDirection: 'row',
-    marginRight: 8,
-  },
-  ratingText: {
-    fontSize: 12,
+  loadingText: {
+    fontSize: 15,
     color: '#666',
+    fontStyle: 'italic',
   },
-  progressContainer: {
+  skillRecommendationsContainer: {
     marginTop: 8,
   },
-  progressBar: {
-    height: 6,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 3,
-    marginBottom: 4,
-    overflow: 'hidden',
+  skillRecommendation: {
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    paddingBottom: 16,
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#FF4081',
-    borderRadius: 3,
-  },
-  progressText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  recommendedImageContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 16,
-    backgroundColor: '#FFF0F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  recommendedImage: {
-    width: 60,
-    height: 60,
-    resizeMode: 'contain',
-  },
-  continueCard: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  continueGradient: {
-    padding: 20,
-  },
-  continueContent: {
+  skillNameContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  continueTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 4,
-  },
-  continueSubtitle: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'space-between',
     marginBottom: 12,
   },
-  continueProgress: {
-    width: '90%',
+  skillName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
   },
-  continueProgressBar: {
-    height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 3,
-    marginBottom: 4,
-    overflow: 'hidden',
+  relevanceTag: {
+    backgroundColor: '#F5EEF8',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  continueProgressFill: {
-    height: '100%',
-    backgroundColor: 'white',
-    borderRadius: 3,
-  },
-  continueProgressText: {
+  relevanceText: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '600',
+    color: '#8E44AD',
   },
-  continueButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
+  skillMetricsContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  fab: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
+  skillMetric: {
+    marginRight: 24,
   },
-  fabGradient: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
+  metricLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 2,
+  },
+  metricValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  exploreButton: {
+    backgroundColor: '#8E44AD',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginLeft: 'auto',
+  },
+  exploreText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: 'white',
+  },
+  fullAnalysisButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-  }
+    justifyContent: 'center',
+    marginTop: 8,
+    padding: 12,
+    backgroundColor: '#F5EEF8',
+    borderRadius: 8,
+  },
+
+    fullAnalysisText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#8E44AD',
+    },
+    microLearningContainer: {
+      marginBottom: 16,
+    },
+    microLearningCard: {
+      backgroundColor: 'white',
+      borderRadius: 16,
+      overflow: 'hidden',
+      marginBottom: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    moduleImageContainer: {
+      width: '100%',
+      height: 120,
+      position: 'relative',
+    },
+    moduleImage: {
+      width: '100%',
+      height: '100%',
+      resizeMode: 'cover',
+    },
+    moduleDurationTag: {
+      position: 'absolute',
+      bottom: 8,
+      right: 8,
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    moduleDurationText: {
+      color: 'white',
+      fontSize: 12,
+      marginLeft: 4,
+    },
+    moduleContent: {
+      padding: 12,
+    },
+    tagContainer: {
+      flexDirection: 'row',
+      marginBottom: 8,
+    },
+    tag: {
+      backgroundColor: '#F5EEF8',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+      marginRight: 8,
+    },
+    tagText: {
+      fontSize: 12,
+      color: '#8E44AD',
+    },
+    moduleTitle: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: '#333',
+      marginBottom: 4,
+    },
+    moduleAuthor: {
+      fontSize: 14,
+      color: '#666',
+      marginBottom: 8,
+    },
+    moduleProgressContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    progressBar: {
+      flex: 1,
+      height: 6,
+      backgroundColor: '#eee',
+      borderRadius: 3,
+      marginRight: 8,
+    },
+    progressFill: {
+      height: '100%',
+      backgroundColor: '#8E44AD',
+      borderRadius: 3,
+      width: '50%', // This value can be dynamic based on progress
+    },
+    progressText: {
+      fontSize: 12,
+      color: '#666',
+    },
+    recommendedCard: {
+      backgroundColor: 'white',
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 16,
+      flexDirection: 'row',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    recommendedContent: {
+      flex: 1,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    recommendedInfo: {
+      flex: 1,
+      paddingRight: 12,
+    },
+    recommendedTopLabels: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    recommendedLabelContainer: {
+      backgroundColor: '#F5EEF8',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+      marginRight: 8,
+    },
+    recommendedLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#8E44AD',
+    },
+    localContextTag: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#E8EAF6',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+    },
+    localContextText: {
+      fontSize: 12,
+      color: '#8E44AD',
+      marginLeft: 4,
+    },
+    recommendedTitle: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: '#333',
+      marginBottom: 4,
+    },
+    recommendedAuthor: {
+      fontSize: 14,
+      color: '#666',
+      marginBottom: 8,
+    },
+    courseMetaContainer: {
+      flexDirection: 'row',
+      marginBottom: 8,
+    },
+    courseMeta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginRight: 16,
+    },
+    courseMetaText: {
+      fontSize: 12,
+      color: '#666',
+      marginLeft: 4,
+    },
+    aiMatchContainer: {
+      marginBottom: 8,
+    },
+    aiMatchGradient: {
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+      alignSelf: 'flex-start',
+    },
+    aiMatchText: {
+      fontSize: 12,
+      color: 'white',
+      fontWeight: '600',
+    },
+    progressContainer: {
+      marginTop: 8,
+    },
+    recommendedImageContainer: {
+      width: 80,
+      height: 80,
+      borderRadius: 16,
+      overflow: 'hidden',
+    },
+    recommendedImage: {
+      width: '100%',
+      height: '100%',
+      resizeMode: 'cover',
+    },
+    budgetChallengeCard: {
+      borderRadius: 16,
+      overflow: 'hidden',
+      marginBottom: 16,
+    },
+    budgetGradient: {
+      padding: 16,
+    },
+    budgetContent: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    budgetTitle: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: 'white',
+      marginBottom: 4,
+    },
+    budgetSubtitle: {
+      fontSize: 14,
+      color: 'white',
+      marginBottom: 8,
+    },
+    budgetProgress: {
+      marginBottom: 8,
+    },
+    budgetProgressBar: {
+      height: 6,
+      backgroundColor: 'rgba(255,255,255,0.3)',
+      borderRadius: 3,
+      marginBottom: 4,
+    },
+    budgetProgressFill: {
+      height: '100%',
+      backgroundColor: 'white',
+      borderRadius: 3,
+      width: '45%', // Adjust dynamically as needed
+    },
+    budgetProgressText: {
+      fontSize: 12,
+      color: 'white',
+    },
+    communityContainer: {
+      marginTop: 4,
+    },
+    communityText: {
+      fontSize: 12,
+      color: 'white',
+    },
+    budgetButton: {
+      backgroundColor: 'white',
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+    },
+    budgetButtonText: {
+      fontSize: 14,
+      fontWeight: 'bold',
+      color: '#2980B9',
+    },
+    mentorsScrollContent: {
+      paddingHorizontal: 16,
+    },
+    mentorCard: {
+      width: 120,
+      backgroundColor: 'white',
+      borderRadius: 16,
+      padding: 12,
+      alignItems: 'center',
+      marginRight: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    mentorImage: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      marginBottom: 8,
+    },
+    mentorName: {
+      fontSize: 14,
+      fontWeight: 'bold',
+      color: '#333',
+      marginBottom: 4,
+      textAlign: 'center',
+    },
+    mentorTitle: {
+      fontSize: 12,
+      color: '#666',
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    mentorButton: {
+      backgroundColor: '#8E44AD',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+    },
+    mentorButtonText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: 'white',
+    },
+    fab: {
+      position: 'absolute',
+      bottom: 20,
+      right: 20,
+    },
+    fabGradient: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 5,
+    },
 });
