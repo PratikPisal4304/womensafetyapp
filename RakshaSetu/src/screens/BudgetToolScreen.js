@@ -202,10 +202,7 @@ const TransactionModal = ({
   setSelectedCategoryId,
 }) => (
   <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{ flex: 1 }}
-    >
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
@@ -262,6 +259,103 @@ const TransactionModal = ({
   </Modal>
 );
 
+// Goal Modal Component for adding new financial goals
+const GoalModal = ({ visible, onClose, onAddGoal }) => {
+  const [goalName, setGoalName] = useState('');
+  const [goalTarget, setGoalTarget] = useState('');
+  const [goalCurrent, setGoalCurrent] = useState('');
+  const [goalDeadline, setGoalDeadline] = useState('');
+
+  const resetFields = () => {
+    setGoalName('');
+    setGoalTarget('');
+    setGoalCurrent('');
+    setGoalDeadline('');
+  };
+
+  const handleAddGoal = () => {
+    if (!goalName.trim() || !goalTarget.trim() || !goalDeadline.trim()) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      return;
+    }
+    const target = parseFloat(goalTarget);
+    const current = parseFloat(goalCurrent) || 0;
+    if (isNaN(target) || target <= 0) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      return;
+    }
+    const newGoal = {
+      id: Date.now().toString(),
+      name: goalName,
+      target,
+      current,
+      deadline: goalDeadline,
+    };
+    onAddGoal(newGoal);
+    resetFields();
+    onClose();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  return (
+    <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Financial Goal</Text>
+              <TouchableOpacity style={styles.closeButton} onPress={() => { resetFields(); onClose(); }}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Goal Name</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="E.g., Emergency Fund"
+                value={goalName}
+                onChangeText={setGoalName}
+              />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Target Amount</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Enter target amount"
+                keyboardType="numeric"
+                value={goalTarget}
+                onChangeText={setGoalTarget}
+              />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Current Progress</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Enter current amount"
+                keyboardType="numeric"
+                value={goalCurrent}
+                onChangeText={setGoalCurrent}
+              />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Deadline (YYYY-MM-DD)</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="2025-12-31"
+                value={goalDeadline}
+                onChangeText={setGoalDeadline}
+              />
+            </View>
+            <TouchableOpacity style={styles.addTransactionButton} onPress={handleAddGoal}>
+              <Text style={styles.addTransactionButtonText}>Add Goal</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+};
+
 // Main BudgetToolScreen Component
 const BudgetToolScreen = () => {
   // Data States
@@ -302,6 +396,7 @@ const BudgetToolScreen = () => {
 
   // UI States
   const [modalVisible, setModalVisible] = useState(false);
+  const [goalModalVisible, setGoalModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('budget');
   const [newTransaction, setNewTransaction] = useState({
     description: '',
@@ -355,6 +450,11 @@ const BudgetToolScreen = () => {
         goal.id === goalId ? { ...goal, current: newCurrent, target: newTarget } : goal
       )
     );
+  };
+
+  // Function to add a new goal
+  const addGoal = (newGoal) => {
+    setGoals([newGoal, ...goals]);
   };
 
   return (
@@ -420,13 +520,17 @@ const BudgetToolScreen = () => {
             </View>
             <View style={styles.categoriesContainer}>
               {categories.map((cat) => (
-                <CategoryCard key={cat.id} category={cat} onUpdateBudget={ (id, newBudget) => {
-                  setCategories(
-                    categories.map((cat) =>
-                      cat.id === id ? { ...cat, budget: newBudget } : cat
-                    )
-                  );
-                } } />
+                <CategoryCard
+                  key={cat.id}
+                  category={cat}
+                  onUpdateBudget={(id, newBudget) => {
+                    setCategories(
+                      categories.map((cat) =>
+                        cat.id === id ? { ...cat, budget: newBudget } : cat
+                      )
+                    );
+                  }}
+                />
               ))}
             </View>
             <View style={styles.sectionHeader}>
@@ -510,7 +614,13 @@ const BudgetToolScreen = () => {
           <>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Financial Goals</Text>
-              <TouchableOpacity style={styles.addButton} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}>
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => {
+                  setGoalModalVisible(true);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                }}
+              >
                 <MaterialIcons name="add" size={24} color="#FFF" />
               </TouchableOpacity>
             </View>
@@ -546,6 +656,12 @@ const BudgetToolScreen = () => {
         setNewTransaction={setNewTransaction}
         selectedCategoryId={selectedCategoryId}
         setSelectedCategoryId={setSelectedCategoryId}
+      />
+
+      <GoalModal
+        visible={goalModalVisible}
+        onClose={() => setGoalModalVisible(false)}
+        onAddGoal={addGoal}
       />
     </KeyboardAvoidingView>
   );
@@ -715,36 +831,11 @@ const styles = StyleSheet.create({
   goalDetails: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   goalProgress: { fontSize: 14, color: '#333' },
   goalDeadline: { fontSize: 12, color: '#666' },
-  goalEditContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginVertical: 10,
-  },
-  goalEditField: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  goalEditLabel: {
-    fontSize: 14,
-    color: '#333',
-    marginRight: 5,
-  },
-  goalEditInput: {
-    borderWidth: 1,
-    borderColor: '#DDD',
-    borderRadius: 4,
-    padding: 5,
-    fontSize: 14,
-    width: 80,
-    textAlign: 'center',
-  },
-  goalSaveButton: {
-    backgroundColor: '#2EC4B6',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 4,
-  },
+  goalEditContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: 10 },
+  goalEditField: { flexDirection: 'row', alignItems: 'center' },
+  goalEditLabel: { fontSize: 14, color: '#333', marginRight: 5 },
+  goalEditInput: { borderWidth: 1, borderColor: '#DDD', borderRadius: 4, padding: 5, fontSize: 14, width: 80, textAlign: 'center' },
+  goalSaveButton: { backgroundColor: '#2EC4B6', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 4 },
   goalSaveText: { color: '#FFF', fontSize: 14, fontWeight: 'bold' },
   recommendationCard: {
     backgroundColor: '#FFF',
