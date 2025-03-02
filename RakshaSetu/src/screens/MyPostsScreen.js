@@ -48,15 +48,19 @@ export default function MyPostsScreen() {
         where('userId', '==', auth.currentUser.uid),
         orderBy('createdAt', 'desc')
       );
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const loadedPosts = [];
-        snapshot.forEach((docSnap) => {
-          loadedPosts.push({ id: docSnap.id, ...docSnap.data() });
-        });
-        setPosts(loadedPosts);
-      }, (error) => {
-        Alert.alert("Error", error.message);
-      });
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const loadedPosts = [];
+          snapshot.forEach((docSnap) => {
+            loadedPosts.push({ id: docSnap.id, ...docSnap.data() });
+          });
+          setPosts(loadedPosts);
+        },
+        (error) => {
+          Alert.alert("Error", error.message);
+        }
+      );
       return () => unsubscribe();
     }
   }, []);
@@ -71,7 +75,7 @@ export default function MyPostsScreen() {
     }
   };
 
-  // Render each post card using enhanced UI
+  // Render each post card using enhanced UI styling
   const renderItem = ({ item }) => {
     const likedBy = item.likedBy || [];
     return (
@@ -150,38 +154,74 @@ const styles = StyleSheet.create({
     paddingVertical: 50,
     paddingHorizontal: 20,
     alignItems: "center",
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
     shadowColor: "#000",
     shadowOpacity: 0.2,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
     elevation: 5,
   },
-  headerTitle: { fontSize: 28, fontWeight: "bold", color: "#fff" ,paddingTop: 20},
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#fff",
+    top: 15,
+    marginBottom: 5,
+    paddingVertical: 10,
+  },
   postsList: { padding: 16 },
   emptyText: { textAlign: "center", color: "#777", marginTop: 20, fontSize: 16 },
   postCard: {
     backgroundColor: "#fff",
     borderRadius: CARD_RADIUS,
     padding: 20,
-    marginBottom: 16,
-    elevation: 3,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#f0f0f0",
+    elevation: 4,
     shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 6,
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
   },
   postHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   headerLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
-  userAvatar: { width: 45, height: 45, borderRadius: 22.5 },
+  userAvatar: {
+    width: 45,
+    height: 45,
+    borderRadius: 22.5,
+    borderWidth: 2,
+    borderColor: PINK,
+  },
   postHeaderText: { marginLeft: 12 },
   userName: { fontSize: 16, fontWeight: "600", color: "#333" },
   dateText: { fontSize: 12, color: "#999", marginTop: 4 },
-  postTitle: { fontSize: 18, fontWeight: "700", color: "#000", marginBottom: 6 },
+  postTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#333",
+    marginBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+    paddingBottom: 4,
+  },
   postContent: { fontSize: 15, color: "#444", marginBottom: 10 },
-  postImage: { width: "100%", height: 200, borderRadius: 10, marginBottom: 10, resizeMode: "cover" },
-  actionRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 10 },
+  postImage: {
+    width: "100%",
+    height: 300,
+    borderRadius: 8,
+    marginBottom: 10,
+    resizeMode: "cover",
+  },
+  actionRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+    paddingTop: 10,
+  },
   actionButton: { flexDirection: "row", alignItems: "center" },
   actionButtonText: { fontSize: 15, color: "#666", marginLeft: 4 },
 });

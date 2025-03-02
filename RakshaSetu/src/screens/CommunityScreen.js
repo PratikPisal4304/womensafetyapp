@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   Image,
   StatusBar,
   TextInput,
@@ -13,6 +14,7 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
@@ -35,9 +37,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { useNavigation } from '@react-navigation/native';
-
-import { auth, db, storage } from '../../config/firebaseConfig'; 
-// Make sure 'storage' is exported from firebaseConfig if using Firebase Storage
+import { auth, db, storage } from '../../config/firebaseConfig';
 
 const PINK = '#ff5f96';
 const CARD_RADIUS = 10;
@@ -52,16 +52,153 @@ const formatTimestamp = (timestamp) => {
   return new Date(timestamp).toLocaleDateString();
 };
 
+/**
+ * PostCard Component
+ * - Renders each post with its UI.
+ * - Listens for double taps.
+ * - If the post is not already liked, a double tap toggles the like and plays an animation.
+ * - If the post is already liked, a double tap simply removes the like without triggering animation.
+ */
+const PostCard = ({
+  post,
+  handleLikeToggle,
+  handleDeletePost,
+  handleCommentPost,
+  handleSharePost,
+}) => {
+  const lastTapRef = useRef(0);
+  const animation = useRef(new Animated.Value(0)).current;
+
+  const likedBy = post.likedBy || [];
+  const isLiked = auth.currentUser && likedBy.includes(auth.currentUser.uid);
+
+  const handleCardTap = () => {
+    const now = Date.now();
+    const DOUBLE_PRESS_DELAY = 300;
+    if (lastTapRef.current && now - lastTapRef.current < DOUBLE_PRESS_DELAY) {
+      // Double tap detected: toggle like
+      handleLikeToggle(post);
+      // Only trigger animation if adding a like (i.e. when not already liked)
+      if (!isLiked) {
+        triggerLikeAnimation();
+      }
+    } else {
+      lastTapRef.current = now;
+    }
+  };
+
+  const triggerLikeAnimation = () => {
+    animation.setValue(0);
+    Animated.sequence([
+      Animated.timing(animation, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(animation, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const scale = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.5, 1.5],
+  });
+
+  return (
+    <TouchableWithoutFeedback onPress={handleCardTap}>
+      <View style={styles.postCard}>
+        <View style={styles.postHeader}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            <Image
+              source={{ uri: "https://via.placeholder.com/40" }}
+              style={styles.userAvatar}
+            />
+            <View style={{ marginLeft: 10 }}>
+              <Text style={styles.userName}>{post.userName || "Unknown User"}</Text>
+              <Text style={styles.dateText}>
+                Posted on: {formatTimestamp(post.createdAt)}
+              </Text>
+            </View>
+          </View>
+          {auth.currentUser && post.userId === auth.currentUser.uid && (
+            <TouchableOpacity onPress={() => handleDeletePost(post)}>
+              <Ionicons name="trash" size={20} color="red" />
+            </TouchableOpacity>
+          )}
+        </View>
+        <Text style={styles.postTitle}>{post.title}</Text>
+        <Text style={styles.postContent}>{post.content}</Text>
+        {post.imageUrl ? (
+          <Image source={{ uri: post.imageUrl }} style={styles.postImage} />
+        ) : null}
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => handleLikeToggle(post)}
+          >
+            <Ionicons
+              name={isLiked ? "heart" : "heart-outline"}
+              size={20}
+              color={isLiked ? "red" : "#666"}
+              style={{ marginRight: 5 }}
+            />
+            <Text style={styles.actionButtonText}>
+              {likedBy.length > 0 ? likedBy.length : ""}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => handleCommentPost(post)}
+          >
+            <Ionicons
+              name="chatbubble-outline"
+              size={20}
+              color="#666"
+              style={{ marginRight: 5 }}
+            />
+            <Text style={styles.actionButtonText}>
+              {post.commentCount ? post.commentCount : 0}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => handleSharePost(post)}
+          >
+            <Ionicons
+              name="share-social-outline"
+              size={20}
+              color="#666"
+              style={{ marginRight: 5 }}
+            />
+            <Text style={styles.actionButtonText}>Share</Text>
+          </TouchableOpacity>
+        </View>
+        {/* Animated heart overlay */}
+        <Animated.View
+          style={[
+            styles.heartOverlay,
+            { opacity: animation, transform: [{ scale }] },
+          ]}
+        >
+          <Ionicons name="heart" size={80} color="red" />
+        </Animated.View>
+      </View>
+    </TouchableWithoutFeedback>
+  );
+};
+
 export default function CommunityScreen() {
   const navigation = useNavigation();
   const [searchTerm, setSearchTerm] = useState('');
   const [posts, setPosts] = useState([]);
 
-  // For the create-post modal
+  // Create post modal states
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [uploading, setUploading] = useState(false);
-
-  // Post form states
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [imageUri, setImageUri] = useState(null);
@@ -72,7 +209,7 @@ export default function CommunityScreen() {
   const [commentText, setCommentText] = useState('');
   const [comments, setComments] = useState([]);
 
-  // 1) Listen to Firestore for community posts in real time
+  // Listen to Firestore for community posts in real time.
   useEffect(() => {
     const q = query(collection(db, 'communityPosts'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -85,7 +222,7 @@ export default function CommunityScreen() {
     return () => unsubscribe();
   }, []);
 
-  // Subscribe to comments when a post is selected for commenting
+  // Subscribe to comments when a post is selected for commenting.
   useEffect(() => {
     if (selectedPost) {
       const commentQuery = query(
@@ -103,13 +240,36 @@ export default function CommunityScreen() {
     }
   }, [selectedPost]);
 
-  // 2) Search
+  // Filter posts based on search term (title, content, and user profile).
+  const filteredPosts =
+    searchTerm.trim() === ''
+      ? posts
+      : posts.filter(
+          (post) =>
+            post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            post.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (post.userName &&
+              post.userName.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+
+  // Compute search suggestions from matching post titles and user names.
+  const suggestionsSet = new Set();
+  filteredPosts.forEach((post) => {
+    if (post.title.toLowerCase().includes(searchTerm.toLowerCase())) {
+      suggestionsSet.add(post.title);
+    }
+    if (post.userName && post.userName.toLowerCase().includes(searchTerm.toLowerCase())) {
+      suggestionsSet.add(post.userName);
+    }
+  });
+  const suggestions = Array.from(suggestionsSet);
+
   const handleSearchSubmit = () => {
     console.log('Search submitted:', searchTerm);
-    // Optionally filter or navigate based on searchTerm
+    // Additional navigation or logic can be added here.
   };
 
-  // 3) Like toggling
+  // Like toggling.
   const handleLikeToggle = async (post) => {
     if (!auth.currentUser) {
       Alert.alert('Error', 'You must be logged in to like posts.');
@@ -129,7 +289,6 @@ export default function CommunityScreen() {
     }
   };
 
-  // 4) Share
   const handleSharePost = async (post) => {
     try {
       await Share.share({
@@ -140,14 +299,12 @@ export default function CommunityScreen() {
     }
   };
 
-  // 5) Comment feature: Open comment modal
   const handleCommentPost = (post) => {
     setSelectedPost(post);
     setCommentText('');
     setCommentModalVisible(true);
   };
 
-  // Submit comment: Save comment in subcollection 'comments' and increment commentCount
   const handleSubmitComment = async () => {
     if (!auth.currentUser) {
       Alert.alert('Error', 'You must be logged in to comment.');
@@ -164,14 +321,12 @@ export default function CommunityScreen() {
       if (userDocSnap.exists()) {
         userName = userDocSnap.data().name || 'Anonymous';
       }
-      // Add comment to subcollection
       await addDoc(collection(db, 'communityPosts', selectedPost.id, 'comments'), {
         userId: auth.currentUser.uid,
         userName: userName,
         comment: commentText,
         createdAt: serverTimestamp(),
       });
-      // Update post's commentCount field by incrementing it by 1.
       const postRef = doc(db, 'communityPosts', selectedPost.id);
       await updateDoc(postRef, { commentCount: increment(1) });
       Alert.alert('Success', 'Comment posted!');
@@ -181,7 +336,6 @@ export default function CommunityScreen() {
     }
   };
 
-  // Delete comment: Remove comment document and decrement commentCount
   const handleDeleteComment = async (commentId) => {
     try {
       await deleteDoc(doc(db, 'communityPosts', selectedPost.id, 'comments', commentId));
@@ -193,7 +347,6 @@ export default function CommunityScreen() {
     }
   };
 
-  // Delete post (only if current user owns the post)
   const handleDeletePost = async (post) => {
     try {
       await deleteDoc(doc(db, 'communityPosts', post.id));
@@ -203,7 +356,6 @@ export default function CommunityScreen() {
     }
   };
 
-  // =============== CREATE POST MODAL LOGIC ===============
   const handlePickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -224,16 +376,13 @@ export default function CommunityScreen() {
   const uploadImageAsync = async (uri) => {
     if (!uri) return null;
     try {
-      console.log("Uploading image from URI:", uri);
       const response = await fetch(uri);
       const blob = await response.blob();
-      console.log("Blob created:", blob);
       const filename = `communityImages/${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const storageRef = ref(storage, filename);
       const uploadTask = uploadBytesResumable(storageRef, blob);
       await uploadTask;
       const downloadURL = await getDownloadURL(storageRef);
-      console.log("Download URL:", downloadURL);
       return downloadURL;
     } catch (error) {
       Alert.alert('Upload Error', error.message);
@@ -256,15 +405,12 @@ export default function CommunityScreen() {
       const userDocSnap = await getDoc(userDocRef);
       let userName = 'Unknown User';
       if (userDocSnap.exists()) {
-        const userData = userDocSnap.data();
-        userName = userData.name || 'Unknown User';
+        userName = userDocSnap.data().name || 'Unknown User';
       }
       let imageUrl = null;
       if (imageUri) {
         imageUrl = await uploadImageAsync(imageUri);
-        console.log("Image URL to store:", imageUrl);
       }
-      // Save post with initial commentCount of 0.
       await addDoc(collection(db, 'communityPosts'), {
         userId: auth.currentUser.uid,
         userName: userName,
@@ -297,12 +443,13 @@ export default function CommunityScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-
-      {/* Pink Header */}
+      {/* Header with Search */}
       <View style={styles.headerContainer}>
         <Text style={styles.headerTitle}>My Community</Text>
         <View style={styles.searchBar}>
-          <MaterialIcons name="search" size={24} color="#666" style={{ marginRight: 8 }} />
+          <TouchableOpacity onPress={handleSearchSubmit}>
+            <MaterialIcons name="search" size={24} color="#666" style={{ marginRight: 8 }} />
+          </TouchableOpacity>
           <TextInput
             style={styles.searchInput}
             placeholder="Search Posts..."
@@ -313,9 +460,20 @@ export default function CommunityScreen() {
             returnKeyType="search"
           />
         </View>
+        {searchTerm.trim() !== '' && suggestions.length > 0 && (
+          <View style={styles.suggestionContainer}>
+            {suggestions.map((suggestion, index) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() => setSearchTerm(suggestion)}
+              >
+                <Text style={styles.suggestionText}>{suggestion}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
-
-      {/* Posts Scrollable Area */}
+      {/* Posts Area */}
       <KeyboardAwareScrollView
         style={styles.scrollContainer}
         contentContainerStyle={styles.scrollContent}
@@ -332,86 +490,19 @@ export default function CommunityScreen() {
               <Text style={styles.createPostButtonText}>Create Post</Text>
             </TouchableOpacity>
           </View>
-          {posts.map((post) => {
-            const likedBy = post.likedBy || [];
-            const isLiked = auth.currentUser && likedBy.includes(auth.currentUser.uid);
-            return (
-              <View key={post.id} style={styles.postCard}>
-                <View style={styles.postHeader}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <Image
-                      source={{ uri: "https://via.placeholder.com/40" }}
-                      style={styles.userAvatar}
-                    />
-                    <View style={{ marginLeft: 10 }}>
-                      <Text style={styles.userName}>
-                        {post.userName || "Unknown User"}
-                      </Text>
-                      <Text style={styles.dateText}>
-                        Posted on: {formatTimestamp(post.createdAt)}
-                      </Text>
-                    </View>
-                  </View>
-                  {auth.currentUser && post.userId === auth.currentUser.uid && (
-                    <TouchableOpacity onPress={() => handleDeletePost(post)}>
-                      <Ionicons name="trash" size={20} color="red" />
-                    </TouchableOpacity>
-                  )}
-                </View>
-                <Text style={styles.postTitle}>{post.title}</Text>
-                <Text style={styles.postContent}>{post.content}</Text>
-                {post.imageUrl ? (
-                  <Image source={{ uri: post.imageUrl }} style={styles.postImage} />
-                ) : null}
-                <View style={styles.actionRow}>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => handleLikeToggle(post)}
-                  >
-                    <Ionicons
-                      name={isLiked ? "heart" : "heart-outline"}
-                      size={20}
-                      color={isLiked ? "red" : "#666"}
-                      style={{ marginRight: 5 }}
-                    />
-                    <Text style={styles.actionButtonText}>
-                      {likedBy.length > 0 ? likedBy.length : ""}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => handleCommentPost(post)}
-                  >
-                    <Ionicons
-                      name="chatbubble-outline"
-                      size={20}
-                      color="#666"
-                      style={{ marginRight: 5 }}
-                    />
-                    <Text style={styles.actionButtonText}>
-                      {post.commentCount ? post.commentCount : 0}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => handleSharePost(post)}
-                  >
-                    <Ionicons
-                      name="share-social-outline"
-                      size={20}
-                      color="#666"
-                      style={{ marginRight: 5 }}
-                    />
-                    <Text style={styles.actionButtonText}>Share</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            );
-          })}
+          {filteredPosts.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              handleLikeToggle={handleLikeToggle}
+              handleDeletePost={handleDeletePost}
+              handleCommentPost={handleCommentPost}
+              handleSharePost={handleSharePost}
+            />
+          ))}
         </View>
       </KeyboardAwareScrollView>
-
-      {/* CREATE POST MODAL with KeyboardAvoidingView */}
+      {/* Create Post Modal */}
       <Modal
         visible={isModalVisible}
         transparent
@@ -466,8 +557,7 @@ export default function CommunityScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-
-      {/* COMMENT MODAL with KeyboardAvoidingView */}
+      {/* Comment Modal */}
       <Modal
         visible={commentModalVisible}
         transparent
@@ -523,7 +613,6 @@ export default function CommunityScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-
       <TouchableOpacity
         style={styles.floatingButton}
         onPress={() => navigation.navigate("GeminiChat")}
@@ -542,13 +631,13 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 40,
     paddingHorizontal: 20,
     paddingTop: 70,
-    paddingBottom: 40,
+    paddingBottom: 20,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#fff",
-    marginBottom: 20,
+    marginBottom: 10,
   },
   searchBar: {
     flexDirection: "row",
@@ -564,6 +653,17 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   searchInput: { flex: 1, color: "#666", fontSize: 15 },
+  suggestionContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    marginTop: 5,
+    padding: 10,
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: "#333",
+    paddingVertical: 4,
+  },
   scrollContainer: { flex: 1, backgroundColor: "#f8f8f8" },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 100 },
   section: { marginBottom: 24, marginTop: 20 },
@@ -598,30 +698,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 8,
   },
-  postHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  userAvatar: {
-    width: 45,
-    height: 45,
-    borderRadius: 22.5,
-    borderWidth: 2,
-    borderColor: PINK,
-  },
-  userName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#333",
-    marginLeft: 10,
-  },
-  dateText: {
-    fontSize: 12,
-    color: "#999",
-    marginTop: 4,
-    marginLeft: 10,
-  },
+  postHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
+  userAvatar: { width: 45, height: 45, borderRadius: 22.5, borderWidth: 2, borderColor: PINK },
+  userName: { fontSize: 15, fontWeight: "600", color: "#333", marginLeft: 10 },
+  dateText: { fontSize: 12, color: "#999", marginTop: 4, marginLeft: 10 },
   postTitle: {
     fontSize: 18,
     fontWeight: "700",
@@ -631,18 +711,8 @@ const styles = StyleSheet.create({
     borderBottomColor: "#e0e0e0",
     paddingBottom: 4,
   },
-  postContent: {
-    fontSize: 15,
-    color: "#555",
-    marginBottom: 12,
-  },
-  postImage: {
-    width: "100%",
-    height: 300,
-    borderRadius: 8,
-    marginBottom: 10,
-    resizeMode: "cover",
-  },
+  postContent: { fontSize: 15, color: "#555", marginBottom: 12 },
+  postImage: { width: "100%", height: 300, borderRadius: 8, marginBottom: 10, resizeMode: "cover" },
   actionRow: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -651,71 +721,21 @@ const styles = StyleSheet.create({
     borderTopColor: "#eee",
     paddingTop: 10,
   },
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  actionButtonText: {
-    fontSize: 14,
-    color: "#666",
-  },
+  actionButton: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 5 },
+  actionButtonText: { fontSize: 14, color: "#666" },
+  heartOverlay: { position: 'absolute', top: '40%', left: '40%' },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.3)", justifyContent: "center", padding: 20 },
   modalContainer: { backgroundColor: "#fff", borderRadius: 15, padding: 20, maxHeight: "90%", alignSelf: "center", width: "100%" },
   modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 15, color: "#333", textAlign: "center" },
-  modalInput: {
-    backgroundColor: "#f8f8f8",
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: "#333",
-    borderWidth: 1,
-    borderColor: "#eee",
-    marginBottom: 10,
-  },
+  modalInput: { backgroundColor: "#f8f8f8", borderRadius: 8, paddingHorizontal: 15, paddingVertical: 10, fontSize: 15, color: "#333", borderWidth: 1, borderColor: "#eee", marginBottom: 10 },
   previewImage: { width: "100%", height: 200, borderRadius: 8, resizeMode: "cover", marginBottom: 10 },
-  pickImageButton: {
-    backgroundColor: "#999",
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 8,
-    marginBottom: 20,
-  },
+  pickImageButton: { backgroundColor: "#999", flexDirection: "row", alignItems: "center", alignSelf: "flex-start", paddingVertical: 10, paddingHorizontal: 15, borderRadius: 8, marginBottom: 20 },
   pickImageText: { color: "#fff", fontWeight: "600" },
   modalActions: { flexDirection: "row", justifyContent: "flex-end" },
   modalButton: { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, marginLeft: 10 },
   modalButtonText: { color: "#fff", fontWeight: "600" },
-  floatingButton: {
-    position: "absolute",
-    bottom: 80,
-    right: 20,
-    backgroundColor: PINK,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    zIndex: 100,
-  },
-  commentItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    marginBottom: 4,
-  },
+  floatingButton: { position: "absolute", bottom: 80, right: 20, backgroundColor: PINK, width: 56, height: 56, borderRadius: 28, justifyContent: "center", alignItems: "center", elevation: 5, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84, zIndex: 100 },
+  commentItem: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#eee", marginBottom: 4 },
   commentUser: { fontWeight: "bold", color: "#333" },
   commentText: { flex: 1, marginLeft: 10, color: "#555" },
   commentDate: { fontSize: 12, color: "#999", marginTop: 4 },
