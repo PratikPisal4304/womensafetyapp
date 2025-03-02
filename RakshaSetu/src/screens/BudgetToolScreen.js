@@ -23,7 +23,7 @@ const formatDate = (dateString) => {
 };
 const calculatePercentage = (spent, budget) => Math.min((spent / budget) * 100, 100);
 
-// Category Card Component with inline editing for budget
+// Category Card Component with inline budget editing
 const CategoryCard = ({ category, onUpdateBudget }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedBudget, setEditedBudget] = useState(category.budget.toString());
@@ -33,8 +33,6 @@ const CategoryCard = ({ category, onUpdateBudget }) => {
     if (!isNaN(newBudget) && newBudget > 0) {
       onUpdateBudget(category.id, newBudget);
       setIsEditing(false);
-    } else {
-      // You could alert an error here if needed
     }
   };
 
@@ -112,28 +110,71 @@ const InsightCard = ({ insight }) => (
   </View>
 );
 
-// Goal Card Component
-const GoalCard = ({ goal }) => (
-  <View style={styles.goalCard}>
-    <View style={styles.goalHeader}>
-      <Text style={styles.goalName}>{goal.name}</Text>
-      <TouchableOpacity style={styles.editButton} onPress={() => { /* Edit functionality */ }}>
-        <FontAwesome5 name="edit" size={14} color="#666" />
-      </TouchableOpacity>
+// Goal Card Component with inline editing functionality
+const GoalCard = ({ goal, onUpdateGoal }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedCurrent, setEditedCurrent] = useState(goal.current.toString());
+  const [editedTarget, setEditedTarget] = useState(goal.target.toString());
+
+  const handleSave = () => {
+    const newCurrent = parseFloat(editedCurrent);
+    const newTarget = parseFloat(editedTarget);
+    if (!isNaN(newCurrent) && newCurrent >= 0 && !isNaN(newTarget) && newTarget > 0) {
+      onUpdateGoal(goal.id, newCurrent, newTarget);
+      setIsEditing(false);
+    }
+  };
+
+  return (
+    <View style={styles.goalCard}>
+      <View style={styles.goalHeader}>
+        <Text style={styles.goalName}>{goal.name}</Text>
+        <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(!isEditing)}>
+          <FontAwesome5 name={isEditing ? 'check' : 'edit'} size={16} color={isEditing ? '#2EC4B6' : '#666'} />
+        </TouchableOpacity>
+      </View>
+      {isEditing ? (
+        <View style={styles.goalEditContainer}>
+          <View style={styles.goalEditField}>
+            <Text style={styles.goalEditLabel}>Current:</Text>
+            <TextInput
+              style={styles.goalEditInput}
+              value={editedCurrent}
+              onChangeText={setEditedCurrent}
+              keyboardType="numeric"
+            />
+          </View>
+          <View style={styles.goalEditField}>
+            <Text style={styles.goalEditLabel}>Target:</Text>
+            <TextInput
+              style={styles.goalEditInput}
+              value={editedTarget}
+              onChangeText={setEditedTarget}
+              keyboardType="numeric"
+            />
+          </View>
+          <TouchableOpacity onPress={handleSave} style={styles.goalSaveButton}>
+            <Text style={styles.goalSaveText}>Save</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
+          <View style={styles.goalProgressContainer}>
+            <View style={[styles.goalProgressBar, { width: `${(goal.current / goal.target) * 100}%` }]} />
+          </View>
+          <View style={styles.goalDetails}>
+            <Text style={styles.goalProgress}>
+              {formatCurrency(goal.current)} of {formatCurrency(goal.target)}
+            </Text>
+            <Text style={styles.goalDeadline}>
+              Due by {new Date(goal.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </Text>
+          </View>
+        </>
+      )}
     </View>
-    <View style={styles.goalProgressContainer}>
-      <View style={[styles.goalProgressBar, { width: `${(goal.current / goal.target) * 100}%` }]} />
-    </View>
-    <View style={styles.goalDetails}>
-      <Text style={styles.goalProgress}>
-        {formatCurrency(goal.current)} of {formatCurrency(goal.target)}
-      </Text>
-      <Text style={styles.goalDeadline}>
-        Due by {new Date(goal.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-      </Text>
-    </View>
-  </View>
-);
+  );
+};
 
 // Recommendation Card Component
 const RecommendationCard = ({ title, text, buttonText, onPress }) => (
@@ -161,7 +202,10 @@ const TransactionModal = ({
   setSelectedCategoryId,
 }) => (
   <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1 }}
+    >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
@@ -250,7 +294,7 @@ const BudgetToolScreen = () => {
     'Negotiating rent or property rates can save up to 10-15% annually.',
   ]);
 
-  const [goals] = useState([
+  const [goals, setGoals] = useState([
     { id: '1', name: 'Emergency Fund', target: 150000, current: 75000, deadline: '2025-06-01' },
     { id: '2', name: 'Debt Clearance', target: 100000, current: 30000, deadline: '2025-08-01' },
     { id: '3', name: 'Career Development', target: 50000, current: 20000, deadline: '2025-10-01' },
@@ -304,9 +348,13 @@ const BudgetToolScreen = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
-  // Function to update a category's budget inline
-  const updateCategoryBudget = (id, newBudget) => {
-    setCategories(categories.map((cat) => (cat.id === id ? { ...cat, budget: newBudget } : cat)));
+  // Function to update a goal's progress (current & target)
+  const updateGoal = (goalId, newCurrent, newTarget) => {
+    setGoals(
+      goals.map((goal) =>
+        goal.id === goalId ? { ...goal, current: newCurrent, target: newTarget } : goal
+      )
+    );
   };
 
   return (
@@ -329,20 +377,10 @@ const BudgetToolScreen = () => {
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryItem}>
-              <Text
-                style={[
-                  styles.summaryLabel,
-                  { color: remainingBudget >= 0 ? '#2EC4B6' : '#FF6B6B' },
-                ]}
-              >
+              <Text style={[styles.summaryLabel, { color: remainingBudget >= 0 ? '#2EC4B6' : '#FF6B6B' }]}>
                 Remaining
               </Text>
-              <Text
-                style={[
-                  styles.summaryValue,
-                  { color: remainingBudget >= 0 ? '#2EC4B6' : '#FF6B6B' },
-                ]}
-              >
+              <Text style={[styles.summaryValue, { color: remainingBudget >= 0 ? '#2EC4B6' : '#FF6B6B' }]}>
                 {formatCurrency(remainingBudget)}
               </Text>
             </View>
@@ -382,7 +420,13 @@ const BudgetToolScreen = () => {
             </View>
             <View style={styles.categoriesContainer}>
               {categories.map((cat) => (
-                <CategoryCard key={cat.id} category={cat} onUpdateBudget={updateCategoryBudget} />
+                <CategoryCard key={cat.id} category={cat} onUpdateBudget={ (id, newBudget) => {
+                  setCategories(
+                    categories.map((cat) =>
+                      cat.id === id ? { ...cat, budget: newBudget } : cat
+                    )
+                  );
+                } } />
               ))}
             </View>
             <View style={styles.sectionHeader}>
@@ -398,11 +442,7 @@ const BudgetToolScreen = () => {
               </TouchableOpacity>
             </View>
             {transactions.slice(0, 5).map((txn) => (
-              <TransactionItem
-                key={txn.id}
-                transaction={txn}
-                category={getCategoryById(txn.category)}
-              />
+              <TransactionItem key={txn.id} transaction={txn} category={getCategoryById(txn.category)} />
             ))}
             {transactions.length > 5 && (
               <TouchableOpacity style={styles.viewAllButton}>
@@ -475,7 +515,7 @@ const BudgetToolScreen = () => {
               </TouchableOpacity>
             </View>
             {goals.map((goal) => (
-              <GoalCard key={goal.id} goal={goal} />
+              <GoalCard key={goal.id} goal={goal} onUpdateGoal={updateGoal} />
             ))}
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recommendations</Text>
@@ -675,6 +715,37 @@ const styles = StyleSheet.create({
   goalDetails: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   goalProgress: { fontSize: 14, color: '#333' },
   goalDeadline: { fontSize: 12, color: '#666' },
+  goalEditContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginVertical: 10,
+  },
+  goalEditField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  goalEditLabel: {
+    fontSize: 14,
+    color: '#333',
+    marginRight: 5,
+  },
+  goalEditInput: {
+    borderWidth: 1,
+    borderColor: '#DDD',
+    borderRadius: 4,
+    padding: 5,
+    fontSize: 14,
+    width: 80,
+    textAlign: 'center',
+  },
+  goalSaveButton: {
+    backgroundColor: '#2EC4B6',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 4,
+  },
+  goalSaveText: { color: '#FFF', fontSize: 14, fontWeight: 'bold' },
   recommendationCard: {
     backgroundColor: '#FFF',
     borderRadius: 12,
