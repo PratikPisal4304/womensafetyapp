@@ -305,7 +305,7 @@ export default function CommunityScreen() {
           <MaterialIcons name="search" size={24} color="#666" style={{ marginRight: 8 }} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search Legal Women Rights"
+            placeholder="Search Posts..."
             placeholderTextColor="#666"
             value={searchTerm}
             onChangeText={setSearchTerm}
@@ -588,34 +588,79 @@ const styles = StyleSheet.create({
   postCard: {
     backgroundColor: "#fff",
     borderRadius: CARD_RADIUS,
-    padding: 16,
-    marginBottom: 16,
-    elevation: 2,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#f0f0f0",
+    elevation: 4,
     shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
   },
   postHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 12,
   },
-  userAvatar: { width: 40, height: 40, borderRadius: 20 },
-  userName: { fontSize: 15, fontWeight: "600", color: "#333" },
-  dateText: { fontSize: 12, color: "#999", marginTop: 4 },
-  postTitle: { fontSize: 16, fontWeight: "700", color: "#000", marginBottom: 4 },
-  postContent: { fontSize: 14, color: "#444", marginBottom: 8 },
+  userAvatar: {
+    width: 45,
+    height: 45,
+    borderRadius: 22.5,
+    borderWidth: 2,
+    borderColor: PINK,
+  },
+  userName: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#333",
+    marginLeft: 10,
+  },
+  dateText: {
+    fontSize: 12,
+    color: "#999",
+    marginTop: 4,
+    marginLeft: 10,
+  },
+  postTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#333",
+    marginBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+    paddingBottom: 4,
+  },
+  postContent: {
+    fontSize: 15,
+    color: "#555",
+    marginBottom: 12,
+  },
   postImage: {
     width: "100%",
-    height: 180,
+    height: 300,
     borderRadius: 8,
-    marginBottom: 8,
+    marginBottom: 10,
     resizeMode: "cover",
   },
-  actionRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 6 },
-  actionButton: { flexDirection: "row", alignItems: "center" },
-  actionButtonText: { fontSize: 14, color: "#666" },
+  actionRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+    paddingTop: 10,
+  },
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  actionButtonText: {
+    fontSize: 14,
+    color: "#666",
+  },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.3)", justifyContent: "center", padding: 20 },
   modalContainer: { backgroundColor: "#fff", borderRadius: 15, padding: 20, maxHeight: "90%", alignSelf: "center", width: "100%" },
   modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 15, color: "#333", textAlign: "center" },
