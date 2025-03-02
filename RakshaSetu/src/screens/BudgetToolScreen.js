@@ -23,31 +23,65 @@ const formatDate = (dateString) => {
 };
 const calculatePercentage = (spent, budget) => Math.min((spent / budget) * 100, 100);
 
-// Category Card Component
-const CategoryCard = ({ category }) => (
-  <View style={styles.categoryCard}>
-    <View style={styles.categoryHeader}>
-      <View style={[styles.categoryIcon, { backgroundColor: category.color }]}>
-        <FontAwesome5 name={category.icon} size={16} color="#FFF" />
+// Category Card Component with inline editing for budget
+const CategoryCard = ({ category, onUpdateBudget }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedBudget, setEditedBudget] = useState(category.budget.toString());
+
+  const handleSave = () => {
+    const newBudget = parseFloat(editedBudget);
+    if (!isNaN(newBudget) && newBudget > 0) {
+      onUpdateBudget(category.id, newBudget);
+      setIsEditing(false);
+    } else {
+      // You could alert an error here if needed
+    }
+  };
+
+  return (
+    <View style={styles.categoryCard}>
+      <View style={styles.categoryHeader}>
+        <View style={[styles.categoryIcon, { backgroundColor: category.color }]}>
+          <FontAwesome5 name={category.icon} size={16} color="#FFF" />
+        </View>
+        <Text style={styles.categoryName}>{category.name}</Text>
+        {isEditing ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TextInput
+              style={[styles.editInput, { borderColor: category.color }]}
+              value={editedBudget}
+              onChangeText={setEditedBudget}
+              keyboardType="numeric"
+            />
+            <TouchableOpacity onPress={handleSave} style={styles.iconButton}>
+              <FontAwesome5 name="check" size={16} color="#2EC4B6" />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={styles.categoryAmount}>
+              {formatCurrency(category.spent)} / {formatCurrency(category.budget)}
+            </Text>
+            <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.iconButton}>
+              <FontAwesome5 name="edit" size={16} color="#8A2BE2" />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
-      <Text style={styles.categoryName}>{category.name}</Text>
-      <Text style={styles.categoryAmount}>
-        {formatCurrency(category.spent)} / {formatCurrency(category.budget)}
-      </Text>
+      <View style={styles.progressBarContainer}>
+        <View
+          style={[
+            styles.progressBar,
+            {
+              width: `${calculatePercentage(category.spent, category.budget)}%`,
+              backgroundColor: category.spent > category.budget ? '#FF6B6B' : category.color,
+            },
+          ]}
+        />
+      </View>
     </View>
-    <View style={styles.progressBarContainer}>
-      <View
-        style={[
-          styles.progressBar,
-          {
-            width: `${calculatePercentage(category.spent, category.budget)}%`,
-            backgroundColor: category.spent > category.budget ? '#FF6B6B' : category.color,
-          },
-        ]}
-      />
-    </View>
-  </View>
-);
+  );
+};
 
 // Transaction Item Component
 const TransactionItem = ({ transaction, category }) => (
@@ -83,7 +117,7 @@ const GoalCard = ({ goal }) => (
   <View style={styles.goalCard}>
     <View style={styles.goalHeader}>
       <Text style={styles.goalName}>{goal.name}</Text>
-      <TouchableOpacity style={styles.editButton} onPress={() => { /* Add edit functionality here */ }}>
+      <TouchableOpacity style={styles.editButton} onPress={() => { /* Edit functionality */ }}>
         <FontAwesome5 name="edit" size={14} color="#666" />
       </TouchableOpacity>
     </View>
@@ -127,10 +161,7 @@ const TransactionModal = ({
   setSelectedCategoryId,
 }) => (
   <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{ flex: 1 }}
-    >
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
@@ -263,7 +294,9 @@ const BudgetToolScreen = () => {
     };
     setTransactions([transaction, ...transactions]);
     setCategories(
-      categories.map((cat) => (cat.id === selectedCategoryId ? { ...cat, spent: cat.spent + amount } : cat))
+      categories.map((cat) =>
+        cat.id === selectedCategoryId ? { ...cat, spent: cat.spent + amount } : cat
+      )
     );
     setNewTransaction({ description: '', amount: '', category: '' });
     setSelectedCategoryId(null);
@@ -271,8 +304,16 @@ const BudgetToolScreen = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
+  // Function to update a category's budget inline
+  const updateCategoryBudget = (id, newBudget) => {
+    setCategories(categories.map((cat) => (cat.id === id ? { ...cat, budget: newBudget } : cat)));
+  };
+
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <LinearGradient colors={['#8A2BE2', '#4B0082']} style={styles.headerGradient}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Mahila Arthik Dashboard</Text>
@@ -288,10 +329,20 @@ const BudgetToolScreen = () => {
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryItem}>
-              <Text style={[styles.summaryLabel, { color: remainingBudget >= 0 ? '#2EC4B6' : '#FF6B6B' }]}>
+              <Text
+                style={[
+                  styles.summaryLabel,
+                  { color: remainingBudget >= 0 ? '#2EC4B6' : '#FF6B6B' },
+                ]}
+              >
                 Remaining
               </Text>
-              <Text style={[styles.summaryValue, { color: remainingBudget >= 0 ? '#2EC4B6' : '#FF6B6B' }]}>
+              <Text
+                style={[
+                  styles.summaryValue,
+                  { color: remainingBudget >= 0 ? '#2EC4B6' : '#FF6B6B' },
+                ]}
+              >
                 {formatCurrency(remainingBudget)}
               </Text>
             </View>
@@ -300,15 +351,24 @@ const BudgetToolScreen = () => {
       </LinearGradient>
 
       <View style={styles.tabContainer}>
-        <TouchableOpacity style={[styles.tabButton, activeTab === 'budget' && styles.activeTabButton]} onPress={() => setActiveTab('budget')}>
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === 'budget' && styles.activeTabButton]}
+          onPress={() => setActiveTab('budget')}
+        >
           <FontAwesome5 name="coins" size={16} color={activeTab === 'budget' ? '#8A2BE2' : '#666'} />
           <Text style={[styles.tabText, activeTab === 'budget' && styles.activeTabText]}>Budget</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.tabButton, activeTab === 'insights' && styles.activeTabButton]} onPress={() => setActiveTab('insights')}>
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === 'insights' && styles.activeTabButton]}
+          onPress={() => setActiveTab('insights')}
+        >
           <FontAwesome5 name="lightbulb" size={16} color={activeTab === 'insights' ? '#8A2BE2' : '#666'} />
           <Text style={[styles.tabText, activeTab === 'insights' && styles.activeTabText]}>Insights</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.tabButton, activeTab === 'goals' && styles.activeTabButton]} onPress={() => setActiveTab('goals')}>
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === 'goals' && styles.activeTabButton]}
+          onPress={() => setActiveTab('goals')}
+        >
           <FontAwesome5 name="flag" size={16} color={activeTab === 'goals' ? '#8A2BE2' : '#666'} />
           <Text style={[styles.tabText, activeTab === 'goals' && styles.activeTabText]}>Goals</Text>
         </TouchableOpacity>
@@ -322,17 +382,27 @@ const BudgetToolScreen = () => {
             </View>
             <View style={styles.categoriesContainer}>
               {categories.map((cat) => (
-                <CategoryCard key={cat.id} category={cat} />
+                <CategoryCard key={cat.id} category={cat} onUpdateBudget={updateCategoryBudget} />
               ))}
             </View>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recent Transactions</Text>
-              <TouchableOpacity style={styles.addButton} onPress={() => { setModalVisible(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}>
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => {
+                  setModalVisible(true);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                }}
+              >
                 <MaterialIcons name="add" size={24} color="#FFF" />
               </TouchableOpacity>
             </View>
             {transactions.slice(0, 5).map((txn) => (
-              <TransactionItem key={txn.id} transaction={txn} category={getCategoryById(txn.category)} />
+              <TransactionItem
+                key={txn.id}
+                transaction={txn}
+                category={getCategoryById(txn.category)}
+              />
             ))}
             {transactions.length > 5 && (
               <TouchableOpacity style={styles.viewAllButton}>
@@ -519,6 +589,8 @@ const styles = StyleSheet.create({
   categoryIcon: { height: 32, width: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   categoryName: { flex: 1, fontSize: 16, fontWeight: '600', color: '#333' },
   categoryAmount: { fontSize: 14, color: '#666' },
+  editInput: { borderBottomWidth: 1, width: 80, textAlign: 'right', marginRight: 5, fontSize: 14, color: '#333' },
+  iconButton: { padding: 4 },
   progressBarContainer: { height: 8, backgroundColor: '#EAEAEA', borderRadius: 4, overflow: 'hidden' },
   progressBar: { height: '100%', borderRadius: 4 },
   transactionItem: {
