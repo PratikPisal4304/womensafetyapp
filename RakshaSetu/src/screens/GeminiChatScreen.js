@@ -129,7 +129,7 @@ export default function GeminiChatScreen({ navigation }) {
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Ionicons name="sparkles" size={18} color={PINK} />
-          <Text style={styles.headerTitle}>Gemini Assistant</Text>
+          <Text style={styles.headerTitle}>Legal Assistant</Text>
         </View>
         <View style={{ width: 24 }} />
       </View>
