@@ -137,12 +137,12 @@ export default function FinancialEmpowermentScreen({ navigation }) {
   return (
     <View style={styles.container}>
       {/* Status Bar */}
-      <StatusBar barStyle="light-content" backgroundColor="#8E44AD" />
+      <StatusBar barStyle="light-content" backgroundColor="#ff5f96" />
       
       {/* Header Section with gradient */}
       <Animated.View style={[styles.headerContainer, { height: headerHeight }]}>
         <LinearGradient 
-          colors={['#9B59B6', '#8E44AD']} 
+          colors={['#9B59B6', '#ff5f96']} 
           start={[0, 0]} 
           end={[1, 1]}
           style={styles.headerGradient}
@@ -179,7 +179,7 @@ export default function FinancialEmpowermentScreen({ navigation }) {
                   placeholderTextColor="gray"
                 />
                 <TouchableOpacity style={styles.filterButton}>
-                  <Feather name="sliders" size={18} color="#8E44AD" />
+                  <Feather name="sliders" size={18} color="#ff5f96" />
                 </TouchableOpacity>
               </View>
             </Animated.View>
@@ -231,7 +231,7 @@ export default function FinancialEmpowermentScreen({ navigation }) {
             <Text style={styles.sectionTitle}>Quick Actions</Text>
             <TouchableOpacity style={styles.seeAllButton}>
               <Text style={styles.seeAllText}>See all</Text>
-              <Feather name="chevron-right" size={16} color="#8E44AD" />
+              <Feather name="chevron-right" size={16} color="#ff5f96" />
             </TouchableOpacity>
           </View>
           
@@ -262,14 +262,14 @@ export default function FinancialEmpowermentScreen({ navigation }) {
             <Text style={styles.sectionTitle}>Your Skills Analysis</Text>
             <TouchableOpacity style={styles.refreshButton}>
               <Text style={styles.refreshText}>Refresh</Text>
-              <Feather name="refresh-cw" size={16} color="#8E44AD" />
+              <Feather name="refresh-cw" size={16} color="#ff5f96" />
             </TouchableOpacity>
           </View>
           
           <View style={styles.aiAnalysisCard}>
             <View style={styles.aiCardHeader}>
               <View style={styles.aiTitleContainer}>
-                <FontAwesome5 name="brain" size={18} color="#8E44AD" style={styles.aiIcon} />
+                <FontAwesome5 name="brain" size={18} color="#ff5f96" style={styles.aiIcon} />
                 <Text style={styles.aiCardTitle}>AI-Powered Skills Match</Text>
               </View>
               <Text style={styles.aiCardSubtitle}>Based on your profile, local market, and career goals</Text>
@@ -306,7 +306,7 @@ export default function FinancialEmpowermentScreen({ navigation }) {
                 ))}
                 <TouchableOpacity style={styles.fullAnalysisButton}>
                   <Text style={styles.fullAnalysisText}>View Full Skills Analysis</Text>
-                  <Feather name="arrow-right" size={16} color="#8E44AD" />
+                  <Feather name="arrow-right" size={16} color="#ff5f96" />
                 </TouchableOpacity>
               </View>
             )}
@@ -319,7 +319,7 @@ export default function FinancialEmpowermentScreen({ navigation }) {
             <Text style={styles.sectionTitle}>Micro-Learning Modules</Text>
             <TouchableOpacity style={styles.seeAllButton}>
               <Text style={styles.seeAllText}>View all</Text>
-              <Feather name="chevron-right" size={16} color="#8E44AD" />
+              <Feather name="chevron-right" size={16} color="#ff5f96" />
             </TouchableOpacity>
           </View>
           
@@ -366,7 +366,7 @@ export default function FinancialEmpowermentScreen({ navigation }) {
             <Text style={styles.sectionTitle}>Personalized For You</Text>
             <TouchableOpacity style={styles.seeAllButton}>
               <Text style={styles.seeAllText}>More</Text>
-              <Feather name="chevron-right" size={16} color="#8E44AD" />
+              <Feather name="chevron-right" size={16} color="#ff5f96" />
             </TouchableOpacity>
           </View>
           
@@ -380,7 +380,7 @@ export default function FinancialEmpowermentScreen({ navigation }) {
                     </View>
                     {course.localContext && (
                       <View style={styles.localContextTag}>
-                        <Ionicons name="location" size={12} color="#8E44AD" />
+                        <Ionicons name="location" size={12} color="#ff5f96" />
                         <Text style={styles.localContextText}>Local</Text>
                       </View>
                     )}
@@ -402,7 +402,7 @@ export default function FinancialEmpowermentScreen({ navigation }) {
                   
                   <View style={styles.aiMatchContainer}>
                     <LinearGradient 
-                      colors={['#9B59B6', '#8E44AD']} 
+                      colors={['#9B59B6', '#ff5f96']} 
                       start={[0, 0]} 
                       end={[1, 0]}
                       style={styles.aiMatchGradient}
@@ -434,7 +434,7 @@ export default function FinancialEmpowermentScreen({ navigation }) {
             <Text style={styles.sectionTitle}>Monthly Budget Challenge</Text>
             <TouchableOpacity style={styles.seeAllButton}>
               <Text style={styles.seeAllText}>Details</Text>
-              <Feather name="chevron-right" size={16} color="#8E44AD" />
+              <Feather name="chevron-right" size={16} color="#ff5f96" />
             </TouchableOpacity>
           </View>
           
@@ -473,7 +473,7 @@ export default function FinancialEmpowermentScreen({ navigation }) {
             <Text style={styles.sectionTitle}>Connect with Mentors</Text>
             <TouchableOpacity style={styles.seeAllButton}>
               <Text style={styles.seeAllText}>Browse all</Text>
-              <Feather name="chevron-right" size={16} color="#8E44AD" />
+              <Feather name="chevron-right" size={16} color="#ff5f96" />
             </TouchableOpacity>
           </View>
           
@@ -527,7 +527,7 @@ export default function FinancialEmpowermentScreen({ navigation }) {
       {/* Floating Action Button */}
       <TouchableOpacity style={styles.fab}>
         <LinearGradient 
-          colors={['#9B59B6', '#8E44AD']} 
+          colors={['#9B59B6', '#ff5f96']} 
           start={[0, 0]} 
           end={[1, 1]}
           style={styles.fabGradient}
@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fc',
   },
   headerContainer: {
-    backgroundColor: '#8E44AD',
+    backgroundColor: '#ff5f96',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     overflow: 'hidden',
   },
@@ -628,6 +628,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     height: 48,
+    bottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
@@ -670,7 +671,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   activeTabItem: {
-    backgroundColor: '#8E44AD',
+    backgroundColor: '#ff5f96',
   },
   tabText: {
     fontSize: 14,
@@ -702,7 +703,7 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontSize: 14,
-    color: '#8E44AD',
+    color: '#ff5f96',
     fontWeight: '500',
     marginRight: 2,
   },
@@ -712,7 +713,7 @@ const styles = StyleSheet.create({
   },
   refreshText: {
     fontSize: 14,
-    color: '#8E44AD',
+    color: '#ff5f96',
     fontWeight: '500',
     marginRight: 4,
   },
@@ -815,7 +816,7 @@ const styles = StyleSheet.create({
   relevanceText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#8E44AD',
+    color: '#ff5f96',
   },
   skillMetricsContainer: {
     flexDirection: 'row',
@@ -835,7 +836,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   exploreButton: {
-    backgroundColor: '#8E44AD',
+    backgroundColor: '#ff5f96',
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 8,
@@ -859,7 +860,7 @@ const styles = StyleSheet.create({
     fullAnalysisText: {
       fontSize: 14,
       fontWeight: '600',
-      color: '#8E44AD',
+      color: '#ff5f96',
     },
     microLearningContainer: {
       marginBottom: 16,
@@ -917,7 +918,7 @@ const styles = StyleSheet.create({
     },
     tagText: {
       fontSize: 12,
-      color: '#8E44AD',
+      color: '#ff5f96',
     },
     moduleTitle: {
       fontSize: 16,
@@ -943,7 +944,7 @@ const styles = StyleSheet.create({
     },
     progressFill: {
       height: '100%',
-      backgroundColor: '#8E44AD',
+      backgroundColor: '#ff5f96',
       borderRadius: 3,
       width: '50%', // This value can be dynamic based on progress
     },
@@ -988,7 +989,7 @@ const styles = StyleSheet.create({
     recommendedLabel: {
       fontSize: 12,
       fontWeight: '600',
-      color: '#8E44AD',
+      color: '#ff5f96',
     },
     localContextTag: {
       flexDirection: 'row',
@@ -1000,7 +1001,7 @@ const styles = StyleSheet.create({
     },
     localContextText: {
       fontSize: 12,
-      color: '#8E44AD',
+      color: '#ff5f96',
       marginLeft: 4,
     },
     recommendedTitle: {
@@ -1153,7 +1154,7 @@ const styles = StyleSheet.create({
       textAlign: 'center',
     },
     mentorButton: {
-      backgroundColor: '#8E44AD',
+      backgroundColor: '#ff5f96',
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 8,
@@ -1165,7 +1166,7 @@ const styles = StyleSheet.create({
     },
     fab: {
       position: 'absolute',
-      bottom: 20,
+      bottom: 70,
       right: 20,
     },
     fabGradient: {
