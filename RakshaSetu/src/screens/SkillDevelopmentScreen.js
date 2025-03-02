@@ -107,7 +107,7 @@ function SkillDevelopmentScreen({ navigation }) {
   const categories = [
     { id: 1, name: 'My Learning Path', icon: 'route', gradient: ['#66BB6A', '#43A047'] },
     { id: 2, name: 'Mentorship Hub', icon: 'users', gradient: ['#7E57C2', '#5E35B1'] },
-    { id: 3, name: 'Budget Tools', icon: 'calculator', gradient: ['#FF8A65', '#FF5722'],screen:'BudgetTool' },
+    { id: 3, name: 'Budget Tools', icon: 'calculator', gradient: ['#FF8A65', '#FF5722'] },
   ];
 
   // AI-recommended courses and mentors
@@ -404,7 +404,7 @@ function SkillDevelopmentScreen({ navigation }) {
                 style={styles.categoryCard}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  if (category.name === 'Budget Tools') {
+                  if (category.name === 'Budget Tools' ) {
                     navigation.navigate('BudgetTool');
                   } else {
                   Alert.alert(category.name, `You selected: ${category.name}`);
