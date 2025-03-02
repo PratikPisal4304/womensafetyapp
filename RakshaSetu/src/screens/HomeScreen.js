@@ -103,15 +103,15 @@ const HomeScreen = ({ navigation }) => {
         </View>
 
         {/* Skill Development */}        
-        <TouchableOpacity style={styles.journeySection} onPress={() => navigation.navigate('SkillDevelopment')}>
-          <View style={styles.journeyContent}>
+        <TouchableOpacity style={styles.skillSection} onPress={() => navigation.navigate('SkillDevelopment')}>
+          <View style={styles.skillContent}>
             <Image
               source={require('../../assets/skill.png')}
-              style={styles.journeyIcon}
+              style={styles.skillIcon}
             />
             <View>
-              <Text style={styles.journeyTitle}>Skill Development</Text>
-              <Text style={styles.journeySubtitle}>
+              <Text style={styles.skillTitle}>Skill Development</Text>
+              <Text style={styles.skillSubtitle}>
                 Learn Skills
               </Text>
             </View>
@@ -269,6 +269,43 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: '#FFF',
     fontWeight: '500',
+  },
+  skillSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    backgroundColor: '#FFF',
+    borderRadius: 15,
+    marginHorizontal: 20,
+    marginVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  skillContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  skillIcon: {
+    width: 40,
+    height: 40,
+    marginRight: 15,
+  },
+  skillTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+  },
+  skillSubtitle: {
+    color: '#666',
+    fontSize: 12,
   },
   journeySection: {
     flexDirection: 'row',
