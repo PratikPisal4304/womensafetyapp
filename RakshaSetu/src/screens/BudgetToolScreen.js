@@ -83,8 +83,7 @@ const GoalCard = ({ goal }) => (
   <View style={styles.goalCard}>
     <View style={styles.goalHeader}>
       <Text style={styles.goalName}>{goal.name}</Text>
-      {/* You can add edit functionality here */}
-      <TouchableOpacity style={styles.editButton} onPress={() => {}}>
+      <TouchableOpacity style={styles.editButton} onPress={() => { /* Add edit functionality here */ }}>
         <FontAwesome5 name="edit" size={14} color="#666" />
       </TouchableOpacity>
     </View>
@@ -116,7 +115,7 @@ const RecommendationCard = ({ title, text, buttonText, onPress }) => (
   </View>
 );
 
-// Transaction Modal Component
+// Transaction Modal Component with KeyboardAvoidingView
 const TransactionModal = ({
   visible,
   onClose,
@@ -128,58 +127,63 @@ const TransactionModal = ({
   setSelectedCategoryId,
 }) => (
   <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
-    <View style={styles.modalOverlay}>
-      <View style={styles.modalContent}>
-        <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Add Transaction</Text>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Ionicons name="close" size={24} color="#666" />
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1 }}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Add Transaction</Text>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <Ionicons name="close" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Description</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="What did you spend on?"
+              value={newTransaction.description}
+              onChangeText={(text) => setNewTransaction({ ...newTransaction, description: text })}
+            />
+          </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Amount</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="0.00"
+              keyboardType="decimal-pad"
+              value={newTransaction.amount}
+              onChangeText={(text) => setNewTransaction({ ...newTransaction, amount: text })}
+            />
+          </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Category</Text>
+            <View style={styles.categorySelector}>
+              {categories.map((category) => (
+                <TouchableOpacity
+                  key={category.id}
+                  style={[
+                    styles.categoryOption,
+                    selectedCategoryId === category.id && { borderColor: category.color, borderWidth: 2 },
+                  ]}
+                  onPress={() => setSelectedCategoryId(category.id)}
+                >
+                  <View style={[styles.categoryOptionIcon, { backgroundColor: category.color }]}>
+                    <FontAwesome5 name={category.icon} size={14} color="#FFF" />
+                  </View>
+                  <Text style={styles.categoryOptionText}>{category.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          <TouchableOpacity style={styles.addTransactionButton} onPress={onAddTransaction}>
+            <Text style={styles.addTransactionButtonText}>Add Transaction</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Description</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="What did you spend on?"
-            value={newTransaction.description}
-            onChangeText={(text) => setNewTransaction({ ...newTransaction, description: text })}
-          />
-        </View>
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Amount</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="0.00"
-            keyboardType="decimal-pad"
-            value={newTransaction.amount}
-            onChangeText={(text) => setNewTransaction({ ...newTransaction, amount: text })}
-          />
-        </View>
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Category</Text>
-          <View style={styles.categorySelector}>
-            {categories.map((category) => (
-              <TouchableOpacity
-                key={category.id}
-                style={[
-                  styles.categoryOption,
-                  selectedCategoryId === category.id && { borderColor: category.color, borderWidth: 2 },
-                ]}
-                onPress={() => setSelectedCategoryId(category.id)}
-              >
-                <View style={[styles.categoryOptionIcon, { backgroundColor: category.color }]}>
-                  <FontAwesome5 name={category.icon} size={14} color="#FFF" />
-                </View>
-                <Text style={styles.categoryOptionText}>{category.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-        <TouchableOpacity style={styles.addTransactionButton} onPress={onAddTransaction}>
-          <Text style={styles.addTransactionButtonText}>Add Transaction</Text>
-        </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   </Modal>
 );
 
@@ -236,7 +240,7 @@ const BudgetToolScreen = () => {
   const totalSpent = categories.reduce((sum, cat) => sum + cat.spent, 0);
   const remainingBudget = totalBudget - totalSpent;
 
-  // Helper: Get category object by id
+  // Helper: Get category by id
   const getCategoryById = (id) => categories.find((cat) => cat.id === id) || {};
 
   // Function to add a new transaction
@@ -258,18 +262,14 @@ const BudgetToolScreen = () => {
       date: new Date().toISOString().split('T')[0],
     };
     setTransactions([transaction, ...transactions]);
-    setCategories(categories.map((cat) => {
-      if (cat.id === selectedCategoryId) return { ...cat, spent: cat.spent + amount };
-      return cat;
-    }));
+    setCategories(
+      categories.map((cat) => (cat.id === selectedCategoryId ? { ...cat, spent: cat.spent + amount } : cat))
+    );
     setNewTransaction({ description: '', amount: '', category: '' });
     setSelectedCategoryId(null);
     setModalVisible(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
-
-  // Screen width for potential layout use
-  const screenWidth = Dimensions.get('window').width;
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -288,13 +288,17 @@ const BudgetToolScreen = () => {
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryItem}>
-              <Text style={[styles.summaryLabel, { color: remainingBudget >= 0 ? '#2EC4B6' : '#FF6B6B' }]}>Remaining</Text>
-              <Text style={[styles.summaryValue, { color: remainingBudget >= 0 ? '#2EC4B6' : '#FF6B6B' }]}>{formatCurrency(remainingBudget)}</Text>
+              <Text style={[styles.summaryLabel, { color: remainingBudget >= 0 ? '#2EC4B6' : '#FF6B6B' }]}>
+                Remaining
+              </Text>
+              <Text style={[styles.summaryValue, { color: remainingBudget >= 0 ? '#2EC4B6' : '#FF6B6B' }]}>
+                {formatCurrency(remainingBudget)}
+              </Text>
             </View>
           </View>
         </View>
       </LinearGradient>
-      
+
       <View style={styles.tabContainer}>
         <TouchableOpacity style={[styles.tabButton, activeTab === 'budget' && styles.activeTabButton]} onPress={() => setActiveTab('budget')}>
           <FontAwesome5 name="coins" size={16} color={activeTab === 'budget' ? '#8A2BE2' : '#666'} />
@@ -446,12 +450,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 20,
   },
   header: { paddingHorizontal: 20 },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFF',
-    marginBottom: 15,
-  },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#FFF', marginBottom: 15 },
   summaryContainer: {
     flexDirection: 'row',
     backgroundColor: 'rgba(255,255,255,0.2)',
@@ -489,13 +488,7 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 14, color: '#666', marginLeft: 5 },
   activeTabText: { color: '#8A2BE2', fontWeight: 'bold' },
   content: { flex: 1, padding: 20 },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 15,
-  },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, marginBottom: 15 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333' },
   addButton: {
     backgroundColor: '#8A2BE2',
@@ -523,22 +516,10 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   categoryHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  categoryIcon: {
-    height: 32,
-    width: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
+  categoryIcon: { height: 32, width: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   categoryName: { flex: 1, fontSize: 16, fontWeight: '600', color: '#333' },
   categoryAmount: { fontSize: 14, color: '#666' },
-  progressBarContainer: {
-    height: 8,
-    backgroundColor: '#EAEAEA',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
+  progressBarContainer: { height: 8, backgroundColor: '#EAEAEA', borderRadius: 4, overflow: 'hidden' },
   progressBar: { height: '100%', borderRadius: 4 },
   transactionItem: {
     flexDirection: 'row',
@@ -555,14 +536,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   transactionLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  transactionIcon: {
-    height: 28,
-    width: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
+  transactionIcon: { height: 28, width: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   transactionDetails: { flex: 1 },
   transactionDescription: { fontSize: 15, fontWeight: '500', color: '#333' },
   transactionCategory: { fontSize: 13, color: '#666', marginTop: 2 },
@@ -586,15 +560,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  insightIconContainer: {
-    height: 36,
-    width: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(138,43,226,0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
+  insightIconContainer: { height: 36, width: 36, borderRadius: 18, backgroundColor: 'rgba(138,43,226,0.1)', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   insightText: { flex: 1, fontSize: 14, lineHeight: 20, color: '#333' },
   breakdownCard: {
     backgroundColor: '#FFF',
