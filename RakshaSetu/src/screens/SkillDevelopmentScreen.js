@@ -21,9 +21,26 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Feather, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import { 
+  getFirestore, 
+  doc, 
+  getDoc, 
+  updateDoc, 
+  collection,
+  query,
+  where,
+  getDocs,
+  onSnapshot
+} from 'firebase/firestore';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { app } from '../../config/firebaseConfig';
 
 const { width, height } = Dimensions.get('window');
-const HEADER_HEIGHT = 160; // Adjust this constant to match your fixed header's height
+const HEADER_HEIGHT = 160;
+
+// Initialize Firebase services
+const db = getFirestore(app);
+const auth = getAuth(app);
 
 // Custom hook for debouncing search input
 function useDebounce(value, delay) {
@@ -35,7 +52,7 @@ function useDebounce(value, delay) {
   return debouncedValue;
 }
 
-// Sample data - in a real app, this would come from an API
+// Sample data - in a real app, this would come from Firestore
 const SAMPLE_MODULES = [
   { 
     id: 1, 
@@ -79,22 +96,22 @@ function SkillDevelopmentScreen({ navigation }) {
   // State variables
   const [activeTab, setActiveTab] = useState('All');
   const [skillRecommendations, setSkillRecommendations] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [microLearningModules, setMicroLearningModules] = useState(SAMPLE_MODULES);
-  const [userName, setUserName] = useState('Maria');
-  const [budgetGoal, setBudgetGoal] = useState(300);
-  const [budgetSaved, setBudgetSaved] = useState(135);
+  const [userName, setUserName] = useState('');
+  const [budgetGoal, setBudgetGoal] = useState(0);
+  const [budgetSaved, setBudgetSaved] = useState(0);
   const [budgetModalVisible, setBudgetModalVisible] = useState(false);
   const [updatedBudget, setUpdatedBudget] = useState('');
   const [favoriteCourses, setFavoriteCourses] = useState([]);
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: 'New mentor available', read: false },
-    { id: 2, title: 'Course completion reminder', read: false }
-  ]);
+  const [notifications, setNotifications] = useState([]);
   const [notificationModalVisible, setNotificationModalVisible] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [userEnrolledCourses, setUserEnrolledCourses] = useState([]);
+  const [userProgress, setUserProgress] = useState({});
 
   // Scroll value (for pull-to-refresh)
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -110,8 +127,8 @@ function SkillDevelopmentScreen({ navigation }) {
     { id: 3, name: 'Budget Tools', icon: 'calculator', gradient: ['#FF8A65', '#FF5722'] },
   ];
 
-  // AI-recommended courses and mentors
-  const aiRecommendedCourses = [
+  // AI-recommended courses
+  const [recommendedCourses, setRecommendedCourses] = useState([
     {
       id: 1,
       title: 'Investment Fundamentals for Women',
@@ -157,16 +174,153 @@ function SkillDevelopmentScreen({ navigation }) {
       localContext: false,
       favorite: false
     }
-  ];
+  ]);
 
+  // Fetch user data from Firestore
+  const fetchUserData = async (userId) => {
+    try {
+      setIsLoading(true);
+      
+      // Get the user document
+      const userDocRef = doc(db, 'users', userId);
+      const userDocSnap = await getDoc(userDocRef);
+      
+      if (userDocSnap.exists()) {
+        const userData = userDocSnap.data();
+        
+        // Set user profile data
+        setUserName(userData.name || userData.displayName || 'User');
+        setBudgetGoal(userData.budgetGoal || 300);
+        setBudgetSaved(userData.budgetSaved || 135);
+        
+        // Get favorite courses
+        if (userData.favoriteCourses) {
+          setFavoriteCourses(userData.favoriteCourses);
+          
+          // Update the recommended courses with favorite status
+          setRecommendedCourses(prev => 
+            prev.map(course => ({
+              ...course,
+              favorite: userData.favoriteCourses.includes(course.id)
+            }))
+          );
+        }
+        
+        // Fetch user's enrolled courses
+        if (userData.enrolledCourses) {
+          setUserEnrolledCourses(userData.enrolledCourses);
+          
+          // Fetch course progress data
+          const progressData = userData.courseProgress || {};
+          setUserProgress(progressData);
+          
+          // Update micro-learning modules with user's progress
+          const updatedModules = [...microLearningModules];
+          Object.keys(progressData).forEach(courseId => {
+            const moduleIndex = updatedModules.findIndex(m => m.id.toString() === courseId);
+            if (moduleIndex !== -1) {
+              updatedModules[moduleIndex].completionPercent = progressData[courseId].percentComplete || 0;
+              updatedModules[moduleIndex].completion = `${progressData[courseId].completedModules || 0}/${progressData[courseId].totalModules || 5} modules`;
+            }
+          });
+          setMicroLearningModules(updatedModules);
+        }
+        
+        // Fetch notifications
+        const userNotificationsRef = collection(db, 'notifications');
+        const q = query(userNotificationsRef, where('userId', '==', userId));
+        const notificationsSnapshot = await getDocs(q);
+        
+        if (!notificationsSnapshot.empty) {
+          const notificationsData = notificationsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          setNotifications(notificationsData);
+        } else {
+          // Set default notifications if none exist
+          setNotifications([
+            { id: 1, title: 'New mentor available', read: false },
+            { id: 2, title: 'Course completion reminder', read: false }
+          ]);
+        }
+      } else {
+        console.log("No such document!");
+        setUserName('User'); // Default fallback
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      Alert.alert("Error", "Failed to load profile data. Please try again.");
+      setUserName('User'); // Default fallback
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Set up real-time listener for user document
+  const setupUserListener = (userId) => {
+    const userDocRef = doc(db, 'users', userId);
+    return onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const userData = docSnap.data();
+        setUserName(userData.name || userData.displayName || 'User');
+        setBudgetGoal(userData.budgetGoal || 300);
+        setBudgetSaved(userData.budgetSaved || 135);
+        
+        // Update favorites in real-time
+        if (userData.favoriteCourses) {
+          setFavoriteCourses(userData.favoriteCourses);
+          setRecommendedCourses(prev => 
+            prev.map(course => ({
+              ...course,
+              favorite: userData.favoriteCourses.includes(course.id)
+            }))
+          );
+        }
+      }
+    }, (error) => {
+      console.error("Real-time listener error:", error);
+    });
+  };
+
+  // Authentication listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setCurrentUser(user);
+        fetchUserData(user.uid);
+        
+        // Set up real-time listener for user document
+        const userListener = setupUserListener(user.uid);
+        
+        // Clean up user listener when component unmounts
+        return () => {
+          userListener();
+        };
+      } else {
+        // No user is signed in, redirect to login or set default values
+        setCurrentUser(null);
+        setUserName('Guest');
+        setIsLoading(false);
+        // Optionally navigate to login screen
+        // navigation.navigate('Login');
+      }
+    });
+
+    // Cleanup subscription
+    return () => unsubscribe();
+  }, []);
 
   // Pull-to-refresh logic
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    getSkillRecommendations(true);
-  }, []);
-
-
+    if (currentUser) {
+      fetchUserData(currentUser.uid)
+        .then(() => setRefreshing(false));
+    } else {
+      setRefreshing(false);
+    }
+  }, [currentUser]);
 
   // Filter courses based on debounced search query and active tab
   const getFilteredCourses = () => {
@@ -186,31 +340,127 @@ function SkillDevelopmentScreen({ navigation }) {
     return filtered;
   };
 
-
-  // Toggle course favorite status and persist state
-  const toggleFavorite = (courseId) => {
-    const updatedCourses = aiRecommendedCourses.map(course => {
-      if (course.id === courseId) return { ...course, favorite: !course.favorite };
-      return course;
-    });
-    const favoriteIds = updatedCourses.filter(course => course.favorite).map(course => course.id);
-    setFavoriteCourses(favoriteIds);
-    AsyncStorage.setItem('favoriteCourses', JSON.stringify(favoriteIds));
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  // Toggle course favorite status and persist state in Firestore
+  const toggleFavorite = async (courseId) => {
+    try {
+      if (!currentUser) {
+        Alert.alert("Sign In Required", "Please sign in to save favorites.");
+        return;
+      }
+      
+      // Update local state first for immediate feedback
+      const isCurrentlyFavorite = favoriteCourses.includes(courseId);
+      const updatedFavorites = isCurrentlyFavorite 
+        ? favoriteCourses.filter(id => id !== courseId)
+        : [...favoriteCourses, courseId];
+      
+      setFavoriteCourses(updatedFavorites);
+      
+      // Update recommended courses state
+      setRecommendedCourses(prev => 
+        prev.map(course => {
+          if (course.id === courseId) {
+            return { ...course, favorite: !isCurrentlyFavorite };
+          }
+          return course;
+        })
+      );
+      
+      // Provide haptic feedback
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      
+      // Save to AsyncStorage as a backup
+      await AsyncStorage.setItem('favoriteCourses', JSON.stringify(updatedFavorites));
+      
+      // Update Firestore
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      await updateDoc(userDocRef, {
+        favoriteCourses: updatedFavorites
+      });
+      
+    } catch (error) {
+      console.error("Error updating favorites:", error);
+      Alert.alert("Error", "Failed to update favorites. Please try again.");
+      
+      // Revert to previous state on error
+      fetchUserData(currentUser.uid);
+    }
   };
 
-  // Mark notifications as read
-  const markNotificationsAsRead = () => {
-    const updatedNotifications = notifications.map(notification => ({ ...notification, read: true }));
-    setNotifications(updatedNotifications);
+  // Mark notifications as read and update in Firestore
+  const markNotificationsAsRead = async () => {
+    try {
+      if (!currentUser) return;
+      
+      // Update local state
+      const updatedNotifications = notifications.map(notification => ({ 
+        ...notification, 
+        read: true 
+      }));
+      setNotifications(updatedNotifications);
+      
+      // Update each notification document in Firestore
+      for (const notification of updatedNotifications) {
+        if (notification.id && !notification.read) {
+          const notificationRef = doc(db, 'notifications', notification.id);
+          await updateDoc(notificationRef, { read: true });
+        }
+      }
+    } catch (error) {
+      console.error("Error marking notifications as read:", error);
+    }
   };
 
-  // Navigation placeholder for course detail
+  // Navigation to course detail screen
   const navigateToCourseDetail = (course) => {
-    Alert.alert('Course Selected', `You selected: ${course.title}`);
+    // Navigate to course detail screen
+    navigation.navigate('CourseDetail', { 
+      courseId: course.id,
+      courseName: course.title 
+    });
   };
 
+  // Update user's budget goal in Firestore
+  const updateBudgetGoal = async () => {
+    try {
+      if (!currentUser) {
+        Alert.alert("Sign In Required", "Please sign in to update your budget goal.");
+        return;
+      }
+      
+      const newBudgetGoal = parseFloat(updatedBudget);
+      if (isNaN(newBudgetGoal) || newBudgetGoal <= 0) {
+        Alert.alert("Invalid Amount", "Please enter a valid budget amount.");
+        return;
+      }
+      
+      // Update local state
+      setBudgetGoal(newBudgetGoal);
+      
+      // Update Firestore
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      await updateDoc(userDocRef, {
+        budgetGoal: newBudgetGoal
+      });
+      
+      setBudgetModalVisible(false);
+      setUpdatedBudget('');
+      
+    } catch (error) {
+      console.error("Error updating budget goal:", error);
+      Alert.alert("Error", "Failed to update budget goal. Please try again.");
+    }
+  };
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#ff5f96" />
+        <Text style={{ marginTop: 20, color: '#666' }}>Loading your personalized content...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -237,7 +487,10 @@ function SkillDevelopmentScreen({ navigation }) {
                   </View>
                 )}
               </TouchableOpacity>
-              <TouchableOpacity style={styles.profileButton} onPress={() => Alert.alert('Profile', 'Profile settings coming soon.')}>
+              <TouchableOpacity 
+                style={styles.profileButton} 
+                onPress={() => navigation.navigate('Profile')}
+              >
                 <Image source={require('../../assets/icon.png')} style={styles.profileImage} />
               </TouchableOpacity>
             </View>
@@ -310,9 +563,13 @@ function SkillDevelopmentScreen({ navigation }) {
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                   if (category.name === 'Budget Tools' ) {
+                    // Navigate to budget tool screen
                     navigation.navigate('BudgetTool');
+                  } else if (category.name === 'My Learning Path') {
+                    // Navigate to learning path screen
+                    navigation.navigate('LearningPath', { userId: currentUser?.uid });
                   } else {
-                  Alert.alert(category.name, `You selected: ${category.name}`);
+                    Alert.alert(category.name, `You selected: ${category.name}`);
                   }
                 }}
                 activeOpacity={0.7}
@@ -325,7 +582,6 @@ function SkillDevelopmentScreen({ navigation }) {
             ))}
           </View>
         </View>
-
 
         {/* Micro-Learning Section */}
         <View style={styles.sectionContainer}>
@@ -388,7 +644,7 @@ function SkillDevelopmentScreen({ navigation }) {
               <Feather name="chevron-right" size={16} color="#ff5f96" />
             </TouchableOpacity>
           </View>
-          {aiRecommendedCourses.map(course => (
+          {recommendedCourses.map(course => (
             <TouchableOpacity 
               key={course.id} 
               style={styles.recommendedCard}
@@ -436,7 +692,11 @@ function SkillDevelopmentScreen({ navigation }) {
                 </View>
                 <View style={styles.recommendedActions}>
                   <TouchableOpacity style={styles.favoriteButton} onPress={() => toggleFavorite(course.id)}>
-                    <Ionicons name={course.favorite ? "heart" : "heart-outline"} size={20} color={course.favorite ? "#ff5f96" : "#666"} />
+                    <Ionicons 
+                      name={favoriteCourses.includes(course.id) ? "heart" : "heart-outline"} 
+                      size={20} 
+                      color={favoriteCourses.includes(course.id) ? "#ff5f96" : "#666"} 
+                    />
                   </TouchableOpacity>
                 </View>
               </View>
