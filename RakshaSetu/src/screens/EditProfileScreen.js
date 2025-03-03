@@ -17,7 +17,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { auth, db } from '../../config/firebaseConfig';
+import { auth, db } from '../../config/firebaseConfig'; // Ensure these are correctly exported
 
 const EditProfileScreen = ({ navigation }) => {
   const [name, setName] = useState('');
@@ -31,6 +31,7 @@ const EditProfileScreen = ({ navigation }) => {
   const [avatarUri, setAvatarUri] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // Fetch the user data from Firestore when the component mounts
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -49,6 +50,8 @@ const EditProfileScreen = ({ navigation }) => {
             if (data.birthday) {
               setDate(new Date(data.birthday));
             }
+          } else {
+            Alert.alert('No Data', 'No profile data found for this user.');
           }
         }
       } catch (error) {
@@ -69,22 +72,20 @@ const EditProfileScreen = ({ navigation }) => {
     return re.test(phone);
   };
 
+  // Handle saving changes to the profile
   const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert('Error', 'Please enter your name');
       return;
     }
-
     if (!validateEmail(email)) {
       Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
-
     if (phone && !validatePhone(phone)) {
       Alert.alert('Error', 'Please enter a valid phone number');
       return;
     }
-
     try {
       setIsLoading(true);
       const user = auth.currentUser;
@@ -110,6 +111,7 @@ const EditProfileScreen = ({ navigation }) => {
     }
   };
 
+  // Image picking and upload logic
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -120,15 +122,19 @@ const EditProfileScreen = ({ navigation }) => {
 
     if (!result.canceled) {
       const uri = result.assets[0].uri;
-      const storage = getStorage();
-      const storageRef = ref(storage, `avatars/${auth.currentUser.uid}`);
-      
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      
-      await uploadBytes(storageRef, blob);
-      const downloadURL = await getDownloadURL(storageRef);
-      setAvatarUri(downloadURL);
+      try {
+        const storage = getStorage();
+        const storageRef = ref(storage, `avatars/${auth.currentUser.uid}`);
+        
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        
+        await uploadBytes(storageRef, blob);
+        const downloadURL = await getDownloadURL(storageRef);
+        setAvatarUri(downloadURL);
+      } catch (error) {
+        Alert.alert('Error', 'Failed to upload image');
+      }
     }
   };
 
@@ -138,14 +144,13 @@ const EditProfileScreen = ({ navigation }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* Header */}
+        {/* Header Section */}
         <View style={styles.headerContainer}>
           <View style={styles.headerCurve} />
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <MaterialCommunityIcons name="arrow-left" size={28} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Profile</Text>
-          
           <TouchableOpacity onPress={pickImage}>
             <Image
               source={{ uri: avatarUri || 'https://via.placeholder.com/80' }}
@@ -157,9 +162,9 @@ const EditProfileScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Form */}
+        {/* Form Section */}
         <View style={styles.content}>
-          <Text style={styles.label}>Name </Text>
+          <Text style={styles.label}>Name</Text>
           <TextInput
             style={styles.input}
             value={name}
@@ -178,7 +183,7 @@ const EditProfileScreen = ({ navigation }) => {
             placeholderTextColor="#999"
           />
 
-          <Text style={styles.label}>Email </Text>
+          <Text style={styles.label}>Email</Text>
           <TextInput
             style={styles.input}
             value={email}
@@ -216,17 +221,15 @@ const EditProfileScreen = ({ navigation }) => {
             ))}
           </View>
 
-          {/* Updated Birthday Section */}
           <Text style={styles.label}>Birthday</Text>
-          <TouchableOpacity 
-            style={styles.dateInputContainer} 
+          <TouchableOpacity
+            style={styles.dateInputContainer}
             onPress={() => setShowDatePicker(true)}
           >
             <Text style={[styles.dateText, { color: birthday ? '#333' : '#999' }]}>
               {birthday ? birthday : 'Select your birthday'}
             </Text>
           </TouchableOpacity>
-
           {showDatePicker && (
             <DateTimePicker
               value={date}
@@ -312,6 +315,11 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 40,
     borderTopRightRadius: 40,
   },
+  backButton: {
+    position: 'absolute',
+    left: 20,
+    top: 50,
+  },
   avatar: {
     width: 80,
     height: 80,
@@ -322,14 +330,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 130,
-    backgroundColor: '#00000050',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     padding: 5,
     borderRadius: 20,
-  },
-  backButton: {
-    position: 'absolute',
-    left: 20,
-    top: 50,
   },
   headerTitle: {
     fontSize: 20,
@@ -367,9 +370,7 @@ const styles = StyleSheet.create({
     borderColor: '#eee',
     justifyContent: 'center',
   },
-  dateText: {
-    fontSize: 16,
-  },
+  dateText: { fontSize: 16 },
   saveButton: {
     backgroundColor: '#FF4B8C',
     marginTop: 30,

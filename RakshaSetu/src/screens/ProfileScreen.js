@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../../config/firebaseConfig'; // Adjust path if needed
 
 const ProfileScreen = ({ navigation }) => {
@@ -34,32 +34,28 @@ const ProfileScreen = ({ navigation }) => {
     { title: 'About Us', icon: 'information', screen: 'AboutUs' },
   ];
 
-  // Fetch Firestore doc for current user on mount
+  // Use onSnapshot to listen to realtime updates on the user document
   useEffect(() => {
-    const fetchUserData = async () => {
-      const user = auth.currentUser;
-      if (!user) {
-        setIsLoading(false);
-        return;
+    const user = auth.currentUser;
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+    const docRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.name) setName(data.name);
+        if (data.phone) setPhone(data.phone);
+      } else {
+        Alert.alert('No Data', 'No profile data found for this user.');
       }
-      try {
-        const docRef = doc(db, 'users', user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          if (data.name) setName(data.name);
-          if (data.phone) setPhone(data.phone);
-        } else {
-          Alert.alert('No Data', 'No profile data found for this user.');
-        }
-      } catch (error) {
-        Alert.alert('Error', error.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchUserData();
+      setIsLoading(false);
+    }, (error) => {
+      Alert.alert('Error', error.message);
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
   const handleLogout = () => {
@@ -70,7 +66,7 @@ const ProfileScreen = ({ navigation }) => {
         {
           text: 'OK',
           onPress: () => {
-            // Place any logout logic here (e.g., auth.signOut())
+            // Place your logout logic here (e.g., auth.signOut())
             navigation.replace('Login');
           },
         },
@@ -93,12 +89,9 @@ const ProfileScreen = ({ navigation }) => {
       {/* Header */}
       <View style={styles.headerContainer}>
         <View style={styles.headerCurve} />
-        {/* Display name & phone from state */}
         <Image source={{ uri: 'https://via.placeholder.com/80' }} style={styles.avatar} />
         <Text style={styles.name}>{name}</Text>
         <Text style={styles.phone}>{phone}</Text>
-
-        {/* EDIT PROFILE BUTTON */}
         <TouchableOpacity
           style={styles.editButton}
           onPress={() => navigation.navigate('EditProfile')}
@@ -132,11 +125,7 @@ const ProfileScreen = ({ navigation }) => {
             <TouchableOpacity
               key={index}
               style={styles.listItem}
-              onPress={() => {
-                if (item.screen) {
-                  navigation.navigate(item.screen);
-                }
-              }}
+              onPress={() => item.screen && navigation.navigate(item.screen)}
             >
               <MaterialCommunityIcons name={item.icon} size={24} color="#555" />
               <Text style={styles.itemText}>{item.title}</Text>

@@ -159,32 +159,6 @@ function SkillDevelopmentScreen({ navigation }) {
     }
   ];
 
-  const mentors = [
-    {
-      id: 1,
-      name: 'Jennifer Taylor',
-      title: 'Financial Advisor',
-      image: require('../../assets/icon.png'),
-      available: true,
-      specialities: ['Investing', 'Retirement']
-    },
-    {
-      id: 2,
-      name: 'Lisa Washington',
-      title: 'Entrepreneur',
-      image: require('../../assets/icon.png'),
-      available: true,
-      specialities: ['Business', 'Leadership']
-    },
-    {
-      id: 3,
-      name: 'Michelle Roberts',
-      title: 'Tech Leader',
-      image: require('../../assets/icon.png'),
-      available: false,
-      specialities: ['Career', 'Negotiation']
-    }
-  ];
 
   // Load user data from AsyncStorage
   useEffect(() => {
@@ -291,21 +265,7 @@ function SkillDevelopmentScreen({ navigation }) {
     Alert.alert('Course Selected', `You selected: ${course.title}`);
   };
 
-  // Connect with mentor
-  const connectWithMentor = (mentor) => {
-    if (!mentor.available) {
-      Alert.alert('Mentor Unavailable', 'This mentor is currently unavailable. Try again later or choose another mentor.');
-      return;
-    }
-    Alert.alert(
-      'Connect with Mentor',
-      `Schedule a session with ${mentor.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Schedule', onPress: () => Alert.alert('Request Sent', 'Your mentorship request has been sent.') }
-      ]
-    );
-  };
+
 
   return (
     <View style={styles.container}>
@@ -604,32 +564,6 @@ function SkillDevelopmentScreen({ navigation }) {
           ))}
         </View>
 
-        {/* Mentor Connection Section */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Connect with Mentors</Text>
-            <TouchableOpacity style={styles.seeAllButton} onPress={() => Alert.alert('Mentors', 'Browse all available mentors')}>
-              <Text style={styles.seeAllText}>Browse all</Text>
-              <Feather name="chevron-right" size={16} color="#ff5f96" />
-            </TouchableOpacity>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mentorsScrollContent}>
-            {mentors.map(mentor => (
-              <TouchableOpacity 
-                key={mentor.id} 
-                style={styles.mentorCard}
-                onPress={() => connectWithMentor(mentor)}
-              >
-                <Image source={mentor.image} style={styles.mentorImage} />
-                <Text style={styles.mentorName}>{mentor.name}</Text>
-                <Text style={styles.mentorTitle}>{mentor.title}</Text>
-                <View style={styles.mentorButton}>
-                  <Text style={styles.mentorButtonText}>Connect</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
 
         {/* Bottom Padding */}
         <View style={{ height: 80 }} />
@@ -799,13 +733,6 @@ const styles = StyleSheet.create({
   progressContainer: { marginTop: 8 },
   recommendedActions: { justifyContent: 'center', alignItems: 'center' },
   favoriteButton: { padding: 8 },
-  mentorsScrollContent: { paddingHorizontal: 16 },
-  mentorCard: { width: 120, backgroundColor: 'white', borderRadius: 16, padding: 12, alignItems: 'center', marginRight: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
-  mentorImage: { width: 60, height: 60, borderRadius: 30, marginBottom: 8 },
-  mentorName: { fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 4, textAlign: 'center' },
-  mentorTitle: { fontSize: 12, color: '#666', marginBottom: 8, textAlign: 'center' },
-  mentorButton: { backgroundColor: '#ff5f96', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  mentorButtonText: { fontSize: 12, fontWeight: '600', color: 'white' },
   fab: { position: 'absolute', bottom: 20, right: 20 },
   fabGradient: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5 },
   modalContainer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
