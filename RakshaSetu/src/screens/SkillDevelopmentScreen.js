@@ -160,45 +160,13 @@ function SkillDevelopmentScreen({ navigation }) {
   ];
 
 
-  // Load user data from AsyncStorage
-  useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        const savedName = await AsyncStorage.getItem('userName');
-        const savedBudgetGoal = await AsyncStorage.getItem('budgetGoal');
-        const savedBudgetSaved = await AsyncStorage.getItem('budgetSaved');
-        const savedFavorites = await AsyncStorage.getItem('favoriteCourses');
-        if (savedName) setUserName(savedName);
-        if (savedBudgetGoal) setBudgetGoal(parseInt(savedBudgetGoal));
-        if (savedBudgetSaved) setBudgetSaved(parseInt(savedBudgetSaved));
-        if (savedFavorites) setFavoriteCourses(JSON.parse(savedFavorites));
-      } catch (error) {
-        console.error('Error loading user data:', error);
-      }
-    };
-    loadUserData();
-    getSkillRecommendations();
-  }, []);
-
   // Pull-to-refresh logic
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     getSkillRecommendations(true);
   }, []);
 
-  // Simulated API call for skill recommendations
-  const getSkillRecommendations = (isRefreshing = false) => {
-    if (!isRefreshing) setIsLoading(true);
-    setTimeout(() => {
-      setSkillRecommendations([
-        { skillName: 'Financial Analysis', relevance: 92, demandGrowth: '+34%', localJobs: 56 },
-        { skillName: 'Digital Literacy', relevance: 88, demandGrowth: '+28%', localJobs: 42 },
-        { skillName: 'Leadership', relevance: 85, demandGrowth: '+18%', localJobs: 87 }
-      ]);
-      setIsLoading(false);
-      setRefreshing(false);
-    }, 1500);
-  };
+
 
   // Filter courses based on debounced search query and active tab
   const getFilteredCourses = () => {
@@ -218,29 +186,6 @@ function SkillDevelopmentScreen({ navigation }) {
     return filtered;
   };
 
-  // Handle budget update with validation and haptic feedback
-  const handleBudgetUpdate = () => {
-    const newAmount = parseInt(updatedBudget);
-    if (isNaN(newAmount) || newAmount <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid amount');
-      return;
-    }
-    setBudgetSaved(newAmount);
-    AsyncStorage.setItem('budgetSaved', newAmount.toString());
-    setBudgetModalVisible(false);
-    setUpdatedBudget('');
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    if (newAmount >= budgetGoal) {
-      Alert.alert(
-        'Congratulations!',
-        'You\'ve reached your savings goal! Would you like to set a new goal?',
-        [
-          { text: 'Not now', style: 'cancel' },
-          { text: 'Set new goal', onPress: () => Alert.alert('Coming Soon', 'This feature will be available in the next update.') }
-        ]
-      );
-    }
-  };
 
   // Toggle course favorite status and persist state
   const toggleFavorite = (courseId) => {
@@ -381,71 +326,6 @@ function SkillDevelopmentScreen({ navigation }) {
           </View>
         </View>
 
-        {/* AI Skill Analysis Section */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Your Skills Analysis</Text>
-            <TouchableOpacity 
-              style={styles.refreshButton}
-              onPress={() => { setIsLoading(true); getSkillRecommendations(); }}
-              disabled={isLoading}
-            >
-              <Text style={styles.refreshText}>Refresh</Text>
-              <Feather name="refresh-cw" size={16} color="#ff5f96" style={isLoading ? { transform: [{ rotate: '45deg' }] } : null} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.aiAnalysisCard}>
-            <View style={styles.aiCardHeader}>
-              <View style={styles.aiTitleContainer}>
-                <FontAwesome5 name="brain" size={18} color="#ff5f96" style={styles.aiIcon} />
-                <Text style={styles.aiCardTitle}>AI-Powered Skills Match</Text>
-              </View>
-              <Text style={styles.aiCardSubtitle}>Based on your profile, local market, and career goals</Text>
-            </View>
-            {isLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#ff5f96" style={{ marginBottom: 10 }} />
-                <Text style={styles.loadingText}>Analyzing your skills profile...</Text>
-              </View>
-            ) : (
-              <View style={styles.skillRecommendationsContainer}>
-                {skillRecommendations.map((skill, index) => (
-                  <View key={index} style={styles.skillRecommendation}>
-                    <View style={styles.skillNameContainer}>
-                      <Text style={styles.skillName}>{skill.skillName}</Text>
-                      <View style={styles.relevanceTag}>
-                        <Text style={styles.relevanceText}>{skill.relevance}% match</Text>
-                      </View>
-                    </View>
-                    <View style={styles.skillMetricsContainer}>
-                      <View style={styles.skillMetric}>
-                        <Text style={styles.metricLabel}>Growth</Text>
-                        <Text style={[styles.metricValue, { color: '#4CAF50' }]}>{skill.demandGrowth}</Text>
-                      </View>
-                      <View style={styles.skillMetric}>
-                        <Text style={styles.metricLabel}>Local Jobs</Text>
-                        <Text style={styles.metricValue}>{skill.localJobs}</Text>
-                      </View>
-                      <TouchableOpacity 
-                        style={styles.exploreButton}
-                        onPress={() => Alert.alert('Explore Skill', `Learn more about ${skill.skillName} opportunities`)}
-                      >
-                        <Text style={styles.exploreText}>Explore</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))}
-                <TouchableOpacity 
-                  style={styles.fullAnalysisButton}
-                  onPress={() => Alert.alert('Full Analysis', 'Complete skills assessment coming soon.')}
-                >
-                  <Text style={styles.fullAnalysisText}>View Full Skills Analysis</Text>
-                  <Feather name="arrow-right" size={16} color="#ff5f96" />
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        </View>
 
         {/* Micro-Learning Section */}
         <View style={styles.sectionContainer}>
@@ -569,12 +449,6 @@ function SkillDevelopmentScreen({ navigation }) {
         <View style={{ height: 80 }} />
       </Animated.ScrollView>
 
-      {/* Floating Action Button */}
-      <TouchableOpacity style={styles.fab} onPress={() => Alert.alert('Add New', 'Floating action pressed')}>
-        <LinearGradient colors={['#9B59B6', '#ff5f96']} start={[0, 0]} end={[1, 1]} style={styles.fabGradient}>
-          <Feather name="plus" size={24} color="white" />
-        </LinearGradient>
-      </TouchableOpacity>
 
       {/* Notification Modal */}
       <Modal
@@ -595,33 +469,6 @@ function SkillDevelopmentScreen({ navigation }) {
             </ScrollView>
             <TouchableOpacity style={styles.modalCloseButton} onPress={() => setNotificationModalVisible(false)}>
               <Text style={styles.modalCloseButtonText}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Budget Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={budgetModalVisible}
-        onRequestClose={() => setBudgetModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Update Savings</Text>
-            <TextInput 
-              style={styles.modalInput}
-              placeholder="Enter saved amount"
-              keyboardType="numeric"
-              value={updatedBudget}
-              onChangeText={setUpdatedBudget}
-            />
-            <TouchableOpacity style={styles.modalButton} onPress={handleBudgetUpdate}>
-              <Text style={styles.modalButtonText}>Update</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.modalButton, { backgroundColor: '#ccc' }]} onPress={() => setBudgetModalVisible(false)}>
-              <Text style={styles.modalButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -676,14 +523,6 @@ const styles = StyleSheet.create({
   categoryCard: { width: '31%', backgroundColor: 'white', borderRadius: 16, padding: 16, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
   iconContainer: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
   categoryName: { fontSize: 13, fontWeight: '500', textAlign: 'center', color: '#333' },
-  aiAnalysisCard: { backgroundColor: 'white', borderRadius: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3, padding: 16 },
-  aiCardHeader: { marginBottom: 16 },
-  aiTitleContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  aiIcon: { marginRight: 8 },
-  aiCardTitle: { fontSize: 18, fontWeight: 'bold', color: '#333' },
-  aiCardSubtitle: { fontSize: 13, color: '#666', marginLeft: 26 },
-  loadingContainer: { padding: 20, alignItems: 'center' },
-  loadingText: { fontSize: 15, color: '#666', fontStyle: 'italic' },
   skillRecommendationsContainer: { marginTop: 8 },
   skillRecommendation: { marginBottom: 16, borderBottomWidth: 1, borderBottomColor: '#F0F0F0', paddingBottom: 16 },
   skillNameContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
@@ -696,8 +535,6 @@ const styles = StyleSheet.create({
   metricValue: { fontSize: 14, fontWeight: '600', color: '#333' },
   exploreButton: { backgroundColor: '#ff5f96', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 8, marginLeft: 'auto' },
   exploreText: { fontSize: 13, fontWeight: '600', color: 'white' },
-  fullAnalysisButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 8, padding: 12, backgroundColor: '#F5EEF8', borderRadius: 8 },
-  fullAnalysisText: { fontSize: 14, fontWeight: '600', color: '#ff5f96' },
   microLearningContainer: { marginBottom: 16 },
   microLearningCard: { backgroundColor: 'white', borderRadius: 16, overflow: 'hidden', marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
   moduleImageContainer: { width: '100%', height: 120, position: 'relative' },
