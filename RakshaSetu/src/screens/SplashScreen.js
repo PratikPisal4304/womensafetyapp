@@ -25,7 +25,7 @@ export default function SplashScreen({ navigation }) {
     ]).start(() => {
       // After animation completes, wait 1 second, then navigate
       const timer = setTimeout(() => {
-        navigation.replace('Login'); // navigate to 'Main' stack
+        navigation.replace('MainTabs'); // navigate to 'Main' stack
       }, 1000);
       return () => clearTimeout(timer);
     });
