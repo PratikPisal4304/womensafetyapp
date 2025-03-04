@@ -443,6 +443,7 @@ export default function CommunityScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+  
       {/* Header with Search */}
       <View style={styles.headerContainer}>
         <Text style={styles.headerTitle}>My Community</Text>
@@ -619,6 +620,12 @@ export default function CommunityScreen() {
       >
         <Ionicons name="sparkles" size={28} color="#fff" />
       </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.chatfloatingButton}
+        onPress={() => navigation.navigate("InAppChat")}
+      >
+        <Ionicons name="chatbubbles-sharp" size={28} color="#fff" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -734,7 +741,8 @@ const styles = StyleSheet.create({
   modalActions: { flexDirection: "row", justifyContent: "flex-end" },
   modalButton: { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, marginLeft: 10 },
   modalButtonText: { color: "#fff", fontWeight: "600" },
-  floatingButton: { position: "absolute", bottom: 80, right: 20, backgroundColor: PINK, width: 56, height: 56, borderRadius: 28, justifyContent: "center", alignItems: "center", elevation: 5, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84, zIndex: 100 },
+  floatingButton: { position: "absolute", bottom: 150, right: 20, backgroundColor: PINK, width: 56, height: 56, borderRadius: 28, justifyContent: "center", alignItems: "center", elevation: 5, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84, zIndex: 100 },
+  chatfloatingButton: { position: "absolute", bottom: 80, right: 20, backgroundColor: PINK, width: 56, height: 56, borderRadius: 28, justifyContent: "center", alignItems: "center", elevation: 5, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84, zIndex: 100 },
   commentItem: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#eee", marginBottom: 4 },
   commentUser: { fontWeight: "bold", color: "#333" },
   commentText: { flex: 1, marginLeft: 10, color: "#555" },
