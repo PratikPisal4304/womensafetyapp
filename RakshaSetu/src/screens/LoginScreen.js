@@ -19,8 +19,9 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 
 // ============ Firebase + Recaptcha imports ============
 import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
-import { auth } from '../../config/firebaseConfig';  // <-- Your firebaseConfig (must export `auth`)
+import { auth, firestore } from '../../config/firebaseConfig';  // Ensure your firebaseConfig exports both auth and firestore
 import { signInWithPhoneNumber, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 // ============ Expo Auth Session Imports ============
 import * as WebBrowser from 'expo-web-browser';
@@ -37,7 +38,7 @@ export default function LoginScreen({ navigation }) {
   const [selectedLanguage, setSelectedLanguage] = useState('English');
   const [showLanguageModal, setShowLanguageModal] = useState(false);
 
-  // Recaptcha
+  // Recaptcha ref and state
   const recaptchaVerifier = useRef(null);
   const [verificationId, setVerificationId] = useState(null);
 
@@ -52,16 +53,28 @@ export default function LoginScreen({ navigation }) {
     webClientId: '704291591905-l12877n9vn4koms6lj9un8fvanb6av0u.apps.googleusercontent.com',
   });
 
-  // Monitor Google sign-in response
+  // Monitor Google sign-in response and integrate Firestore
   useEffect(() => {
     if (response?.type === 'success') {
       const { idToken, accessToken } = response.authentication;
       const credential = GoogleAuthProvider.credential(idToken, accessToken);
       signInWithCredential(auth, credential)
-        .then((userCredential) => {
+        .then(async (userCredential) => {
           Alert.alert('Success', 'Signed in with Google!');
-          // Optionally navigate to your app’s main screen:
-           navigation.replace('HomeScreen');
+          const { uid, email, displayName } = userCredential.user;
+          // Reference to user document in Firestore
+          const userDocRef = doc(firestore, 'users', uid);
+          const userDoc = await getDoc(userDocRef);
+          if (!userDoc.exists()) {
+            // Create a new document if one doesn't exist
+            await setDoc(userDocRef, {
+              email: email || '',
+              displayName: displayName || '',
+              createdAt: new Date().toISOString(),
+            });
+          }
+          // Navigate to HomeScreen after sign-in
+          navigation.replace('HomeScreen');
         })
         .catch((error) => {
           Alert.alert('Error', error.message);
@@ -78,13 +91,11 @@ export default function LoginScreen({ navigation }) {
 
   // Google sign-in logic
   const handleGoogleSignIn = async () => {
-    // Initiates the Google sign-in prompt
     promptAsync();
   };
 
   // Send OTP with reCAPTCHA + phone auth
   const handleSendOTP = async () => {
-    // Must start with +91 and be exactly 13 chars total (e.g. +911234567890)
     if (!mobileNumber.startsWith('+91') || mobileNumber.length !== 13) {
       Alert.alert(
         'Error',
@@ -93,14 +104,12 @@ export default function LoginScreen({ navigation }) {
       return;
     }
 
-    // Check if recaptcha is ready
     if (!recaptchaVerifier.current) {
       Alert.alert('Error', 'Recaptcha not initialized. Try again.');
       return;
     }
 
     try {
-      // signInWithPhoneNumber from firebase/auth
       const confirmationResult = await signInWithPhoneNumber(
         auth,
         mobileNumber,
@@ -110,7 +119,6 @@ export default function LoginScreen({ navigation }) {
       setVerificationId(confirmationResult.verificationId);
       Alert.alert('Success', `OTP has been sent to ${mobileNumber}`);
 
-      // Navigate to your OTP screen, pass verificationId & phone
       navigation.replace('OTPVerificationScreen', {
         verificationId: confirmationResult.verificationId,
         mobileNumber,
@@ -127,11 +135,10 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      {/* 1) The Recaptcha Modal (must be outside any scrollable content) */}
+      {/* Recaptcha Modal */}
       <FirebaseRecaptchaVerifierModal
         ref={recaptchaVerifier}
         firebaseConfig={{
-          // Paste your web config here, same as in firebaseConfig.js
           apiKey: "AIzaSyBRD6pmrMCcuAksz8hqxXAkP8hV3jih47c",
           authDomain: "rakshasetu-c9e0b.firebaseapp.com",
           projectId: "rakshasetu-c9e0b",
@@ -143,30 +150,16 @@ export default function LoginScreen({ navigation }) {
         attemptInvisibleVerification={false}
       />
 
-      {/* Wrap content in KeyboardAwareScrollView so inputs remain visible */}
-      <KeyboardAwareScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        bounces={false}
-      >
-        {/* Full-screen pink gradient */}
-        <LinearGradient
-          colors={['#ff9dbf', PINK]} // Vibrant pink gradient
-          style={styles.gradientBackground}
-        >
-          {/* Top Section: Title & Language */}
+      <KeyboardAwareScrollView contentContainerStyle={{ flexGrow: 1 }} bounces={false}>
+        <LinearGradient colors={['#ff9dbf', PINK]} style={styles.gradientBackground}>
           <View style={styles.topSection}>
             <Text style={styles.headerTitle}>Log in / Sign up</Text>
             <Text style={styles.headerSubtitle}>
               Sign up to access safety features or log in to continue your journey.
             </Text>
-
-            {/* Language dropdown */}
-            <TouchableOpacity
-              style={styles.languageContainer}
-              onPress={handleLanguagePress}
-            >
+            <TouchableOpacity style={styles.languageContainer} onPress={handleLanguagePress}>
               <Image
-                source={require('../../assets/adaptive-icon.png')} // Replace with your own
+                source={require('../../assets/adaptive-icon.png')}
                 style={styles.flagIcon}
               />
               <Text style={styles.languageText}>{selectedLanguage}</Text>
@@ -174,34 +167,29 @@ export default function LoginScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* White container for form */}
           <View style={styles.formCard}>
             <Text style={styles.label}>Mobile Number</Text>
             <TextInput
               style={styles.input}
               placeholder="e.g. +91XXXXXXXXXX"
               keyboardType="phone-pad"
-              maxLength={13}  // Limit to 13 characters
+              maxLength={13}
               value={mobileNumber}
               onChangeText={(text) => {
-                // Only allow digits & plus sign
                 const cleaned = text.replace(/[^0-9+]/g, '');
                 setMobileNumber(cleaned);
               }}
             />
 
-            {/* Google Sign-In */}
             <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn}>
               <Ionicons name="logo-google" size={20} color="#fff" style={{ marginRight: 8 }} />
               <Text style={styles.googleButtonText}>Continue with Google</Text>
             </TouchableOpacity>
 
-            {/* Send OTP */}
             <TouchableOpacity style={styles.sendOtpButton} onPress={handleSendOTP}>
               <Text style={styles.sendOtpButtonText}>Send OTP</Text>
             </TouchableOpacity>
 
-            {/* Footer text */}
             <View style={styles.footerContainer}>
               <Text style={styles.footerText}>
                 By continuing, you have read and accepted our{' '}
@@ -238,10 +226,7 @@ export default function LoginScreen({ navigation }) {
                 <TouchableOpacity
                   key={index}
                   style={styles.languageItem}
-                  onPress={() => {
-                    setSelectedLanguage(lang);
-                    setShowLanguageModal(false);
-                  }}
+                  onPress={() => handleSelectLanguage(lang)}
                 >
                   <Text style={styles.languageItemText}>{lang}</Text>
                 </TouchableOpacity>
@@ -254,22 +239,13 @@ export default function LoginScreen({ navigation }) {
   );
 }
 
-// ============== STYLES ==============
-
-const CARD_HEIGHT = 420; // Adjust as needed
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  gradientBackground: {
-    flex: 1,
-  },
+  container: { flex: 1, backgroundColor: '#fff' },
+  gradientBackground: { flex: 1 },
   topSection: {
     paddingTop: 40,
     paddingHorizontal: 20,
-    height: height * 0.3, // top area for title & language
+    height: height * 0.3,
     justifyContent: 'flex-end',
   },
   headerTitle: {
@@ -301,30 +277,21 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginRight: 6,
   },
-  languageText: {
-    color: '#fff',
-    fontSize: 14,
-    marginRight: 4,
-  },
+  languageText: { color: '#fff', fontSize: 14, marginRight: 4 },
   formCard: {
     backgroundColor: '#fff',
-    borderRadius: 40, // Curves on all corners
+    borderRadius: 40,
     padding: 25,
-    minHeight: CARD_HEIGHT,
-    marginTop: 20, // put it a bit lower than the top
-    marginHorizontal: 15, // side margin
+    minHeight: 420,
+    marginTop: 20,
+    marginHorizontal: 15,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 5 },
     shadowRadius: 8,
     elevation: 5,
   },
-  label: {
-    fontSize: 17,
-    color: '#333',
-    fontWeight: '600',
-    marginBottom: 8,
-  },
+  label: { fontSize: 17, color: '#333', fontWeight: '600', marginBottom: 8 },
   input: {
     height: 50,
     backgroundColor: '#f8f8f8',
@@ -344,11 +311,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 20,
   },
-  googleButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  googleButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   sendOtpButton: {
     backgroundColor: PINK,
     paddingVertical: 16,
@@ -357,11 +320,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     elevation: 3,
   },
-  sendOtpButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+  sendOtpButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   footerContainer: {
     marginTop: 'auto',
     alignItems: 'center',
@@ -373,41 +332,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
-  linkText: {
-    color: '#ff5f96',
-    fontWeight: '600',
-  },
-  signupContainer: {
-    flexDirection: 'row',
-    marginTop: 10,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  modalContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 20,
-    maxHeight: '60%',
-    alignSelf: 'center',
-    width: '100%',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 10,
-    color: '#333',
-  },
-  languageItem: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  languageItemText: {
-    fontSize: 16,
-    color: '#333',
-  },
+  linkText: { color: '#ff5f96', fontWeight: '600' },
+  signupContainer: { flexDirection: 'row', marginTop: 10 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', padding: 20 },
+  modalContainer: { backgroundColor: '#fff', borderRadius: 15, padding: 20, maxHeight: '60%', alignSelf: 'center', width: '100%' },
+  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 10, color: '#333' },
+  languageItem: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  languageItemText: { fontSize: 16, color: '#333' },
 });
+
+// export default LoginScreen;

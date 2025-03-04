@@ -103,20 +103,33 @@ const HomeScreen = ({ navigation }) => {
         </View>
 
         {/* Skill Development */}        
-        <TouchableOpacity style={styles.journeySection} onPress={() => navigation.navigate('SkillDevelopment')}>
-          <View style={styles.journeyContent}>
-            <Image
-              source={require('../../assets/skill.png')}
-              style={styles.journeyIcon}
-            />
-            <View>
-              <Text style={styles.journeyTitle}>Skill Development</Text>
-              <Text style={styles.journeySubtitle}>
-                Learn Skills
+        <TouchableOpacity 
+          style={styles.skillSection} 
+          onPress={() => navigation.navigate('SkillDevelopment')}
+        >
+          <View style={styles.skillContent}>
+            <View style={styles.skillIconContainer}>
+              <Image
+                source={require('../../assets/skill.png')}
+                style={styles.skillIcon}
+              />
+            </View>
+            <View style={styles.skillTextContainer}>
+              <Text style={styles.skillTitle}>Financial Skill Hub</Text>
+              <Text style={styles.skillSubtitle}>
+              Empower Yourself: Develop Essential Financial Skills for a Brighter Future
               </Text>
+              <View style={styles.skillProgress}>
+                <View style={styles.progressBar}>
+                  <View style={styles.progressFill} />
+                </View>
+                <Text style={styles.progressText}>2/5 skills completed</Text>
+              </View>
             </View>
           </View>
-          <Ionicons name="chevron-forward" size={24} color="black" />
+          <View style={styles.skillArrowContainer}>
+            <Ionicons name="chevron-forward" size={24} color={PINK} />
+          </View>
         </TouchableOpacity>
 
         {/* Journey Section */}
@@ -269,6 +282,82 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: '#FFF',
     fontWeight: '500',
+  },
+  skillSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 15,
+    backgroundColor: '#FFF',
+    borderRadius: 15,
+    marginHorizontal: 20,
+    marginVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: PINK,
+  },
+  skillContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  skillIconContainer: {
+    backgroundColor: PINK + '15', // 15% opacity of PINK
+    padding: 10,
+    borderRadius: 12,
+    marginRight: 15,
+  },
+  skillIcon: {
+    width: 40,
+    height: 40,
+  },
+  skillTextContainer: {
+    flex: 1,
+  },
+  skillTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 4,
+  },
+  skillSubtitle: {
+    color: '#666',
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  skillProgress: {
+    width: '100%',
+    marginTop: 5,
+  },
+  progressBar: {
+    height: 6,
+    backgroundColor: '#F0F0F0',
+    borderRadius: 3,
+    width: '100%',
+    marginBottom: 5,
+  },
+  progressFill: {
+    height: '100%',
+    width: '40%', // This would be dynamic based on progress
+    backgroundColor: PINK,
+    borderRadius: 3,
+  },
+  progressText: {
+    fontSize: 12,
+    color: '#888',
+  },
+  skillArrowContainer: {
+    backgroundColor: PINK + '10', // 10% opacity of PINK
+    padding: 8,
+    borderRadius: 20,
   },
   journeySection: {
     flexDirection: 'row',

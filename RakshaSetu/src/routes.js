@@ -25,6 +25,8 @@ import MyPostsScreen from "./screens/MyPostsScreen";
 import EmergencyHelplineScreen from "./screens/EmergencyHelplineScreen";
 import CommunityScreen from "./screens/CommunityScreen";
 import GeminiChatScreen from "./screens/GeminiChatScreen";
+import BudgetToolScreen from "./screens/BudgetToolScreen";
+import FinancialNews from "./screens/FinancialNews";
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -43,6 +45,8 @@ function HomeStack() {
       <Stack.Screen name="FakeCall" component={FakeCallScreen} />
       <Stack.Screen name="AddFriends" component={AddFriendsScreen} />
       <Stack.Screen name="SkillDevelopment" component={SkillDevelopmentScreen} />
+      <Stack.Screen name="BudgetTool" component={BudgetToolScreen} />
+      <Stack.Screen name="FinancialNews" component={FinancialNews} />
     </Stack.Navigator>
   );
 }
