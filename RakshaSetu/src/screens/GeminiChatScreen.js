@@ -1,29 +1,61 @@
-// GeminiChatScreen.js
-import React, { useState,useEffect, useRef } from 'react';
+import { OPENAI_API_KEY } from '@env'; // Import API key from .env
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
+  Animated,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
-  Animated,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 
 const PINK = '#ff5f96';
 const AI_BUBBLE = '#f8f8f8';
 const USER_BUBBLE = PINK;
 
-export default function GeminiChatScreen({ navigation }) {
+const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+
+export default function LegalAssistantScreen({ navigation }) {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollViewRef = useRef();
   const dotAnim = useRef(new Animated.Value(0)).current;
+
+  // Load chat history from AsyncStorage on component mount
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      try {
+        const savedMessages = await AsyncStorage.getItem('chatMessages');
+        if (savedMessages) {
+          setMessages(JSON.parse(savedMessages));
+        }
+      } catch (error) {
+        console.error('Failed to load chat history:', error);
+      }
+    };
+
+    loadChatHistory();
+  }, []);
+
+  // Save chat history to AsyncStorage whenever messages change
+  useEffect(() => {
+    const saveChatHistory = async () => {
+      try {
+        await AsyncStorage.setItem('chatMessages', JSON.stringify(messages));
+      } catch (error) {
+        console.error('Failed to save chat history:', error);
+      }
+    };
+
+    saveChatHistory();
+  }, [messages]);
 
   // Animated loading dots
   useEffect(() => {
@@ -45,19 +77,32 @@ export default function GeminiChatScreen({ navigation }) {
     }
   }, [isLoading]);
 
-  // Mock AI response
-  const mockAIResponse = async (userMessage) => {
+  // Call OpenAI API for legal advice
+  const getLegalAdvice = async (userMessage) => {
     try {
-      setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      return {
-        text: `I'm here to help with women's rights information. Could you please clarify: "${userMessage}"?`,
-        isUser: false,
-        timestamp: new Date(),
-      };
-    } finally {
-      setIsLoading(false);
+      const response = await fetch(OPENAI_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo', // or 'gpt-4' if available
+          messages: [
+            { 
+              role: 'system', 
+              content: 'You are a legal assistant. Your role is to ask the user to specify their legal problem and then provide relevant laws and IPC sections. Always respond in a professional and concise manner.' 
+            },
+            { role: 'user', content: userMessage },
+          ],
+        }),
+      });
+
+      const data = await response.json();
+      return data.choices[0].message.content;
+    } catch (error) {
+      console.error('Error calling OpenAI API:', error);
+      return 'Sorry, I am unable to provide legal advice at the moment.';
     }
   };
 
@@ -71,15 +116,22 @@ export default function GeminiChatScreen({ navigation }) {
     };
 
     try {
-      setMessages(prev => [...prev, userMessage]);
+      setMessages((prev) => [...prev, userMessage]);
       setInputText('');
 
-      const aiResponse = await mockAIResponse(inputText);
-      if (aiResponse) {
-        setMessages(prev => [...prev, aiResponse]);
-      }
+      setIsLoading(true);
+      const aiResponseText = await getLegalAdvice(inputText);
+      const aiResponse = {
+        text: aiResponseText,
+        isUser: false,
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, aiResponse]);
     } catch (error) {
       alert('Failed to send message');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -149,7 +201,7 @@ export default function GeminiChatScreen({ navigation }) {
           {messages.length === 0 && (
             <View style={styles.emptyState}>
               <Ionicons name="chatbubbles-outline" size={48} color="#ddd" />
-              <Text style={styles.emptyStateText}>Ask me about legal rights, safety tips, or community support</Text>
+              <Text style={styles.emptyStateText}>Please describe your legal problem, and I will provide relevant laws and IPC sections.</Text>
             </View>
           )}
 
@@ -191,7 +243,7 @@ export default function GeminiChatScreen({ navigation }) {
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Ask about women's rights..."
+            placeholder="Describe your legal problem..."
             placeholderTextColor="#999"
             value={inputText}
             onChangeText={setInputText}
