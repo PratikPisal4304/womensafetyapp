@@ -21,7 +21,7 @@ const USER_BUBBLE = PINK;
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 
-export default function LegalAssistantScreen({ navigation }) {
+export default function GeminiChatScreen({ navigation }) {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
