@@ -10,7 +10,6 @@ import {
   Platform,
   Modal,
   Dimensions,
-  ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -237,10 +236,7 @@ const TransactionModal = ({
 
   return (
     <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -340,10 +336,7 @@ const GoalModal = ({ visible, onClose, onAddGoal }) => {
 
   return (
     <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -400,8 +393,9 @@ const GoalModal = ({ visible, onClose, onAddGoal }) => {
   );
 };
 
-// Main BudgetToolScreen Component with AsyncStorage integration and dynamic monthly pie chart data
+// Main BudgetToolScreen Component with AsyncStorage integration and monthly filtering
 const BudgetToolScreen = () => {
+  // Data States
   const [categories, setCategories] = useState([
     { id: '1', name: 'Housing', budget: 30000, color: '#FF6B6B', icon: 'home' },
     { id: '2', name: 'Groceries', budget: 10000, color: '#4ECDC4', icon: 'shopping-basket' },
@@ -441,11 +435,7 @@ const BudgetToolScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [goalModalVisible, setGoalModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('budget');
-  const [newTransaction, setNewTransaction] = useState({
-    description: '',
-    amount: '',
-    category: '',
-  });
+  const [newTransaction, setNewTransaction] = useState({ description: '', amount: '', category: '' });
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [allTransactionsVisible, setAllTransactionsVisible] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
@@ -508,48 +498,49 @@ const BudgetToolScreen = () => {
     saveGoals();
   }, [goals]);
 
-  // Compute category spending based on all transactions
-  const computedCategories = categories.map((cat) => {
-    const spent = transactions
-      .filter((txn) => txn.category === cat.id)
-      .reduce((sum, txn) => sum + txn.amount, 0);
-    return { ...cat, spent };
-  });
+  // Filter transactions for the selected month and year
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((txn) => {
+      const d = new Date(txn.date);
+      return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+    });
+  }, [transactions, selectedMonth, selectedYear]);
 
-  // Overall totals
-  const totalBudget = categories.reduce((sum, cat) => sum + cat.budget, 0);
-  const totalSpent = computedCategories.reduce((sum, cat) => sum + cat.spent, 0);
-  const remainingBudget = totalBudget - totalSpent;
-
-  // Helper: Get category by id from computedCategories
-  const getCategoryById = (id) =>
-    computedCategories.find((cat) => cat.id === id) || {};
-
-  // Filter transactions for selected month and year
-  const filteredTransactions = transactions.filter((txn) => {
-    const d = new Date(txn.date);
-    return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
-  });
-
-  // Monthly summaries
-  const monthlySpent = filteredTransactions.reduce((sum, txn) => sum + txn.amount, 0);
-  const monthlyBudget = categories.reduce((sum, cat) => sum + cat.budget, 0);
-  const monthlyRemaining = monthlyBudget - monthlySpent;
-
-  // PieChart data based on transactions for the selected month/year
-  const pieData = useMemo(() => {
+  // Compute category spending based on filtered transactions only
+  const computedCategoriesFiltered = useMemo(() => {
     return categories.map((cat) => {
-      const monthlySpentForCat = filteredTransactions
+      const spent = filteredTransactions
         .filter((txn) => txn.category === cat.id)
         .reduce((sum, txn) => sum + txn.amount, 0);
-      return {
-        name: cat.name,
-        amount: monthlySpentForCat,
-        color: cat.color,
-        legendFontColor: '#333',
-        legendFontSize: 12,
-      };
-    }).filter(item => item.amount > 0);
+      return { ...cat, spent };
+    });
+  }, [categories, filteredTransactions]);
+
+  // Helper: Get category by id from computedCategoriesFiltered
+  const getCategoryById = (id) =>
+    computedCategoriesFiltered.find((cat) => cat.id === id) || {};
+
+  // Monthly totals
+  const monthlyBudget = categories.reduce((sum, cat) => sum + cat.budget, 0);
+  const monthlySpent = filteredTransactions.reduce((sum, txn) => sum + txn.amount, 0);
+  const monthlyRemaining = monthlyBudget - monthlySpent;
+
+  // PieChart data based on filtered transactions
+  const pieData = useMemo(() => {
+    return categories
+      .map((cat) => {
+        const monthlySpentForCat = filteredTransactions
+          .filter((txn) => txn.category === cat.id)
+          .reduce((sum, txn) => sum + txn.amount, 0);
+        return {
+          name: cat.name,
+          amount: monthlySpentForCat,
+          color: cat.color,
+          legendFontColor: '#333',
+          legendFontSize: 12,
+        };
+      })
+      .filter((item) => item.amount > 0);
   }, [categories, filteredTransactions]);
 
   // Function to add a new transaction
@@ -615,23 +606,24 @@ const BudgetToolScreen = () => {
       <LinearGradient colors={[themeColor, themeColor]} style={styles.headerGradient}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Mahila Arthik Dashboard</Text>
+          {/* Monthly summary header (filtered data) */}
           <View style={styles.summaryContainer}>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Budget</Text>
-              <Text style={styles.summaryValue}>{formatCurrency(totalBudget)}</Text>
+              <Text style={styles.summaryValue}>{formatCurrency(monthlyBudget)}</Text>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Spent</Text>
-              <Text style={styles.summaryValue}>{formatCurrency(totalSpent)}</Text>
+              <Text style={styles.summaryValue}>{formatCurrency(monthlySpent)}</Text>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryItem}>
-              <Text style={[styles.summaryLabel, { color: remainingBudget >= 0 ? '#2EC4B6' : '#FF6B6B' }]}>
+              <Text style={[styles.summaryLabel, { color: monthlyRemaining >= 0 ? '#2ECC71' : '#E74C3C' }]}>
                 Remaining
               </Text>
-              <Text style={[styles.summaryValue, { color: remainingBudget >= 0 ? '#2EC4B6' : '#FF6B6B' }]}>
-                {formatCurrency(remainingBudget)}
+              <Text style={[styles.summaryValue, { color: monthlyRemaining >= 0 ? '#2ECC71' : '#E74C3C' }]}>
+                {formatCurrency(monthlyRemaining)}
               </Text>
             </View>
           </View>
@@ -665,7 +657,7 @@ const BudgetToolScreen = () => {
       <ScrollView style={styles.content}>
         {activeTab === 'budget' && (
           <>
-            {/* Monthly Data Section */}
+            {/* Month Filter Section */}
             <View style={styles.monthFilterContainer}>
               <TouchableOpacity onPress={() => setSelectedYear(selectedYear - 1)}>
                 <Ionicons name="chevron-back-outline" size={24} color={themeColor} />
@@ -702,10 +694,10 @@ const BudgetToolScreen = () => {
                 </View>
                 <View style={styles.summaryDivider} />
                 <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryLabel, { color: monthlyRemaining >= 0 ? '#2EC4B6' : '#FF6B6B' }]}>
+                  <Text style={[styles.summaryLabel, { color: monthlyRemaining >= 0 ? '#2ECC71' : '#E74C3C' }]}>
                     Remaining
                   </Text>
-                  <Text style={[styles.summaryValue, { color: monthlyRemaining >= 0 ? '#2EC4B6' : '#FF6B6B' }]}>
+                  <Text style={[styles.summaryValue, { color: monthlyRemaining >= 0 ? '#2ECC71' : '#E74C3C' }]}>
                     {formatCurrency(monthlyRemaining)}
                   </Text>
                 </View>
@@ -730,14 +722,16 @@ const BudgetToolScreen = () => {
               <Text style={styles.sectionTitle}>Categories</Text>
             </View>
             <View style={styles.categoriesContainer}>
-              {computedCategories.map((cat) => (
+              {computedCategoriesFiltered.map((cat) => (
                 <CategoryCard
                   key={cat.id}
                   category={cat}
                   computedSpent={cat.spent}
                   onUpdateBudget={(id, newBudget) => {
                     setCategories(
-                      categories.map((cat) => (cat.id === id ? { ...cat, budget: newBudget } : cat))
+                      categories.map((cat) =>
+                        cat.id === id ? { ...cat, budget: newBudget } : cat
+                      )
                     );
                   }}
                 />
@@ -758,7 +752,7 @@ const BudgetToolScreen = () => {
                 <MaterialIcons name="add" size={24} color="#FFF" />
               </TouchableOpacity>
             </View>
-            {transactions.slice(0, 5).map((txn) => (
+            {filteredTransactions.slice(0, 5).map((txn) => (
               <TransactionItem
                 key={txn.id}
                 transaction={txn}
@@ -776,7 +770,7 @@ const BudgetToolScreen = () => {
                 onDelete={deleteTransaction}
               />
             ))}
-            {transactions.length > 5 && (
+            {filteredTransactions.length > 5 && (
               <TouchableOpacity style={styles.viewAllButton} onPress={() => setAllTransactionsVisible(true)}>
                 <Text style={styles.viewAllText}>View all transactions</Text>
               </TouchableOpacity>
@@ -799,7 +793,7 @@ const BudgetToolScreen = () => {
             </View>
             <View style={styles.breakdownCard}>
               <Text style={styles.breakdownTitle}>Top 3 Expenses</Text>
-              {computedCategories
+              {computedCategoriesFiltered
                 .sort((a, b) => b.spent - a.spent)
                 .slice(0, 3)
                 .map((cat) => (
@@ -809,7 +803,7 @@ const BudgetToolScreen = () => {
                       <Text style={styles.breakdownLabel}>{cat.name}</Text>
                     </View>
                     <Text style={styles.breakdownValue}>
-                      {formatCurrency(cat.spent)} ({Math.round((cat.spent / totalSpent) * 100)}%)
+                      {formatCurrency(cat.spent)} ({Math.round((cat.spent / monthlySpent) * 100)}%)
                     </Text>
                   </View>
                 ))}
@@ -817,19 +811,19 @@ const BudgetToolScreen = () => {
               <View style={styles.breakdownStats}>
                 <View style={styles.statItem}>
                   <Text style={styles.statValue}>
-                    {Math.round((computedCategories.find(c => c.name === 'Savings')?.spent || 0) / totalSpent * 100)}%
+                    {Math.round((computedCategoriesFiltered.find(c => c.name === 'Savings')?.spent || 0) / monthlySpent * 100)}%
                   </Text>
                   <Text style={styles.statLabel}>Savings Rate</Text>
                 </View>
                 <View style={styles.statItem}>
                   <Text style={styles.statValue}>
-                    {Math.round((computedCategories.find(c => c.name === 'Housing')?.spent || 0) / totalSpent * 100)}%
+                    {Math.round((computedCategoriesFiltered.find(c => c.name === 'Housing')?.spent || 0) / monthlySpent * 100)}%
                   </Text>
                   <Text style={styles.statLabel}>Housing %</Text>
                 </View>
                 <View style={styles.statItem}>
                   <Text style={styles.statValue}>
-                    {Math.round((computedCategories.find(c => c.name === 'Childcare')?.spent || 0) / totalSpent * 100)}%
+                    {Math.round((computedCategoriesFiltered.find(c => c.name === 'Childcare')?.spent || 0) / monthlySpent * 100)}%
                   </Text>
                   <Text style={styles.statLabel}>Childcare %</Text>
                 </View>
@@ -913,7 +907,7 @@ const BudgetToolScreen = () => {
               </TouchableOpacity>
             </View>
             <ScrollView style={{ maxHeight: Dimensions.get('window').height * 0.6 }}>
-              {transactions.map((txn) => (
+              {filteredTransactions.map((txn) => (
                 <TransactionItem
                   key={txn.id}
                   transaction={txn}
@@ -1093,15 +1087,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  insightIconContainer: {
-    height: 36,
-    width: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,95,150,0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
+  insightIconContainer: { height: 36, width: 36, borderRadius: 18, backgroundColor: 'rgba(255,95,150,0.1)', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   insightText: { flex: 1, fontSize: 14, lineHeight: 20, color: '#333' },
   breakdownCard: {
     backgroundColor: '#FFF',
