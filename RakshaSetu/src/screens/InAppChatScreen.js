@@ -9,6 +9,8 @@ import {
   TextInput,
   Image,
   ActivityIndicator,
+  Keyboard,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -28,7 +30,15 @@ import {
 
 import { db } from '../../config/firebaseConfig';
 
+// Replace these with your auth user's actual data
+const CURRENT_USER_ID = 'CURRENT_USER_ID';
+const CURRENT_USER_NAME = 'My Name'; // Replace with actual name
+const CURRENT_USER_IMAGE = 'https://example.com/my-default.png'; // Replace with actual image URL
+
 const InAppChatScreen = () => {
+  // ----------------------------
+  // STATES
+  // ----------------------------
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -41,94 +51,135 @@ const InAppChatScreen = () => {
   const [chatData, setChatData] = useState({});
   const [selectedChat, setSelectedChat] = useState(null);
   const [inputText, setInputText] = useState('');
-  const currentUserId = 'CURRENT_USER_ID';
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [error, setError] = useState(null);
 
+  // Refs
   const unsubscribeRef = useRef(null);
+  const chatListRef = useRef(null);
+  const searchTimeoutRef = useRef(null);
+  
+  const currentUserId = CURRENT_USER_ID;
 
+  // ----------------------------
+  // FETCH DATA ON MOUNT
+  // ----------------------------
   useEffect(() => {
+    // Close Friends listener
     const closeFriendsRef = collection(db, 'users', currentUserId, 'closeFriends');
-    const unsubscribe = onSnapshot(closeFriendsRef, (snapshot) => {
-      const friends = [];
-      snapshot.forEach((docSnap) => {
-        friends.push({ id: docSnap.id, ...docSnap.data() });
-      });
-      setCloseFriends(friends);
-      setLoadingCloseFriends(false);
-    });
+    const unsubscribe = onSnapshot(
+      closeFriendsRef,
+      (snapshot) => {
+        const friends = [];
+        snapshot.forEach((docSnap) => {
+          friends.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        setCloseFriends(friends);
+        setLoadingCloseFriends(false);
+      },
+      (err) => setError('Error fetching close friends')
+    );
     return () => unsubscribe();
   }, [currentUserId]);
 
   useEffect(() => {
+    // Requests listener
     const requestsRef = collection(db, 'requests');
     const q = query(
       requestsRef,
       where('toUserId', '==', currentUserId),
       where('status', '==', 'pending')
     );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const reqs = [];
-      snapshot.forEach((docSnap) => {
-        reqs.push({ id: docSnap.id, ...docSnap.data() });
-      });
-      setRequests(reqs);
-      setLoadingRequests(false);
-    });
-
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const reqs = [];
+        snapshot.forEach((docSnap) => {
+          reqs.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        setRequests(reqs);
+        setLoadingRequests(false);
+      },
+      (err) => setError('Error fetching requests')
+    );
     return () => unsubscribe();
   }, [currentUserId]);
 
   useEffect(() => {
+    // Messages (active chats) listener
     const messagesRef = collection(db, 'threads');
     const q = query(messagesRef, where('participants', 'array-contains', currentUserId));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const msgs = [];
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        const otherUser = data?.userData?.find((u) => u.id !== currentUserId);
-
-        msgs.push({
-          threadId: docSnap.id,
-          ...otherUser,
-          lastMessage: data.lastMessage || '',
-          lastTimestamp: data.lastTimestamp || null,
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const msgs = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          // Find the other user's data from the userData array
+          const otherUser = data?.userData?.find((u) => u.id !== currentUserId);
+          msgs.push({
+            threadId: docSnap.id,
+            ...otherUser,
+            lastMessage: data.lastMessage || '',
+            lastTimestamp: data.lastTimestamp || null,
+          });
         });
-      });
-      setMessagesList(msgs);
-      setLoadingMessages(false);
-    });
-
+        // Sort chats by lastTimestamp (descending)
+        msgs.sort((a, b) => (b.lastTimestamp?.seconds || 0) - (a.lastTimestamp?.seconds || 0));
+        setMessagesList(msgs);
+        setLoadingMessages(false);
+      },
+      (err) => setError('Error fetching messages')
+    );
     return () => unsubscribe();
   }, [currentUserId]);
 
-  const handleSearch = useCallback(async () => {
-    if (!searchTerm.trim()) {
-      setSearchResults([]);
-      return;
+  // ----------------------------
+  // SEARCH LOGIC (Debounced)
+  // ----------------------------
+  const debouncedSearch = useCallback(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
     }
-    setIsSearching(true);
-    try {
-      const usersRef = collection(db, 'users');
-      const q = query(
-        usersRef,
-        where('name', '>=', searchTerm),
-        where('name', '<=', searchTerm + '\uf8ff'),
-        limit(10)
-      );
-      const snap = await getDocs(q);
-      const results = [];
-      snap.forEach((docSnap) => {
-        results.push({ id: docSnap.id, ...docSnap.data() });
-      });
-      setSearchResults(results);
-    } catch (error) {
-      console.log('Search error:', error);
-    } finally {
-      setIsSearching(false);
-    }
+    searchTimeoutRef.current = setTimeout(async () => {
+      if (!searchTerm.trim()) {
+        setSearchResults([]);
+        return;
+      }
+      setIsSearching(true);
+      try {
+        const usersRef = collection(db, 'users');
+        const q = query(
+          usersRef,
+          where('name', '>=', searchTerm),
+          where('name', '<=', searchTerm + '\uf8ff'),
+          limit(10)
+        );
+        const snap = await getDocs(q);
+        const results = [];
+        snap.forEach((docSnap) => {
+          results.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        setSearchResults(results);
+      } catch (error) {
+        console.log('Search error:', error);
+        setError('Error during search.');
+      } finally {
+        setIsSearching(false);
+      }
+    }, 500);
   }, [searchTerm]);
 
+  useEffect(() => {
+    debouncedSearch();
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, [searchTerm, debouncedSearch]);
+
+  // ----------------------------
+  // REQUEST HANDLERS
+  // ----------------------------
   const handleAcceptRequest = async (requestItem) => {
     try {
       const requestDocRef = doc(db, 'requests', requestItem.id);
@@ -145,14 +196,15 @@ const InAppChatScreen = () => {
           },
           {
             id: requestItem.toUserId,
-            name: 'CurrentUserName',
-            image: 'CurrentUserImage',
+            name: CURRENT_USER_NAME,
+            image: CURRENT_USER_IMAGE,
           },
         ],
       };
       await addDoc(collection(db, 'threads'), newThread);
     } catch (error) {
       console.log('Accept request error:', error);
+      setError('Failed to accept request.');
     }
   };
 
@@ -162,50 +214,63 @@ const InAppChatScreen = () => {
       await updateDoc(requestDocRef, { status: 'declined' });
     } catch (error) {
       console.log('Decline request error:', error);
+      setError('Failed to decline request.');
     }
   };
 
+  // ----------------------------
+  // CHAT DETAIL & MESSAGES
+  // ----------------------------
   const handleSelectChat = async (chatItem) => {
     setSelectedChat(chatItem);
+    // Listen to real-time messages for this thread
     const messagesRef = collection(db, 'threads', chatItem.threadId, 'messages');
     const q = query(messagesRef, orderBy('createdAt', 'asc'));
 
+    // Unsubscribe previous listener if exists
     if (unsubscribeRef.current) {
       unsubscribeRef.current();
     }
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const loadedMessages = [];
-      snapshot.forEach((docSnap) => {
-        loadedMessages.push({ id: docSnap.id, ...docSnap.data() });
-      });
-
-      const formatted = loadedMessages.map((msg) => {
-        const senderType = msg.senderId === currentUserId ? 'me' : 'them';
-        let timeString = '';
-        if (msg.createdAt?.toDate) {
-          timeString = msg.createdAt.toDate().toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const loadedMessages = [];
+        snapshot.forEach((docSnap) => {
+          loadedMessages.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        // Format messages for UI
+        const formatted = loadedMessages.map((msg) => {
+          const senderType = msg.senderId === currentUserId ? 'me' : 'them';
+          let timeString = '';
+          if (msg.createdAt?.toDate) {
+            timeString = msg.createdAt.toDate().toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            });
+          }
+          return {
+            id: msg.id,
+            sender: senderType,
+            text: msg.text,
+            time: timeString,
+          };
+        });
+        setChatData((prev) => ({
+          ...prev,
+          [chatItem.threadId]: formatted,
+        }));
+        // Auto-scroll to bottom
+        if (chatListRef.current) {
+          chatListRef.current.scrollToEnd({ animated: true });
         }
-        return {
-          id: msg.id,
-          sender: senderType,
-          text: msg.text,
-          time: timeString,
-        };
-      });
-
-      setChatData((prev) => ({
-        ...prev,
-        [chatItem.threadId]: formatted,
-      }));
-    });
-
+      },
+      (err) => setError('Error loading messages')
+    );
     unsubscribeRef.current = unsubscribe;
   };
 
+  // Clean up on unmount
   useEffect(() => {
     return () => {
       if (unsubscribeRef.current) {
@@ -218,6 +283,24 @@ const InAppChatScreen = () => {
     if (!inputText.trim() || !selectedChat?.threadId) return;
     const threadId = selectedChat.threadId;
     const textToSend = inputText.trim();
+    setSendingMessage(true);
+
+    // Optimistically update UI
+    const newMsg = {
+      id: Date.now().toString(), // temporary id
+      sender: 'me',
+      text: textToSend,
+      time: new Date().toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    };
+    setChatData((prev) => {
+      const existing = prev[threadId] || [];
+      return { ...prev, [threadId]: [...existing, newMsg] };
+    });
+    setInputText('');
+    Keyboard.dismiss();
 
     try {
       await addDoc(collection(db, 'threads', threadId, 'messages'), {
@@ -230,16 +313,77 @@ const InAppChatScreen = () => {
         lastMessage: textToSend,
         lastTimestamp: serverTimestamp(),
       });
-      setInputText('');
     } catch (error) {
       console.log('Send message error:', error);
+      setError('Failed to send message.');
+      Alert.alert('Error', 'Message failed to send.');
+    } finally {
+      setSendingMessage(false);
     }
   };
 
+  // ----------------------------
+  // PROFILE CLICK HANDLER (Search Results)
+  // ----------------------------
+  const handleProfileClick = async (profile) => {
+    // Provide fallback defaults for profile values
+    const profileName = profile.name || 'Anonymous';
+    const profileImage =
+      profile.image || 'https://example.com/default-profile.png';
+
+    // Check if a thread already exists with this profile by comparing the other user's id.
+    // (Assumes messagesList items include an id field corresponding to the other user's id)
+    const existingThread = messagesList.find((thread) => thread.id === profile.id);
+    if (existingThread) {
+      // Open existing chat
+      handleSelectChat(existingThread);
+    } else {
+      // Create a new thread with the profile and then open it
+      try {
+        const newThread = {
+          participants: [currentUserId, profile.id],
+          lastMessage: '',
+          lastTimestamp: serverTimestamp(),
+          userData: [
+            {
+              id: currentUserId,
+              name: CURRENT_USER_NAME,
+              image: CURRENT_USER_IMAGE,
+            },
+            {
+              id: profile.id,
+              name: profileName,
+              image: profileImage,
+            },
+          ],
+        };
+        const threadRef = await addDoc(collection(db, 'threads'), newThread);
+        const threadObj = {
+          threadId: threadRef.id,
+          id: profile.id,
+          name: profileName,
+          image: profileImage,
+          lastMessage: '',
+          lastTimestamp: null,
+        };
+        handleSelectChat(threadObj);
+      } catch (error) {
+        console.log('Error creating thread:', error);
+        setError('Failed to create new chat thread.');
+      }
+    }
+  };
+
+  // ----------------------------
+  // RENDER COMPONENTS
+  // ----------------------------
   const renderMainList = () => (
     <View style={styles.container}>
       <Text style={styles.screenTitle}>RaskhaSetu Chat</Text>
+      
+      {error && <Text style={styles.errorText}>{error}</Text>}
 
+      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
@@ -248,11 +392,16 @@ const InAppChatScreen = () => {
           value={searchTerm}
           onChangeText={setSearchTerm}
         />
-        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+        <TouchableOpacity
+          style={styles.searchButton}
+          onPress={debouncedSearch}
+          activeOpacity={0.8}
+        >
           <Text style={styles.searchButtonText}>Search</Text>
         </TouchableOpacity>
       </View>
 
+      {/* Search Results */}
       {isSearching && <ActivityIndicator color="#333" style={{ marginBottom: 10 }} />}
       {searchResults.length > 0 && (
         <View style={{ marginBottom: 20 }}>
@@ -265,7 +414,7 @@ const InAppChatScreen = () => {
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.requestCard}
-                onPress={() => console.log('Open profile or request chat:', item.name)}
+                onPress={() => handleProfileClick(item)}
                 activeOpacity={0.8}
               >
                 <Image source={{ uri: item.image }} style={styles.requestAvatar} />
@@ -276,6 +425,7 @@ const InAppChatScreen = () => {
         </View>
       )}
 
+      {/* Close Friends */}
       <Text style={styles.sectionTitle}>Close Friends</Text>
       {loadingCloseFriends ? (
         <ActivityIndicator color="#333" style={{ marginBottom: 10 }} />
@@ -301,9 +451,10 @@ const InAppChatScreen = () => {
         />
       )}
 
+      {/* Requests */}
       {loadingRequests ? (
         <ActivityIndicator color="#333" style={{ marginBottom: 10 }} />
-      ) : requests.length > 0 ? (
+      ) : requests.length > 0 && (
         <>
           <Text style={styles.sectionTitle}>Requests</Text>
           <FlatList
@@ -336,8 +487,9 @@ const InAppChatScreen = () => {
             )}
           />
         </>
-      ) : null}
+      )}
 
+      {/* Messages (Active Chats) */}
       <Text style={styles.sectionTitle}>Messages</Text>
       {loadingMessages ? (
         <ActivityIndicator color="#333" />
@@ -348,6 +500,10 @@ const InAppChatScreen = () => {
           data={messagesList}
           keyExtractor={(item) => item.threadId}
           showsVerticalScrollIndicator={false}
+          onRefresh={() => {
+            setLoadingMessages(true);
+          }}
+          refreshing={loadingMessages}
           renderItem={({ item }) => {
             let dateStr = '';
             if (item.lastTimestamp?.toDate) {
@@ -393,10 +549,12 @@ const InAppChatScreen = () => {
         </View>
 
         <FlatList
+          ref={chatListRef}
           data={conversation}
           keyExtractor={(item) => item.id}
           style={styles.chatList}
           showsVerticalScrollIndicator={false}
+          onContentSizeChange={() => chatListRef.current.scrollToEnd({ animated: true })}
           renderItem={({ item }) => (
             <View
               style={[
@@ -417,9 +575,20 @@ const InAppChatScreen = () => {
             placeholderTextColor="#aaa"
             value={inputText}
             onChangeText={setInputText}
+            onSubmitEditing={handleSendMessage}
+            returnKeyType="send"
           />
-          <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage} activeOpacity={0.8}>
-            <Text style={styles.sendButtonText}>Send</Text>
+          <TouchableOpacity
+            style={styles.sendButton}
+            onPress={handleSendMessage}
+            activeOpacity={0.8}
+            disabled={sendingMessage}
+          >
+            {sendingMessage ? (
+              <ActivityIndicator color="#FF69B4" />
+            ) : (
+              <Text style={styles.sendButtonText}>Send</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -456,6 +625,11 @@ const styles = StyleSheet.create({
     textShadowColor: '#fff',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+  },
+  errorText: {
+    color: '#FF6B6B',
+    textAlign: 'center',
+    marginBottom: 10,
   },
   sectionTitle: {
     fontSize: 20,
@@ -698,4 +872,3 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
-
