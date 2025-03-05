@@ -31,7 +31,11 @@ import {
   limit,
   deleteDoc,
 } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db } from '../../config/firebaseConfig';
+
+// Initialize Firebase Storage
+const storage = getStorage();
 
 // Replace these with your auth user's actual data
 const CURRENT_USER_ID = 'CURRENT_USER_ID';
@@ -309,6 +313,17 @@ const InAppChatScreen = () => {
   }, []);
 
   // ----------------------------
+  // UPLOAD MEDIA HELPER
+  // ----------------------------
+  const uploadImageAsync = async (uri, path) => {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const storageRef = ref(storage, path);
+    await uploadBytes(storageRef, blob);
+    return await getDownloadURL(storageRef);
+  };
+
+  // ----------------------------
   // MESSAGE ACTIONS
   // ----------------------------
   const handleSendMessage = async () => {
@@ -324,10 +339,7 @@ const InAppChatScreen = () => {
       senderName: 'You',
       text: textToSend,
       media: null,
-      time: new Date().toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       read: false,
     };
     setChatData((prev) => {
@@ -360,7 +372,7 @@ const InAppChatScreen = () => {
   };
 
   const handleSendMedia = async () => {
-    // Ask for permission to access media library
+    // Request media library permission
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
       Alert.alert('Permission required', 'Permission to access media library is required!');
@@ -371,47 +383,54 @@ const InAppChatScreen = () => {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.7,
     });
-    if (!result.cancelled && selectedChat?.threadId) {
-      setSendingMessage(true);
-      const threadId = selectedChat.threadId;
-      const mediaUri = result.uri;
+    // Check cancellation (for both 'canceled' and 'cancelled')
+    if (result.canceled === true || result.cancelled === true) return;
+
+    // For newer versions, the image data is in result.assets (an array)
+    const localUri = result.assets ? result.assets[0].uri : result.uri;
+    if (!localUri || !selectedChat?.threadId) return;
+
+    setSendingMessage(true);
+    const threadId = selectedChat.threadId;
+    
+    try {
+      // Define a unique storage path (e.g., using current user id and timestamp)
+      const filePath = `messages/${currentUserId}/${Date.now()}.jpg`;
+      // Upload the image and get the download URL
+      const downloadURL = await uploadImageAsync(localUri, filePath);
+      
       const newMsg = {
         id: Date.now().toString(),
         sender: 'me',
         senderName: 'You',
         text: '',
-        media: mediaUri,
-        time: new Date().toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
+        media: downloadURL,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         read: false,
       };
+      // Optimistically update UI
       setChatData((prev) => {
         const existing = prev[threadId] || [];
         return { ...prev, [threadId]: [...existing, newMsg] };
       });
-      try {
-        // In a production app, you would upload the media and use its URL.
-        await addDoc(collection(db, 'threads', threadId, 'messages'), {
-          senderId: currentUserId,
-          text: '',
-          media: mediaUri,
-          createdAt: serverTimestamp(),
-          read: false,
-        });
-        const threadDocRef = doc(db, 'threads', threadId);
-        await updateDoc(threadDocRef, {
-          lastMessage: '[Media]',
-          lastTimestamp: serverTimestamp(),
-        });
-      } catch (error) {
-        console.log('Send media error:', error);
-        setError('Failed to send media.');
-        Alert.alert('Error', 'Media message failed to send.');
-      } finally {
-        setSendingMessage(false);
-      }
+      await addDoc(collection(db, 'threads', threadId, 'messages'), {
+        senderId: currentUserId,
+        text: '',
+        media: downloadURL,
+        createdAt: serverTimestamp(),
+        read: false,
+      });
+      const threadDocRef = doc(db, 'threads', threadId);
+      await updateDoc(threadDocRef, {
+        lastMessage: '[Media]',
+        lastTimestamp: serverTimestamp(),
+      });
+    } catch (error) {
+      console.log('Send media error:', error);
+      setError('Failed to send media.');
+      Alert.alert('Error', 'Media message failed to send.');
+    } finally {
+      setSendingMessage(false);
     }
   };
 
@@ -447,8 +466,7 @@ const InAppChatScreen = () => {
   // ----------------------------
   const handleProfileClick = async (profile) => {
     const profileName = profile.name || 'Anonymous';
-    const profileImage =
-      profile.image || 'https://example.com/default-profile.png';
+    const profileImage = profile.image || 'https://example.com/default-profile.png';
     const existingThread = messagesList.find((thread) => thread.id === profile.id);
     if (existingThread) {
       handleSelectChat(existingThread);
@@ -459,16 +477,8 @@ const InAppChatScreen = () => {
           lastMessage: '',
           lastTimestamp: serverTimestamp(),
           userData: [
-            {
-              id: currentUserId,
-              name: CURRENT_USER_NAME,
-              image: CURRENT_USER_IMAGE,
-            },
-            {
-              id: profile.id,
-              name: profileName,
-              image: profileImage,
-            },
+            { id: currentUserId, name: CURRENT_USER_NAME, image: CURRENT_USER_IMAGE },
+            { id: profile.id, name: profileName, image: profileImage },
           ],
         };
         const threadRef = await addDoc(collection(db, 'threads'), newThread);
@@ -521,7 +531,6 @@ const InAppChatScreen = () => {
     <View style={styles.container}>
       <Text style={styles.screenTitle}>RaskhaSetu Chat</Text>
       {error && <Text style={styles.errorText}>{error}</Text>}
-
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <TextInput
@@ -531,15 +540,10 @@ const InAppChatScreen = () => {
           value={searchTerm}
           onChangeText={setSearchTerm}
         />
-        <TouchableOpacity
-          style={styles.searchButton}
-          onPress={debouncedSearch}
-          activeOpacity={0.8}
-        >
+        <TouchableOpacity style={styles.searchButton} onPress={debouncedSearch} activeOpacity={0.8}>
           <Text style={styles.searchButtonText}>Search</Text>
         </TouchableOpacity>
       </View>
-
       {/* Search Results */}
       {isSearching && <ActivityIndicator color="#333" style={{ marginBottom: 10 }} />}
       {searchResults.length > 0 && (
@@ -563,7 +567,6 @@ const InAppChatScreen = () => {
           />
         </View>
       )}
-
       {/* Close Friends */}
       <Text style={styles.sectionTitle}>Close Friends</Text>
       {loadingCloseFriends ? (
@@ -589,7 +592,6 @@ const InAppChatScreen = () => {
           )}
         />
       )}
-
       {/* Requests */}
       {loadingRequests ? (
         <ActivityIndicator color="#333" style={{ marginBottom: 10 }} />
@@ -627,7 +629,6 @@ const InAppChatScreen = () => {
           />
         </>
       )}
-
       {/* Messages (Active Chats) */}
       <Text style={styles.sectionTitle}>Messages</Text>
       {loadingMessages ? (
@@ -644,9 +645,7 @@ const InAppChatScreen = () => {
           renderItem={({ item }) => {
             let dateStr = '';
             if (item.lastTimestamp?.toDate) {
-              dateStr = item.lastTimestamp
-                .toDate()
-                .toLocaleDateString([], { month: 'short', day: 'numeric' });
+              dateStr = item.lastTimestamp.toDate().toLocaleDateString([], { month: 'short', day: 'numeric' });
             }
             return (
               <TouchableOpacity
@@ -675,16 +674,11 @@ const InAppChatScreen = () => {
     return (
       <View style={styles.container}>
         <View style={styles.chatHeader}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleBack}
-            activeOpacity={0.8}
-          >
+          <TouchableOpacity style={styles.backButton} onPress={handleBack} activeOpacity={0.8}>
             <Text style={styles.backButtonText}>{'<'} Back</Text>
           </TouchableOpacity>
           <Text style={styles.chatHeaderText}>{selectedChat?.name}</Text>
         </View>
-
         <FlatList
           ref={chatListRef}
           data={conversation}
@@ -701,14 +695,11 @@ const InAppChatScreen = () => {
             />
           )}
         />
-
-        {/* Typing Indicator */}
         {isTyping && (
           <View style={styles.typingIndicator}>
             <Text style={styles.typingText}>Typing...</Text>
           </View>
         )}
-
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.textInput}
@@ -722,11 +713,7 @@ const InAppChatScreen = () => {
             onSubmitEditing={handleSendMessage}
             returnKeyType="send"
           />
-          <TouchableOpacity
-            style={styles.mediaButton}
-            onPress={handleSendMedia}
-            activeOpacity={0.8}
-          >
+          <TouchableOpacity style={styles.mediaButton} onPress={handleSendMedia} activeOpacity={0.8}>
             <Text style={styles.mediaButtonText}>Media</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -765,9 +752,7 @@ const InAppChatScreen = () => {
 export default InAppChatScreen;
 
 const styles = StyleSheet.create({
-  gradientWrapper: {
-    flex: 1,
-  },
+  gradientWrapper: { flex: 1 },
   container: {
     flex: 1,
     paddingHorizontal: 20,
@@ -789,21 +774,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 10,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 10,
-    color: '#333',
-  },
-  noMessagesText: {
-    color: '#555',
-    fontStyle: 'italic',
-    marginBottom: 10,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    marginBottom: 15,
-  },
+  sectionTitle: { fontSize: 20, fontWeight: '600', marginBottom: 10, color: '#333' },
+  noMessagesText: { color: '#555', fontStyle: 'italic', marginBottom: 10 },
+  searchContainer: { flexDirection: 'row', marginBottom: 15 },
   searchInput: {
     flex: 1,
     backgroundColor: '#fff',
@@ -814,18 +787,8 @@ const styles = StyleSheet.create({
     color: '#333',
     elevation: 2,
   },
-  searchButton: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    justifyContent: 'center',
-    elevation: 2,
-  },
-  searchButtonText: {
-    color: '#FF69B4',
-    fontWeight: '600',
-    fontSize: 16,
-  },
+  searchButton: { backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 15, justifyContent: 'center', elevation: 2 },
+  searchButtonText: { color: '#FF69B4', fontWeight: '600', fontSize: 16 },
   requestCard: {
     width: 130,
     backgroundColor: 'rgba(255,255,255,0.85)',
@@ -835,203 +798,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 3,
   },
-  requestAvatar: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    marginBottom: 8,
-    backgroundColor: '#fff',
-  },
-  requestName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  requestButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  acceptButton: {
-    flex: 1,
-    backgroundColor: '#C8FACC',
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginRight: 5,
-    alignItems: 'center',
-  },
-  declineButton: {
-    flex: 1,
-    backgroundColor: '#FFC0C0',
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginLeft: 5,
-    alignItems: 'center',
-  },
-  requestButtonText: {
-    color: '#333',
-    fontWeight: 'bold',
-  },
-  messageItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    padding: 15,
-    borderRadius: 15,
-    marginBottom: 12,
-    elevation: 3,
-  },
-  avatar: {
-    width: 55,
-    height: 55,
-    borderRadius: 28,
-    backgroundColor: '#fff',
-  },
-  messageContent: {
-    marginLeft: 15,
-    flex: 1,
-  },
-  messageName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 3,
-  },
-  messageText: {
-    fontSize: 15,
-    color: '#666',
-  },
-  messageTime: {
-    color: '#666',
-    fontSize: 13,
-    marginLeft: 'auto',
-  },
-  chatHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingVertical: 18,
-    borderRadius: 15,
-    marginBottom: 12,
-    elevation: 3,
-  },
-  backButton: {
-    position: 'absolute',
-    left: 20,
-    padding: 8,
-    zIndex: 1,
-  },
-  backButtonText: {
-    color: '#333',
-    fontWeight: '600',
-    fontSize: 17,
-  },
-  chatHeaderText: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#333',
-    textAlign: 'center',
-  },
-  chatList: {
-    flex: 1,
-    marginBottom: 15,
-  },
-  chatBubble: {
-    maxWidth: '75%',
-    padding: 12,
-    borderRadius: 15,
-    marginBottom: 10,
-  },
-  myMessage: {
-    backgroundColor: '#fff',
-    alignSelf: 'flex-end',
-    elevation: 2,
-  },
-  theirMessage: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    alignSelf: 'flex-start',
-    elevation: 2,
-  },
-  chatBubbleText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  senderName: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    marginBottom: 3,
-    color: '#555',
-  },
-  bubbleFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 5,
-  },
-  chatBubbleTime: {
-    fontSize: 11,
-    color: '#666',
-  },
-  readReceipt: {
-    fontSize: 11,
-    color: '#FF69B4',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    borderRadius: 30,
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    marginBottom: 20,
-    elevation: 3,
-  },
-  textInput: {
-    flex: 1,
-    padding: 10,
-    color: '#333',
-    fontSize: 16,
-  },
-  mediaButton: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginLeft: 8,
-    elevation: 2,
-  },
-  mediaButtonText: {
-    fontWeight: '600',
-    color: '#FF69B4',
-    fontSize: 16,
-  },
-  sendButton: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    marginLeft: 8,
-    elevation: 2,
-  },
-  sendButtonText: {
-    fontWeight: '600',
-    color: '#FF69B4',
-    fontSize: 16,
-  },
-  typingIndicator: {
-    alignItems: 'center',
-    marginVertical: 5,
-  },
-  typingText: {
-    fontStyle: 'italic',
-    color: '#666',
-  },
-  mediaImage: {
-    width: 200,
-    height: 200,
-    borderRadius: 10,
-    marginBottom: 5,
-  },
+  requestAvatar: { width: 70, height: 70, borderRadius: 35, marginBottom: 8, backgroundColor: '#fff' },
+  requestName: { fontSize: 15, fontWeight: '600', color: '#333', marginBottom: 8, textAlign: 'center' },
+  requestButtons: { flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
+  acceptButton: { flex: 1, backgroundColor: '#C8FACC', paddingVertical: 6, borderRadius: 8, marginRight: 5, alignItems: 'center' },
+  declineButton: { flex: 1, backgroundColor: '#FFC0C0', paddingVertical: 6, borderRadius: 8, marginLeft: 5, alignItems: 'center' },
+  requestButtonText: { color: '#333', fontWeight: 'bold' },
+  messageItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.95)', padding: 15, borderRadius: 15, marginBottom: 12, elevation: 3 },
+  avatar: { width: 55, height: 55, borderRadius: 28, backgroundColor: '#fff' },
+  messageContent: { marginLeft: 15, flex: 1 },
+  messageName: { fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 3 },
+  messageText: { fontSize: 15, color: '#666' },
+  messageTime: { color: '#666', fontSize: 13, marginLeft: 'auto' },
+  chatHeader: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.9)', paddingVertical: 18, borderRadius: 15, marginBottom: 12, elevation: 3 },
+  backButton: { position: 'absolute', left: 20, padding: 8, zIndex: 1 },
+  backButtonText: { color: '#333', fontWeight: '600', fontSize: 17 },
+  chatHeaderText: { flex: 1, fontSize: 20, fontWeight: '700', color: '#333', textAlign: 'center' },
+  chatList: { flex: 1, marginBottom: 15 },
+  chatBubble: { maxWidth: '75%', padding: 12, borderRadius: 15, marginBottom: 10 },
+  myMessage: { backgroundColor: '#fff', alignSelf: 'flex-end', elevation: 2 },
+  theirMessage: { backgroundColor: 'rgba(255,255,255,0.9)', alignSelf: 'flex-start', elevation: 2 },
+  chatBubbleText: { fontSize: 16, color: '#333' },
+  senderName: { fontSize: 13, fontWeight: 'bold', marginBottom: 3, color: '#555' },
+  bubbleFooter: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 5 },
+  chatBubbleTime: { fontSize: 11, color: '#666' },
+  readReceipt: { fontSize: 11, color: '#FF69B4' },
+  inputContainer: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 30, alignItems: 'center', paddingHorizontal: 15, paddingVertical: 8, marginBottom: 20, elevation: 3 },
+  textInput: { flex: 1, padding: 10, color: '#333', fontSize: 16 },
+  mediaButton: { backgroundColor: '#fff', borderRadius: 20, paddingVertical: 8, paddingHorizontal: 12, marginLeft: 8, elevation: 2 },
+  mediaButtonText: { fontWeight: '600', color: '#FF69B4', fontSize: 16 },
+  sendButton: { backgroundColor: '#fff', borderRadius: 20, paddingVertical: 8, paddingHorizontal: 15, marginLeft: 8, elevation: 2 },
+  sendButtonText: { fontWeight: '600', color: '#FF69B4', fontSize: 16 },
+  typingIndicator: { alignItems: 'center', marginVertical: 5 },
+  typingText: { fontStyle: 'italic', color: '#666' },
+  mediaImage: { width: 200, height: 200, borderRadius: 10, marginBottom: 5 },
 });
