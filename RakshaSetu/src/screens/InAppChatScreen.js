@@ -13,7 +13,6 @@ import {
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-
 import {
   collection,
   doc,
@@ -26,14 +25,40 @@ import {
   serverTimestamp,
   orderBy,
   limit,
+  deleteDoc,
 } from 'firebase/firestore';
-
 import { db } from '../../config/firebaseConfig';
 
 // Replace these with your auth user's actual data
 const CURRENT_USER_ID = 'CURRENT_USER_ID';
-const CURRENT_USER_NAME = 'My Name'; // Replace with actual name
-const CURRENT_USER_IMAGE = 'https://example.com/my-default.png'; // Replace with actual image URL
+const CURRENT_USER_NAME = 'My Name';
+const CURRENT_USER_IMAGE = 'https://example.com/my-default.png';
+
+const ChatBubble = ({ item, onLongPress }) => {
+  return (
+    <TouchableOpacity
+      onLongPress={onLongPress}
+      activeOpacity={0.8}
+      style={[
+        styles.chatBubble,
+        item.sender === 'me' ? styles.myMessage : styles.theirMessage,
+      ]}
+    >
+      {item.sender === 'them' && (
+        <Text style={styles.senderName}>{item.senderName}</Text>
+      )}
+      <Text style={styles.chatBubbleText}>{item.text}</Text>
+      <View style={styles.bubbleFooter}>
+        <Text style={styles.chatBubbleTime}>{item.time}</Text>
+        {item.sender === 'me' && (
+          <Text style={styles.readReceipt}>
+            {item.read ? 'Read' : 'Sent'}
+          </Text>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 const InAppChatScreen = () => {
   // ----------------------------
@@ -53,12 +78,13 @@ const InAppChatScreen = () => {
   const [inputText, setInputText] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [error, setError] = useState(null);
+  const [isTyping, setIsTyping] = useState(false);
 
   // Refs
   const unsubscribeRef = useRef(null);
   const chatListRef = useRef(null);
   const searchTimeoutRef = useRef(null);
-  
+
   const currentUserId = CURRENT_USER_ID;
 
   // ----------------------------
@@ -115,7 +141,6 @@ const InAppChatScreen = () => {
         const msgs = [];
         snapshot.forEach((docSnap) => {
           const data = docSnap.data();
-          // Find the other user's data from the userData array
           const otherUser = data?.userData?.find((u) => u.id !== currentUserId);
           msgs.push({
             threadId: docSnap.id,
@@ -124,7 +149,6 @@ const InAppChatScreen = () => {
             lastTimestamp: data.lastTimestamp || null,
           });
         });
-        // Sort chats by lastTimestamp (descending)
         msgs.sort((a, b) => (b.lastTimestamp?.seconds || 0) - (a.lastTimestamp?.seconds || 0));
         setMessagesList(msgs);
         setLoadingMessages(false);
@@ -223,7 +247,10 @@ const InAppChatScreen = () => {
   // ----------------------------
   const handleSelectChat = async (chatItem) => {
     setSelectedChat(chatItem);
-    // Listen to real-time messages for this thread
+    // Clear any unsent input when switching chats
+    setInputText('');
+    setIsTyping(false);
+
     const messagesRef = collection(db, 'threads', chatItem.threadId, 'messages');
     const q = query(messagesRef, orderBy('createdAt', 'asc'));
 
@@ -239,7 +266,6 @@ const InAppChatScreen = () => {
         snapshot.forEach((docSnap) => {
           loadedMessages.push({ id: docSnap.id, ...docSnap.data() });
         });
-        // Format messages for UI
         const formatted = loadedMessages.map((msg) => {
           const senderType = msg.senderId === currentUserId ? 'me' : 'them';
           let timeString = '';
@@ -252,15 +278,16 @@ const InAppChatScreen = () => {
           return {
             id: msg.id,
             sender: senderType,
+            senderName: senderType === 'them' ? selectedChat?.name : 'You',
             text: msg.text,
             time: timeString,
+            read: msg.read || false,
           };
         });
         setChatData((prev) => ({
           ...prev,
           [chatItem.threadId]: formatted,
         }));
-        // Auto-scroll to bottom
         if (chatListRef.current) {
           chatListRef.current.scrollToEnd({ animated: true });
         }
@@ -279,21 +306,27 @@ const InAppChatScreen = () => {
     };
   }, []);
 
+  // ----------------------------
+  // MESSAGE ACTIONS
+  // ----------------------------
   const handleSendMessage = async () => {
     if (!inputText.trim() || !selectedChat?.threadId) return;
     const threadId = selectedChat.threadId;
     const textToSend = inputText.trim();
     setSendingMessage(true);
+    setIsTyping(false);
 
-    // Optimistically update UI
+    // Optimistic UI update
     const newMsg = {
-      id: Date.now().toString(), // temporary id
+      id: Date.now().toString(),
       sender: 'me',
+      senderName: 'You',
       text: textToSend,
       time: new Date().toLocaleTimeString([], {
         hour: '2-digit',
         minute: '2-digit',
       }),
+      read: false,
     };
     setChatData((prev) => {
       const existing = prev[threadId] || [];
@@ -307,6 +340,7 @@ const InAppChatScreen = () => {
         senderId: currentUserId,
         text: textToSend,
         createdAt: serverTimestamp(),
+        read: false,
       });
       const threadDocRef = doc(db, 'threads', threadId);
       await updateDoc(threadDocRef, {
@@ -322,23 +356,45 @@ const InAppChatScreen = () => {
     }
   };
 
+  const handleDeleteMessage = (msgId) => {
+    Alert.alert(
+      'Delete Message',
+      'Are you sure you want to delete this message?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const threadId = selectedChat.threadId;
+              await deleteDoc(doc(db, 'threads', threadId, 'messages', msgId));
+              // Remove message from UI state immediately
+              setChatData((prev) => {
+                const updated = prev[threadId].filter((msg) => msg.id !== msgId);
+                return { ...prev, [threadId]: updated };
+              });
+            } catch (error) {
+              console.log('Delete message error:', error);
+              Alert.alert('Error', 'Unable to delete message.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // ----------------------------
   // PROFILE CLICK HANDLER (Search Results)
   // ----------------------------
   const handleProfileClick = async (profile) => {
-    // Provide fallback defaults for profile values
     const profileName = profile.name || 'Anonymous';
     const profileImage =
       profile.image || 'https://example.com/default-profile.png';
-
-    // Check if a thread already exists with this profile by comparing the other user's id.
-    // (Assumes messagesList items include an id field corresponding to the other user's id)
     const existingThread = messagesList.find((thread) => thread.id === profile.id);
     if (existingThread) {
-      // Open existing chat
       handleSelectChat(existingThread);
     } else {
-      // Create a new thread with the profile and then open it
       try {
         const newThread = {
           participants: [currentUserId, profile.id],
@@ -375,12 +431,38 @@ const InAppChatScreen = () => {
   };
 
   // ----------------------------
+  // BACK BUTTON HANDLER (Enhanced)
+  // ----------------------------
+  const handleBack = () => {
+    // If there is unsent text, ask the user to confirm discarding it
+    if (inputText.trim().length > 0) {
+      Alert.alert(
+        'Discard Message?',
+        'You have an unsent message. Are you sure you want to leave this chat?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => {
+              setInputText('');
+              setIsTyping(false);
+              setSelectedChat(null);
+            },
+          },
+        ]
+      );
+    } else {
+      setSelectedChat(null);
+    }
+  };
+
+  // ----------------------------
   // RENDER COMPONENTS
   // ----------------------------
   const renderMainList = () => (
     <View style={styles.container}>
       <Text style={styles.screenTitle}>RaskhaSetu Chat</Text>
-      
       {error && <Text style={styles.errorText}>{error}</Text>}
 
       {/* Search Bar */}
@@ -500,10 +582,8 @@ const InAppChatScreen = () => {
           data={messagesList}
           keyExtractor={(item) => item.threadId}
           showsVerticalScrollIndicator={false}
-          onRefresh={() => {
-            setLoadingMessages(true);
-          }}
           refreshing={loadingMessages}
+          onRefresh={() => setLoadingMessages(true)}
           renderItem={({ item }) => {
             let dateStr = '';
             if (item.lastTimestamp?.toDate) {
@@ -540,7 +620,7 @@ const InAppChatScreen = () => {
         <View style={styles.chatHeader}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => setSelectedChat(null)}
+            onPress={handleBack}
             activeOpacity={0.8}
           >
             <Text style={styles.backButtonText}>{'<'} Back</Text>
@@ -556,17 +636,21 @@ const InAppChatScreen = () => {
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() => chatListRef.current.scrollToEnd({ animated: true })}
           renderItem={({ item }) => (
-            <View
-              style={[
-                styles.chatBubble,
-                item.sender === 'me' ? styles.myMessage : styles.theirMessage,
-              ]}
-            >
-              <Text style={styles.chatBubbleText}>{item.text}</Text>
-              <Text style={styles.chatBubbleTime}>{item.time}</Text>
-            </View>
+            <ChatBubble
+              item={item}
+              onLongPress={() => {
+                if (item.sender === 'me') handleDeleteMessage(item.id);
+              }}
+            />
           )}
         />
+
+        {/* Typing Indicator */}
+        {isTyping && (
+          <View style={styles.typingIndicator}>
+            <Text style={styles.typingText}>Typing...</Text>
+          </View>
+        )}
 
         <View style={styles.inputContainer}>
           <TextInput
@@ -574,7 +658,10 @@ const InAppChatScreen = () => {
             placeholder="Type your message..."
             placeholderTextColor="#aaa"
             value={inputText}
-            onChangeText={setInputText}
+            onChangeText={(text) => {
+              setInputText(text);
+              setIsTyping(text.length > 0);
+            }}
             onSubmitEditing={handleSendMessage}
             returnKeyType="send"
           />
@@ -655,10 +742,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
     color: '#333',
     elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 2,
   },
   searchButton: {
     backgroundColor: '#fff',
@@ -666,10 +749,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     justifyContent: 'center',
     elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 2,
   },
   searchButtonText: {
     color: '#FF69B4',
@@ -684,10 +763,6 @@ const styles = StyleSheet.create({
     marginRight: 12,
     alignItems: 'center',
     elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 3,
   },
   requestAvatar: {
     width: 70,
@@ -736,10 +811,6 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     marginBottom: 12,
     elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 3,
   },
   avatar: {
     width: 55,
@@ -774,15 +845,12 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     marginBottom: 12,
     elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 3,
   },
   backButton: {
     position: 'absolute',
     left: 20,
     padding: 8,
+    zIndex: 1,
   },
   backButtonText: {
     color: '#333',
@@ -810,29 +878,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignSelf: 'flex-end',
     elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 2,
   },
   theirMessage: {
     backgroundColor: 'rgba(255,255,255,0.9)',
     alignSelf: 'flex-start',
     elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 2,
   },
   chatBubbleText: {
     fontSize: 16,
     color: '#333',
   },
+  senderName: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginBottom: 3,
+    color: '#555',
+  },
+  bubbleFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 5,
+  },
   chatBubbleTime: {
     fontSize: 11,
     color: '#666',
-    marginTop: 5,
-    textAlign: 'right',
+  },
+  readReceipt: {
+    fontSize: 11,
+    color: '#FF69B4',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -843,10 +916,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginBottom: 20,
     elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 3,
   },
   textInput: {
     flex: 1,
@@ -861,14 +930,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     marginLeft: 8,
     elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 2,
   },
   sendButtonText: {
     fontWeight: '600',
     color: '#FF69B4',
     fontSize: 16,
+  },
+  typingIndicator: {
+    alignItems: 'center',
+    marginVertical: 5,
+  },
+  typingText: {
+    fontStyle: 'italic',
+    color: '#666',
   },
 });
