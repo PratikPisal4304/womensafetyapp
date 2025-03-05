@@ -11,7 +11,7 @@ import {
 import * as Location from 'expo-location';
 import * as SMS from 'expo-sms';
 import MapView, { Marker } from 'react-native-maps';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, getDocs, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../config/firebaseConfig'; // Adjust path if needed
 
 export default function SOSScreen() {
@@ -19,7 +19,7 @@ export default function SOSScreen() {
   const [countdown, setCountdown] = useState(10);
   const [isSendingSOS, setIsSendingSOS] = useState(false);
   const [location, setLocation] = useState(null);
-  const [closeFriends, setcloseFriends] = useState([]); // Updated name to reflect your Firestore field
+  const [closeFriends, setCloseFriends] = useState([]); // Firestore field "closeFriends"
 
   // Fallback contacts in case no closeFriends are found
   const emergencyContacts = [
@@ -27,6 +27,7 @@ export default function SOSScreen() {
     { id: '2', name: 'Police', phone: '100' },
   ];
 
+  // Listen for changes to the user's "closeFriends" field
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -34,23 +35,21 @@ export default function SOSScreen() {
     const userDocRef = doc(db, 'users', user.uid);
     console.log("Listening for 'closeFriends' in user's doc...");
 
-    // Listen to the user doc, reading the 'closeFriends' array
     const unsubscribe = onSnapshot(
       userDocRef,
       (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data();
-          // Make sure to read the 'closeFriends' field exactly as named in Firestore
           if (data.closeFriends && Array.isArray(data.closeFriends)) {
             console.log("Fetched closeFriends:", data.closeFriends);
-            setcloseFriends(data.closeFriends);
+            setCloseFriends(data.closeFriends);
           } else {
             console.log("No 'closeFriends' array found in user doc.");
-            setcloseFriends([]);
+            setCloseFriends([]);
           }
         } else {
           console.log("User document does not exist.");
-          setcloseFriends([]);
+          setCloseFriends([]);
         }
       },
       (error) => {
@@ -98,16 +97,47 @@ export default function SOSScreen() {
     setCountdown(10);
   };
 
+  // Function to send SOS message via in-app chat
+  const sendSOSInAppChat = async (message) => {
+    const user = auth.currentUser;
+    if (!user) return;
+    try {
+      // Query all threads where the current user is a participant
+      const threadsQuery = query(collection(db, "threads"), where("participants", "array-contains", user.uid));
+      const querySnapshot = await getDocs(threadsQuery);
+      querySnapshot.forEach(async (docSnap) => {
+        const threadId = docSnap.id;
+        // Add the SOS message to each thread's messages subcollection
+        await addDoc(collection(db, "threads", threadId, "messages"), {
+          senderId: user.uid,
+          text: message,
+          media: null,
+          createdAt: serverTimestamp(),
+          read: false,
+        });
+        // Optionally, update the thread's lastMessage
+        await updateDoc(doc(db, "threads", threadId), {
+          lastMessage: message,
+          lastTimestamp: serverTimestamp(),
+        });
+      });
+      console.log("SOS in-app messages sent.");
+    } catch (e) {
+      console.error("Error sending SOS via in-app chat:", e);
+    }
+  };
+
   const triggerSOS = async () => {
     setIsSendingSOS(true);
     try {
+      // Get current location
       const loc = await Location.getCurrentPositionAsync({});
       setLocation(loc.coords);
       const { latitude, longitude } = loc.coords;
 
       const message = `Emergency! I need help immediately. My location: https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
 
-      // If we have closeFriends in Firestore, use them; otherwise fallback
+      // Send SMS to emergency contacts (closeFriends if available, fallback otherwise)
       const allContacts = closeFriends.length > 0 ? closeFriends : emergencyContacts;
       console.log("Sending SMS to:", allContacts);
 
@@ -121,6 +151,9 @@ export default function SOSScreen() {
       } else {
         Alert.alert('SMS Not Available', 'Your device does not support SMS.');
       }
+
+      // Also send the SOS message via in-app chat to all chats
+      await sendSOSInAppChat(message);
     } catch (error) {
       console.error('Error triggering SOS:', error);
       Alert.alert('Error', 'Failed to send SOS alert.');
@@ -133,7 +166,7 @@ export default function SOSScreen() {
     <View style={styles.container}>
       <Text style={styles.header}>RakshaSetu SOS</Text>
       <Text style={styles.infoText}>
-        If you feel unsafe, press the button below. An alert with your current location will be sent to your emergency contacts.
+        If you feel unsafe, press the button below. An alert with your current location will be sent to your emergency contacts and via in-app chat to all your conversations.
       </Text>
       
       {!isSOSActive && !isSendingSOS && (
