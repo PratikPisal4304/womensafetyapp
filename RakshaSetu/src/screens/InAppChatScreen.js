@@ -11,8 +11,12 @@ import {
   ActivityIndicator,
   Keyboard,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 import {
   collection,
   doc,
@@ -47,7 +51,11 @@ const ChatBubble = ({ item, onLongPress }) => {
       {item.sender === 'them' && (
         <Text style={styles.senderName}>{item.senderName}</Text>
       )}
-      <Text style={styles.chatBubbleText}>{item.text}</Text>
+      {item.media ? (
+        <Image source={{ uri: item.media }} style={styles.mediaImage} />
+      ) : (
+        <Text style={styles.chatBubbleText}>{item.text}</Text>
+      )}
       <View style={styles.bubbleFooter}>
         <Text style={styles.chatBubbleTime}>{item.time}</Text>
         {item.sender === 'me' && (
@@ -91,7 +99,6 @@ const InAppChatScreen = () => {
   // FETCH DATA ON MOUNT
   // ----------------------------
   useEffect(() => {
-    // Close Friends listener
     const closeFriendsRef = collection(db, 'users', currentUserId, 'closeFriends');
     const unsubscribe = onSnapshot(
       closeFriendsRef,
@@ -109,7 +116,6 @@ const InAppChatScreen = () => {
   }, [currentUserId]);
 
   useEffect(() => {
-    // Requests listener
     const requestsRef = collection(db, 'requests');
     const q = query(
       requestsRef,
@@ -132,7 +138,6 @@ const InAppChatScreen = () => {
   }, [currentUserId]);
 
   useEffect(() => {
-    // Messages (active chats) listener
     const messagesRef = collection(db, 'threads');
     const q = query(messagesRef, where('participants', 'array-contains', currentUserId));
     const unsubscribe = onSnapshot(
@@ -247,14 +252,11 @@ const InAppChatScreen = () => {
   // ----------------------------
   const handleSelectChat = async (chatItem) => {
     setSelectedChat(chatItem);
-    // Clear any unsent input when switching chats
     setInputText('');
     setIsTyping(false);
-
     const messagesRef = collection(db, 'threads', chatItem.threadId, 'messages');
     const q = query(messagesRef, orderBy('createdAt', 'asc'));
 
-    // Unsubscribe previous listener if exists
     if (unsubscribeRef.current) {
       unsubscribeRef.current();
     }
@@ -279,7 +281,8 @@ const InAppChatScreen = () => {
             id: msg.id,
             sender: senderType,
             senderName: senderType === 'them' ? selectedChat?.name : 'You',
-            text: msg.text,
+            text: msg.text || '',
+            media: msg.media || null,
             time: timeString,
             read: msg.read || false,
           };
@@ -297,7 +300,6 @@ const InAppChatScreen = () => {
     unsubscribeRef.current = unsubscribe;
   };
 
-  // Clean up on unmount
   useEffect(() => {
     return () => {
       if (unsubscribeRef.current) {
@@ -316,12 +318,12 @@ const InAppChatScreen = () => {
     setSendingMessage(true);
     setIsTyping(false);
 
-    // Optimistic UI update
     const newMsg = {
       id: Date.now().toString(),
       sender: 'me',
       senderName: 'You',
       text: textToSend,
+      media: null,
       time: new Date().toLocaleTimeString([], {
         hour: '2-digit',
         minute: '2-digit',
@@ -339,6 +341,7 @@ const InAppChatScreen = () => {
       await addDoc(collection(db, 'threads', threadId, 'messages'), {
         senderId: currentUserId,
         text: textToSend,
+        media: null,
         createdAt: serverTimestamp(),
         read: false,
       });
@@ -356,6 +359,62 @@ const InAppChatScreen = () => {
     }
   };
 
+  const handleSendMedia = async () => {
+    // Ask for permission to access media library
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      Alert.alert('Permission required', 'Permission to access media library is required!');
+      return;
+    }
+    // Launch the image picker
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7,
+    });
+    if (!result.cancelled && selectedChat?.threadId) {
+      setSendingMessage(true);
+      const threadId = selectedChat.threadId;
+      const mediaUri = result.uri;
+      const newMsg = {
+        id: Date.now().toString(),
+        sender: 'me',
+        senderName: 'You',
+        text: '',
+        media: mediaUri,
+        time: new Date().toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        read: false,
+      };
+      setChatData((prev) => {
+        const existing = prev[threadId] || [];
+        return { ...prev, [threadId]: [...existing, newMsg] };
+      });
+      try {
+        // In a production app, you would upload the media and use its URL.
+        await addDoc(collection(db, 'threads', threadId, 'messages'), {
+          senderId: currentUserId,
+          text: '',
+          media: mediaUri,
+          createdAt: serverTimestamp(),
+          read: false,
+        });
+        const threadDocRef = doc(db, 'threads', threadId);
+        await updateDoc(threadDocRef, {
+          lastMessage: '[Media]',
+          lastTimestamp: serverTimestamp(),
+        });
+      } catch (error) {
+        console.log('Send media error:', error);
+        setError('Failed to send media.');
+        Alert.alert('Error', 'Media message failed to send.');
+      } finally {
+        setSendingMessage(false);
+      }
+    }
+  };
+
   const handleDeleteMessage = (msgId) => {
     Alert.alert(
       'Delete Message',
@@ -369,7 +428,6 @@ const InAppChatScreen = () => {
             try {
               const threadId = selectedChat.threadId;
               await deleteDoc(doc(db, 'threads', threadId, 'messages', msgId));
-              // Remove message from UI state immediately
               setChatData((prev) => {
                 const updated = prev[threadId].filter((msg) => msg.id !== msgId);
                 return { ...prev, [threadId]: updated };
@@ -434,7 +492,6 @@ const InAppChatScreen = () => {
   // BACK BUTTON HANDLER (Enhanced)
   // ----------------------------
   const handleBack = () => {
-    // If there is unsent text, ask the user to confirm discarding it
     if (inputText.trim().length > 0) {
       Alert.alert(
         'Discard Message?',
@@ -666,6 +723,13 @@ const InAppChatScreen = () => {
             returnKeyType="send"
           />
           <TouchableOpacity
+            style={styles.mediaButton}
+            onPress={handleSendMedia}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.mediaButtonText}>Media</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={styles.sendButton}
             onPress={handleSendMessage}
             activeOpacity={0.8}
@@ -685,7 +749,14 @@ const InAppChatScreen = () => {
   return (
     <LinearGradient colors={['#FFC0CB', '#FFB6C1']} style={styles.gradientWrapper}>
       <SafeAreaView style={{ flex: 1 }}>
-        {selectedChat ? renderChatDetailScreen() : renderMainList()}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            {selectedChat ? renderChatDetailScreen() : renderMainList()}
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -923,6 +994,19 @@ const styles = StyleSheet.create({
     color: '#333',
     fontSize: 16,
   },
+  mediaButton: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginLeft: 8,
+    elevation: 2,
+  },
+  mediaButtonText: {
+    fontWeight: '600',
+    color: '#FF69B4',
+    fontSize: 16,
+  },
   sendButton: {
     backgroundColor: '#fff',
     borderRadius: 20,
@@ -943,5 +1027,11 @@ const styles = StyleSheet.create({
   typingText: {
     fontStyle: 'italic',
     color: '#666',
+  },
+  mediaImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 10,
+    marginBottom: 5,
   },
 });
