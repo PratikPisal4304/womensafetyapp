@@ -303,7 +303,8 @@ const InAppChatScreen = () => {
           return {
             id: msg.id,
             sender: senderType,
-            senderName: senderType === 'them' ? selectedChat?.name : 'You',
+            // Use currentUserName for your own messages instead of "You"
+            senderName: senderType === 'them' ? selectedChat?.name : currentUserName,
             text: msg.text || '',
             media: msg.media || null,
             time: timeString,
@@ -355,7 +356,7 @@ const InAppChatScreen = () => {
     const newMsg = {
       id: Date.now().toString(),
       sender: 'me',
-      senderName: 'You',
+      senderName: currentUserName,
       text: textToSend,
       media: null,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -421,7 +422,7 @@ const InAppChatScreen = () => {
       const newMsg = {
         id: Date.now().toString(),
         sender: 'me',
-        senderName: 'You',
+        senderName: currentUserName,
         text: '',
         media: downloadURL,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
