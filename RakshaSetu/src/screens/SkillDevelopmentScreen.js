@@ -21,11 +21,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Feather, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { 
-  getFirestore, 
-  doc, 
-  getDoc, 
-  updateDoc, 
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  updateDoc,
   collection,
   query,
   where,
@@ -52,10 +52,10 @@ function useDebounce(value, delay) {
   return debouncedValue;
 }
 
-// Sample data - in a real app, this would come from Firestore
+// Sample data – in a real app, this would come from Firestore
 const SAMPLE_MODULES = [
-  { 
-    id: 1, 
+  {
+    id: 1,
     title: 'Negotiating Your Worth: Salary Talks',
     author: 'Dr. Maria Rodriguez',
     image: require('../../assets/icon.png'),
@@ -66,8 +66,8 @@ const SAMPLE_MODULES = [
     completion: '3/5 modules',
     completionPercent: 60
   },
-  { 
-    id: 2, 
+  {
+    id: 2,
     title: 'Emergency Funds: Building Financial Security',
     author: 'Sarah Johnson, CFP',
     image: require('../../assets/icon.png'),
@@ -78,8 +78,8 @@ const SAMPLE_MODULES = [
     completion: '2/4 modules',
     completionPercent: 50
   },
-  { 
-    id: 3, 
+  {
+    id: 3,
     title: 'Investment Basics: Start Your Portfolio',
     author: 'Rachel Chen, MBA',
     image: require('../../assets/icon.png'),
@@ -92,10 +92,220 @@ const SAMPLE_MODULES = [
   },
 ];
 
+// -----------------------
+// Reusable UI Components
+// -----------------------
+
+const Header = ({
+  userName,
+  notifications,
+  onNotificationPress,
+  onProfilePress,
+  searchQuery,
+  setSearchQuery,
+  onFocusSearch,
+  onClearSearch
+}) => {
+  return (
+    <SafeAreaView style={styles.fixedHeader}>
+      <View style={styles.headerContent}>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.welcomeText}>Hello, {userName}</Text>
+            <Text style={styles.headerTitle}>Financial Skills Hub</Text>
+          </View>
+          <View style={styles.headerIcons}>
+            <TouchableOpacity style={styles.iconButton} onPress={onNotificationPress}>
+              <Ionicons name="notifications" size={24} color="white" />
+              {notifications.some(n => !n.read) && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.badgeText}>
+                    {notifications.filter(n => !n.read).length}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.profileButton} onPress={onProfilePress}>
+              <Image source={require('../../assets/icon.png')} style={styles.profileImage} />
+            </TouchableOpacity>
+          </View>
+        </View>
+        <SearchBar
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          onFocus={onFocusSearch}
+          onClear={onClearSearch}
+        />
+      </View>
+    </SafeAreaView>
+  );
+};
+
+const SearchBar = ({ searchQuery, setSearchQuery, onFocus, onClear }) => (
+  <View style={styles.searchBarContainer}>
+    <View style={styles.searchBar}>
+      <Feather name="search" size={20} color="gray" style={styles.searchIcon} />
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Find financial skills and courses..."
+        placeholderTextColor="gray"
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        onFocus={onFocus}
+      />
+      {searchQuery.length > 0 && (
+        <TouchableOpacity onPress={onClear}>
+          <Feather name="x" size={18} color="gray" style={{ marginRight: 8 }} />
+        </TouchableOpacity>
+      )}
+      <TouchableOpacity
+        style={styles.filterButton}
+        onPress={() => Alert.alert('Filters', 'Advanced filters coming soon.')}
+      >
+        <Feather name="sliders" size={18} color="#ff5f96" />
+      </TouchableOpacity>
+    </View>
+  </View>
+);
+
+const QuickActions = ({ categories, onCategoryPress }) => (
+  <View style={styles.sectionContainer}>
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>Quick Actions</Text>
+      <TouchableOpacity
+        style={styles.seeAllButton}
+        onPress={() => Alert.alert('More Actions', 'Additional actions coming soon.')}
+      >
+        <Text style={styles.seeAllText}>See all</Text>
+        <Feather name="chevron-right" size={16} color="#ff5f96" />
+      </TouchableOpacity>
+    </View>
+    <View style={styles.categoriesContainer}>
+      {categories.map(category => (
+        <TouchableOpacity
+          key={category.id}
+          style={styles.categoryCard}
+          onPress={() => onCategoryPress(category)}
+          activeOpacity={0.7}
+        >
+          <LinearGradient
+            colors={category.gradient}
+            start={[0, 0]}
+            end={[1, 1]}
+            style={styles.iconContainer}
+          >
+            <FontAwesome5 name={category.icon} size={22} color="white" />
+          </LinearGradient>
+          <Text style={styles.categoryName}>{category.name}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  </View>
+);
+
+const ModuleCard = ({ module, onPress }) => (
+  <TouchableOpacity
+    style={styles.microLearningCard}
+    onPress={() => onPress(module)}
+    activeOpacity={0.8}
+  >
+    <View style={styles.moduleImageContainer}>
+      <Image source={module.image} style={styles.moduleImage} />
+      <View style={styles.moduleDurationTag}>
+        <Ionicons name="time-outline" size={12} color="white" />
+        <Text style={styles.moduleDurationText}>{module.duration}</Text>
+      </View>
+    </View>
+    <View style={styles.moduleContent}>
+      <View style={styles.tagContainer}>
+        {module.tags.map((tag, index) => (
+          <View key={index} style={styles.tag}>
+            <Text style={styles.tagText}>{tag}</Text>
+          </View>
+        ))}
+      </View>
+      <Text style={styles.moduleTitle}>{module.title}</Text>
+      <Text style={styles.moduleAuthor}>{module.author}</Text>
+      <View style={styles.moduleProgressContainer}>
+        <View style={styles.progressBar}>
+          <View style={[styles.progressFill, { width: `${module.completionPercent}%` }]} />
+        </View>
+        <Text style={styles.progressText}>{module.completion}</Text>
+      </View>
+    </View>
+  </TouchableOpacity>
+);
+
+const RecommendedCard = ({ course, onPress, onToggleFavorite, isFavorite }) => (
+  <TouchableOpacity
+    style={styles.recommendedCard}
+    onPress={() => onPress(course)}
+    activeOpacity={0.8}
+  >
+    <View style={styles.recommendedContent}>
+      <View style={styles.recommendedInfo}>
+        <View style={styles.recommendedTopLabels}>
+          <View style={styles.recommendedLabelContainer}>
+            <Text style={styles.recommendedLabel}>{course.label}</Text>
+          </View>
+          {course.localContext && (
+            <View style={styles.localContextTag}>
+              <Ionicons name="location" size={12} color="#ff5f96" />
+              <Text style={styles.localContextText}>Local</Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.recommendedTitle}>{course.title}</Text>
+        <Text style={styles.recommendedAuthor}>{course.author}</Text>
+        <View style={styles.courseMetaContainer}>
+          <View style={styles.courseMeta}>
+            <Ionicons name="time-outline" size={14} color="#666" />
+            <Text style={styles.courseMetaText}>{course.duration}</Text>
+          </View>
+          <View style={styles.courseMeta}>
+            <Ionicons name="bar-chart-outline" size={14} color="#666" />
+            <Text style={styles.courseMetaText}>{course.level}</Text>
+          </View>
+        </View>
+        <View style={styles.aiMatchContainer}>
+          <LinearGradient
+            colors={['#9B59B6', '#ff5f96']}
+            start={[0, 0]}
+            end={[1, 0]}
+            style={styles.aiMatchGradient}
+          >
+            <Text style={styles.aiMatchText}>{course.matchScore}</Text>
+          </LinearGradient>
+        </View>
+        {course.progress > 0 && (
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${course.progress}%` }]} />
+            </View>
+            <Text style={styles.progressText}>{course.progress}% Complete</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.recommendedActions}>
+        <TouchableOpacity style={styles.favoriteButton} onPress={() => onToggleFavorite(course.id)}>
+          <Ionicons
+            name={isFavorite ? 'heart' : 'heart-outline'}
+            size={20}
+            color={isFavorite ? '#ff5f96' : '#666'}
+          />
+        </TouchableOpacity>
+      </View>
+    </View>
+  </TouchableOpacity>
+);
+
+// -----------------------
+// Main Screen Component
+// -----------------------
+
 function SkillDevelopmentScreen({ navigation }) {
   // State variables
   const [activeTab, setActiveTab] = useState('All');
-  const [skillRecommendations, setSkillRecommendations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -112,22 +322,6 @@ function SkillDevelopmentScreen({ navigation }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [userEnrolledCourses, setUserEnrolledCourses] = useState([]);
   const [userProgress, setUserProgress] = useState({});
-
-  // Scroll value (for pull-to-refresh)
-  const scrollY = useRef(new Animated.Value(0)).current;
-
-  // Debounced search query for smoother filtering
-  const debouncedSearchQuery = useDebounce(searchQuery, 300);
-
-  // Tabs and quick access categories
-  const tabs = ['All', 'Financial Basics', 'Investing', 'Entrepreneurship', 'Career Growth', 'Budgeting'];
-  const categories = [
-    { id: 1, name: 'My Learning Path', icon: 'route', gradient: ['#66BB6A', '#43A047'] },
-    { id: 2, name: 'Mentorship Hub', icon: 'users', gradient: ['#7E57C2', '#5E35B1'] },
-    { id: 3, name: 'Budget Tools', icon: 'calculator', gradient: ['#FF8A65', '#FF5722'] },
-  ];
-
-  // AI-recommended courses
   const [recommendedCourses, setRecommendedCourses] = useState([
     {
       id: 1,
@@ -176,45 +370,43 @@ function SkillDevelopmentScreen({ navigation }) {
     }
   ]);
 
+  // Tabs and quick access categories (Mentorship Hub removed)
+  const tabs = ['All', 'Financial Basics', 'Investing', 'Entrepreneurship', 'Career Growth', 'Budgeting'];
+  const categories = [
+    { id: 1, name: 'My Learning Path', icon: 'route', gradient: ['#66BB6A', '#43A047'] },
+    { id: 2, name: 'Budget Tools', icon: 'calculator', gradient: ['#FF8A65', '#FF5722'] }
+  ];
+
+  // Debounced search query for smoother filtering
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  // Scroll value (for pull-to-refresh)
+  const scrollY = useRef(new Animated.Value(0)).current;
+
   // Fetch user data from Firestore
   const fetchUserData = async (userId) => {
     try {
       setIsLoading(true);
-      
-      // Get the user document
       const userDocRef = doc(db, 'users', userId);
       const userDocSnap = await getDoc(userDocRef);
-      
       if (userDocSnap.exists()) {
         const userData = userDocSnap.data();
-        
-        // Set user profile data
         setUserName(userData.name || userData.displayName || 'User');
         setBudgetGoal(userData.budgetGoal || 300);
         setBudgetSaved(userData.budgetSaved || 135);
-        
-        // Get favorite courses
         if (userData.favoriteCourses) {
           setFavoriteCourses(userData.favoriteCourses);
-          
-          // Update the recommended courses with favorite status
-          setRecommendedCourses(prev => 
+          setRecommendedCourses(prev =>
             prev.map(course => ({
               ...course,
               favorite: userData.favoriteCourses.includes(course.id)
             }))
           );
         }
-        
-        // Fetch user's enrolled courses
         if (userData.enrolledCourses) {
           setUserEnrolledCourses(userData.enrolledCourses);
-          
-          // Fetch course progress data
           const progressData = userData.courseProgress || {};
           setUserProgress(progressData);
-          
-          // Update micro-learning modules with user's progress
           const updatedModules = [...microLearningModules];
           Object.keys(progressData).forEach(courseId => {
             const moduleIndex = updatedModules.findIndex(m => m.id.toString() === courseId);
@@ -225,12 +417,9 @@ function SkillDevelopmentScreen({ navigation }) {
           });
           setMicroLearningModules(updatedModules);
         }
-        
-        // Fetch notifications
         const userNotificationsRef = collection(db, 'notifications');
         const q = query(userNotificationsRef, where('userId', '==', userId));
         const notificationsSnapshot = await getDocs(q);
-        
         if (!notificationsSnapshot.empty) {
           const notificationsData = notificationsSnapshot.docs.map(doc => ({
             id: doc.id,
@@ -238,20 +427,19 @@ function SkillDevelopmentScreen({ navigation }) {
           }));
           setNotifications(notificationsData);
         } else {
-          // Set default notifications if none exist
           setNotifications([
             { id: 1, title: 'New mentor available', read: false },
             { id: 2, title: 'Course completion reminder', read: false }
           ]);
         }
       } else {
-        console.log("No such document!");
-        setUserName('User'); // Default fallback
+        console.log('No such document!');
+        setUserName('User');
       }
     } catch (error) {
-      console.error("Error fetching user data:", error);
-      Alert.alert("Error", "Failed to load profile data. Please try again.");
-      setUserName('User'); // Default fallback
+      console.error('Error fetching user data:', error);
+      Alert.alert('Error', 'Failed to load profile data. Please try again.');
+      setUserName('User');
     } finally {
       setIsLoading(false);
     }
@@ -260,27 +448,29 @@ function SkillDevelopmentScreen({ navigation }) {
   // Set up real-time listener for user document
   const setupUserListener = (userId) => {
     const userDocRef = doc(db, 'users', userId);
-    return onSnapshot(userDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const userData = docSnap.data();
-        setUserName(userData.name || userData.displayName || 'User');
-        setBudgetGoal(userData.budgetGoal || 300);
-        setBudgetSaved(userData.budgetSaved || 135);
-        
-        // Update favorites in real-time
-        if (userData.favoriteCourses) {
-          setFavoriteCourses(userData.favoriteCourses);
-          setRecommendedCourses(prev => 
-            prev.map(course => ({
-              ...course,
-              favorite: userData.favoriteCourses.includes(course.id)
-            }))
-          );
+    return onSnapshot(
+      userDocRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const userData = docSnap.data();
+          setUserName(userData.name || userData.displayName || 'User');
+          setBudgetGoal(userData.budgetGoal || 300);
+          setBudgetSaved(userData.budgetSaved || 135);
+          if (userData.favoriteCourses) {
+            setFavoriteCourses(userData.favoriteCourses);
+            setRecommendedCourses(prev =>
+              prev.map(course => ({
+                ...course,
+                favorite: userData.favoriteCourses.includes(course.id)
+              }))
+            );
+          }
         }
+      },
+      (error) => {
+        console.error('Real-time listener error:', error);
       }
-    }, (error) => {
-      console.error("Real-time listener error:", error);
-    });
+    );
   };
 
   // Authentication listener
@@ -289,25 +479,16 @@ function SkillDevelopmentScreen({ navigation }) {
       if (user) {
         setCurrentUser(user);
         fetchUserData(user.uid);
-        
-        // Set up real-time listener for user document
         const userListener = setupUserListener(user.uid);
-        
-        // Clean up user listener when component unmounts
         return () => {
           userListener();
         };
       } else {
-        // No user is signed in, redirect to login or set default values
         setCurrentUser(null);
         setUserName('Guest');
         setIsLoading(false);
-        // Optionally navigate to login screen
-        // navigation.navigate('Login');
       }
     });
-
-    // Cleanup subscription
     return () => unsubscribe();
   }, []);
 
@@ -315,49 +496,44 @@ function SkillDevelopmentScreen({ navigation }) {
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     if (currentUser) {
-      fetchUserData(currentUser.uid)
-        .then(() => setRefreshing(false));
+      fetchUserData(currentUser.uid).then(() => setRefreshing(false));
     } else {
       setRefreshing(false);
     }
   }, [currentUser]);
 
-  // Filter courses based on debounced search query and active tab
+  // Filter courses based on search query and active tab
   const getFilteredCourses = () => {
     let filtered = [...microLearningModules];
     if (debouncedSearchQuery) {
-      filtered = filtered.filter(module => 
-        module.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-        module.author.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-        module.tags.some(tag => tag.toLowerCase().includes(debouncedSearchQuery.toLowerCase()))
+      filtered = filtered.filter(
+        (module) =>
+          module.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+          module.author.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+          module.tags.some(tag => tag.toLowerCase().includes(debouncedSearchQuery.toLowerCase()))
       );
     }
     if (activeTab !== 'All') {
-      filtered = filtered.filter(module => 
+      filtered = filtered.filter(module =>
         module.tags.some(tag => tag.includes(activeTab.split(' ')[0]))
       );
     }
     return filtered;
   };
 
-  // Toggle course favorite status and persist state in Firestore
+  // Toggle favorite status for a course
   const toggleFavorite = async (courseId) => {
     try {
       if (!currentUser) {
-        Alert.alert("Sign In Required", "Please sign in to save favorites.");
+        Alert.alert('Sign In Required', 'Please sign in to save favorites.');
         return;
       }
-      
-      // Update local state first for immediate feedback
       const isCurrentlyFavorite = favoriteCourses.includes(courseId);
-      const updatedFavorites = isCurrentlyFavorite 
+      const updatedFavorites = isCurrentlyFavorite
         ? favoriteCourses.filter(id => id !== courseId)
         : [...favoriteCourses, courseId];
-      
       setFavoriteCourses(updatedFavorites);
-      
-      // Update recommended courses state
-      setRecommendedCourses(prev => 
+      setRecommendedCourses(prev =>
         prev.map(course => {
           if (course.id === courseId) {
             return { ...course, favorite: !isCurrentlyFavorite };
@@ -365,41 +541,28 @@ function SkillDevelopmentScreen({ navigation }) {
           return course;
         })
       );
-      
-      // Provide haptic feedback
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      
-      // Save to AsyncStorage as a backup
       await AsyncStorage.setItem('favoriteCourses', JSON.stringify(updatedFavorites));
-      
-      // Update Firestore
       const userDocRef = doc(db, 'users', currentUser.uid);
       await updateDoc(userDocRef, {
         favoriteCourses: updatedFavorites
       });
-      
     } catch (error) {
-      console.error("Error updating favorites:", error);
-      Alert.alert("Error", "Failed to update favorites. Please try again.");
-      
-      // Revert to previous state on error
+      console.error('Error updating favorites:', error);
+      Alert.alert('Error', 'Failed to update favorites. Please try again.');
       fetchUserData(currentUser.uid);
     }
   };
 
-  // Mark notifications as read and update in Firestore
+  // Mark notifications as read and update Firestore
   const markNotificationsAsRead = async () => {
     try {
       if (!currentUser) return;
-      
-      // Update local state
-      const updatedNotifications = notifications.map(notification => ({ 
-        ...notification, 
-        read: true 
+      const updatedNotifications = notifications.map(notification => ({
+        ...notification,
+        read: true
       }));
       setNotifications(updatedNotifications);
-      
-      // Update each notification document in Firestore
       for (const notification of updatedNotifications) {
         if (notification.id && !notification.read) {
           const notificationRef = doc(db, 'notifications', notification.id);
@@ -407,16 +570,15 @@ function SkillDevelopmentScreen({ navigation }) {
         }
       }
     } catch (error) {
-      console.error("Error marking notifications as read:", error);
+      console.error('Error marking notifications as read:', error);
     }
   };
 
   // Navigation to course detail screen
   const navigateToCourseDetail = (course) => {
-    // Navigate to course detail screen
-    navigation.navigate('CourseDetail', { 
+    navigation.navigate('CourseDetail', {
       courseId: course.id,
-      courseName: course.title 
+      courseName: course.title
     });
   };
 
@@ -424,98 +586,51 @@ function SkillDevelopmentScreen({ navigation }) {
   const updateBudgetGoal = async () => {
     try {
       if (!currentUser) {
-        Alert.alert("Sign In Required", "Please sign in to update your budget goal.");
+        Alert.alert('Sign In Required', 'Please sign in to update your budget goal.');
         return;
       }
-      
       const newBudgetGoal = parseFloat(updatedBudget);
       if (isNaN(newBudgetGoal) || newBudgetGoal <= 0) {
-        Alert.alert("Invalid Amount", "Please enter a valid budget amount.");
+        Alert.alert('Invalid Amount', 'Please enter a valid budget amount.');
         return;
       }
-      
-      // Update local state
       setBudgetGoal(newBudgetGoal);
-      
-      // Update Firestore
       const userDocRef = doc(db, 'users', currentUser.uid);
-      await updateDoc(userDocRef, {
-        budgetGoal: newBudgetGoal
-      });
-      
+      await updateDoc(userDocRef, { budgetGoal: newBudgetGoal });
       setBudgetModalVisible(false);
       setUpdatedBudget('');
-      
     } catch (error) {
-      console.error("Error updating budget goal:", error);
-      Alert.alert("Error", "Failed to update budget goal. Please try again.");
+      console.error('Error updating budget goal:', error);
+      Alert.alert('Error', 'Failed to update budget goal. Please try again.');
     }
   };
 
-  // Loading state
   if (isLoading) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#ff5f96" />
-        <Text style={{ marginTop: 20, color: '#666' }}>Loading your personalized content...</Text>
+        <Text style={{ marginTop: 20, color: '#666' }}>
+          Loading your personalized content...
+        </Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      {/* Fixed Header (includes title and static search bar) */}
-      <View style={styles.fixedHeader}>
-        <SafeAreaView style={styles.headerContent}>
-          <View style={styles.headerTop}>
-            <View>
-              <Text style={styles.welcomeText}>Hello, {userName}</Text>
-              <Text style={styles.headerTitle}>Financial Skills Hub</Text>
-            </View>
-            <View style={styles.headerIcons}>
-              <TouchableOpacity 
-                style={styles.iconButton}
-                onPress={() => {
-                  setNotificationModalVisible(true);
-                  markNotificationsAsRead();
-                }}
-              >
-                <Ionicons name="notifications" size={24} color="white" />
-                {notifications.some(n => !n.read) && (
-                  <View style={styles.notificationBadge}>
-                    <Text style={styles.badgeText}>{notifications.filter(n => !n.read).length}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.profileButton} 
-                onPress={() => navigation.navigate('Profile')}
-              >
-                <Image source={require('../../assets/icon.png')} style={styles.profileImage} />
-              </TouchableOpacity>
-            </View>
-          </View>
-          {/* Static Search Bar */}
-          <View style={styles.searchBarContainer}>
-            <View style={styles.searchBar}>
-              <Feather name="search" size={20} color="gray" style={styles.searchIcon} />
-              <TextInput 
-                style={styles.searchInput}
-                placeholder="Find financial skills and courses..."
-                placeholderTextColor="gray"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                onFocus={() => setShowSearch(true)}
-              />
-              <TouchableOpacity style={styles.filterButton} onPress={() => Alert.alert('Filters', 'Advanced filters coming soon.')}>
-                <Feather name="sliders" size={18} color="#ff5f96" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </SafeAreaView>
-      </View>
-
-      {/* Scrollable Content with Top Padding */}
+      <Header
+        userName={userName}
+        notifications={notifications}
+        onNotificationPress={() => {
+          setNotificationModalVisible(true);
+          markNotificationsAsRead();
+        }}
+        onProfilePress={() => navigation.navigate('Profile')}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        onFocusSearch={() => setShowSearch(true)}
+        onClearSearch={() => setSearchQuery('')}
+      />
       <Animated.ScrollView
         style={[styles.scrollContainer, { marginTop: HEADER_HEIGHT }]}
         showsVerticalScrollIndicator={false}
@@ -528,12 +643,12 @@ function SkillDevelopmentScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#ff5f96']} tintColor="#ff5f96" />
         }
       >
-        {/* Category Tabs */}
+        {/* Tabs Section */}
         <View style={styles.tabsContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsScrollContent}>
-            {tabs.map((tab) => (
-              <TouchableOpacity 
-                key={tab} 
+            {tabs.map(tab => (
+              <TouchableOpacity
+                key={tab}
                 style={[styles.tabItem, activeTab === tab && styles.activeTabItem]}
                 onPress={() => {
                   setActiveTab(tab);
@@ -545,49 +660,25 @@ function SkillDevelopmentScreen({ navigation }) {
             ))}
           </ScrollView>
         </View>
-
-        {/* Quick Action Section */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
-            <TouchableOpacity style={styles.seeAllButton} onPress={() => Alert.alert('More Actions', 'Additional actions coming soon.')}>
-              <Text style={styles.seeAllText}>See all</Text>
-              <Feather name="chevron-right" size={16} color="#ff5f96" />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.categoriesContainer}>
-            {categories.map(category => (
-              <TouchableOpacity 
-                key={category.id} 
-                style={styles.categoryCard}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  if (category.name === 'Budget Tools' ) {
-                    // Navigate to budget tool screen
-                    navigation.navigate('BudgetTool');
-                  } else if (category.name === 'My Learning Path') {
-                    // Navigate to learning path screen
-                    navigation.navigate('LearningPath', { userId: currentUser?.uid });
-                  } else {
-                    Alert.alert(category.name, `You selected: ${category.name}`);
-                  }
-                }}
-                activeOpacity={0.7}
-              >
-                <LinearGradient colors={category.gradient} start={[0, 0]} end={[1, 1]} style={styles.iconContainer}>
-                  <FontAwesome5 name={category.icon} size={22} color="white" />
-                </LinearGradient>
-                <Text style={styles.categoryName}>{category.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Micro-Learning Section */}
+        {/* Quick Actions Section */}
+        <QuickActions
+          categories={categories}
+          onCategoryPress={(category) => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            if (category.name === 'Budget Tools') {
+              navigation.navigate('BudgetTool');
+            } else if (category.name === 'My Learning Path') {
+              navigation.navigate('LearningPath', { userId: currentUser?.uid });
+            } else {
+              Alert.alert(category.name, `You selected: ${category.name}`);
+            }
+          }}
+        />
+        {/* Micro-Learning Modules */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Micro-Learning Modules</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.seeAllButton}
               onPress={() => Alert.alert('All Modules', 'View all available learning modules')}
             >
@@ -597,46 +688,15 @@ function SkillDevelopmentScreen({ navigation }) {
           </View>
           <View style={styles.microLearningContainer}>
             {getFilteredCourses().map(module => (
-              <TouchableOpacity 
-                key={module.id} 
-                style={styles.microLearningCard}
-                onPress={() => navigateToCourseDetail(module)}
-                activeOpacity={0.8}
-              >
-                <View style={styles.moduleImageContainer}>
-                  <Image source={module.image} style={styles.moduleImage} />
-                  <View style={styles.moduleDurationTag}>
-                    <Ionicons name="time-outline" size={12} color="white" />
-                    <Text style={styles.moduleDurationText}>{module.duration}</Text>
-                  </View>
-                </View>
-                <View style={styles.moduleContent}>
-                  <View style={styles.tagContainer}>
-                    {module.tags.map((tag, index) => (
-                      <View key={index} style={styles.tag}>
-                        <Text style={styles.tagText}>{tag}</Text>
-                      </View>
-                    ))}
-                  </View>
-                  <Text style={styles.moduleTitle}>{module.title}</Text>
-                  <Text style={styles.moduleAuthor}>{module.author}</Text>
-                  <View style={styles.moduleProgressContainer}>
-                    <View style={styles.progressBar}>
-                      <View style={[styles.progressFill, { width: `${module.completionPercent}%` }]} />
-                    </View>
-                    <Text style={styles.progressText}>{module.completion}</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
+              <ModuleCard key={module.id} module={module} onPress={navigateToCourseDetail} />
             ))}
           </View>
         </View>
-
-        {/* Personalized Recommendations Section */}
+        {/* Personalized Recommendations */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Personalized For You</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.seeAllButton}
               onPress={() => Alert.alert('More Recommendations', 'View all personalized course recommendations')}
             >
@@ -645,70 +705,17 @@ function SkillDevelopmentScreen({ navigation }) {
             </TouchableOpacity>
           </View>
           {recommendedCourses.map(course => (
-            <TouchableOpacity 
-              key={course.id} 
-              style={styles.recommendedCard}
-              onPress={() => navigateToCourseDetail(course)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.recommendedContent}>
-                <View style={styles.recommendedInfo}>
-                  <View style={styles.recommendedTopLabels}>
-                    <View style={styles.recommendedLabelContainer}>
-                      <Text style={styles.recommendedLabel}>{course.label}</Text>
-                    </View>
-                    {course.localContext && (
-                      <View style={styles.localContextTag}>
-                        <Ionicons name="location" size={12} color="#ff5f96" />
-                        <Text style={styles.localContextText}>Local</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={styles.recommendedTitle}>{course.title}</Text>
-                  <Text style={styles.recommendedAuthor}>{course.author}</Text>
-                  <View style={styles.courseMetaContainer}>
-                    <View style={styles.courseMeta}>
-                      <Ionicons name="time-outline" size={14} color="#666" />
-                      <Text style={styles.courseMetaText}>{course.duration}</Text>
-                    </View>
-                    <View style={styles.courseMeta}>
-                      <Ionicons name="bar-chart-outline" size={14} color="#666" />
-                      <Text style={styles.courseMetaText}>{course.level}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.aiMatchContainer}>
-                    <LinearGradient colors={['#9B59B6', '#ff5f96']} start={[0, 0]} end={[1, 0]} style={styles.aiMatchGradient}>
-                      <Text style={styles.aiMatchText}>{course.matchScore}</Text>
-                    </LinearGradient>
-                  </View>
-                  {course.progress > 0 && (
-                    <View style={styles.progressContainer}>
-                      <View style={styles.progressBar}>
-                        <View style={[styles.progressFill, { width: `${course.progress}%` }]} />
-                      </View>
-                      <Text style={styles.progressText}>{course.progress}% Complete</Text>
-                    </View>
-                  )}
-                </View>
-                <View style={styles.recommendedActions}>
-                  <TouchableOpacity style={styles.favoriteButton} onPress={() => toggleFavorite(course.id)}>
-                    <Ionicons 
-                      name={favoriteCourses.includes(course.id) ? "heart" : "heart-outline"} 
-                      size={20} 
-                      color={favoriteCourses.includes(course.id) ? "#ff5f96" : "#666"} 
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </TouchableOpacity>
+            <RecommendedCard
+              key={course.id}
+              course={course}
+              onPress={navigateToCourseDetail}
+              onToggleFavorite={toggleFavorite}
+              isFavorite={favoriteCourses.includes(course.id)}
+            />
           ))}
         </View>
-
-
-        {/* Bottom Padding */}
         <View style={{ height: 80 }} />
       </Animated.ScrollView>
-
 
       {/* Notification Modal */}
       <Modal
@@ -727,7 +734,10 @@ function SkillDevelopmentScreen({ navigation }) {
                 </View>
               ))}
             </ScrollView>
-            <TouchableOpacity style={styles.modalCloseButton} onPress={() => setNotificationModalVisible(false)}>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setNotificationModalVisible(false)}
+            >
               <Text style={styles.modalCloseButtonText}>Close</Text>
             </TouchableOpacity>
           </View>
@@ -747,7 +757,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ff5f96',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     paddingBottom: 10,
-    zIndex: 100, // Ensure it stays on top
+    zIndex: 100,
     elevation: 3,
   },
   headerContent: { paddingHorizontal: 20 },
@@ -760,13 +770,13 @@ const styles = StyleSheet.create({
   badgeText: { color: 'white', fontSize: 10, fontWeight: 'bold' },
   profileButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
   profileImage: { width: 36, height: 36, borderRadius: 18 },
-  searchBarContainer: { marginTop: 10},
+  searchBarContainer: { marginTop: 10 },
   searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 12, paddingHorizontal: 16, height: 48, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
   searchIcon: { marginRight: 10 },
   searchInput: { flex: 1, fontSize: 15, color: '#333' },
   filterButton: { padding: 8, borderRadius: 8, backgroundColor: '#F5EEF8' },
   scrollContainer: { flex: 1, backgroundColor: '#f8f9fc' },
-  tabsContainer: { backgroundColor: 'white',top:25,marginBottom:5, paddingVertical:5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
+  tabsContainer: { backgroundColor: 'white', top: 25, marginBottom: 5, paddingVertical: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   tabsScrollContent: { paddingHorizontal: 16 },
   tabItem: { paddingHorizontal: 16, paddingVertical: 8, marginRight: 8, borderRadius: 20 },
   activeTabItem: { backgroundColor: '#ff5f96' },
@@ -777,24 +787,10 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 20, fontWeight: 'bold', color: '#333' },
   seeAllButton: { flexDirection: 'row', alignItems: 'center' },
   seeAllText: { fontSize: 14, color: '#ff5f96', fontWeight: '500', marginRight: 2 },
-  refreshButton: { flexDirection: 'row', alignItems: 'center' },
-  refreshText: { fontSize: 14, color: '#ff5f96', fontWeight: '500', marginRight: 4 },
   categoriesContainer: { flexDirection: 'row', justifyContent: 'space-between' },
-  categoryCard: { width: '31%', backgroundColor: 'white', borderRadius: 16, padding: 16, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
+  categoryCard: { width: '48%', backgroundColor: 'white', borderRadius: 16, padding: 16, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
   iconContainer: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
   categoryName: { fontSize: 13, fontWeight: '500', textAlign: 'center', color: '#333' },
-  skillRecommendationsContainer: { marginTop: 8 },
-  skillRecommendation: { marginBottom: 16, borderBottomWidth: 1, borderBottomColor: '#F0F0F0', paddingBottom: 16 },
-  skillNameContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  skillName: { fontSize: 16, fontWeight: 'bold', color: '#333' },
-  relevanceTag: { backgroundColor: '#F5EEF8', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  relevanceText: { fontSize: 12, fontWeight: '600', color: '#ff5f96' },
-  skillMetricsContainer: { flexDirection: 'row', alignItems: 'center' },
-  skillMetric: { marginRight: 24 },
-  metricLabel: { fontSize: 12, color: '#666', marginBottom: 2 },
-  metricValue: { fontSize: 14, fontWeight: '600', color: '#333' },
-  exploreButton: { backgroundColor: '#ff5f96', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 8, marginLeft: 'auto' },
-  exploreText: { fontSize: 13, fontWeight: '600', color: 'white' },
   microLearningContainer: { marginBottom: 16 },
   microLearningCard: { backgroundColor: 'white', borderRadius: 16, overflow: 'hidden', marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
   moduleImageContainer: { width: '100%', height: 120, position: 'relative' },
@@ -809,7 +805,7 @@ const styles = StyleSheet.create({
   moduleAuthor: { fontSize: 14, color: '#666', marginBottom: 8 },
   moduleProgressContainer: { flexDirection: 'row', alignItems: 'center' },
   progressBar: { flex: 1, height: 6, backgroundColor: '#eee', borderRadius: 3, marginRight: 8 },
-  progressFill: { height: '100%', backgroundColor: '#ff5f96', borderRadius: 3, width: '50%' },
+  progressFill: { height: '100%', backgroundColor: '#ff5f96', borderRadius: 3 },
   progressText: { fontSize: 12, color: '#666' },
   recommendedCard: { backgroundColor: 'white', borderRadius: 16, padding: 16, marginBottom: 16, flexDirection: 'row', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
   recommendedContent: { flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -830,17 +826,12 @@ const styles = StyleSheet.create({
   progressContainer: { marginTop: 8 },
   recommendedActions: { justifyContent: 'center', alignItems: 'center' },
   favoriteButton: { padding: 8 },
-  fab: { position: 'absolute', bottom: 20, right: 20 },
-  fabGradient: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5 },
   modalContainer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   modalContent: { width: '80%', backgroundColor: 'white', borderRadius: 16, padding: 20, alignItems: 'center' },
   modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 12 },
-  modalInput: { width: '100%', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 10, marginBottom: 12 },
-  modalButton: { backgroundColor: '#ff5f96', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, marginVertical: 6, width: '100%', alignItems: 'center' },
-  modalButtonText: { color: 'white', fontSize: 16 },
+  modalScrollView: { maxHeight: 200, width: '100%', marginVertical: 10 },
   modalCloseButton: { marginTop: 10 },
   modalCloseButtonText: { color: '#ff5f96', fontSize: 16 },
-  modalScrollView: { maxHeight: 200, width: '100%', marginVertical: 10 },
   notificationItem: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#eee', width: '100%' },
   notificationText: { fontSize: 16, color: '#333' },
 });
