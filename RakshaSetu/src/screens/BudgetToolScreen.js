@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,10 +10,12 @@ import {
   Platform,
   Modal,
   Dimensions,
+  Share,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { PieChart } from 'react-native-chart-kit';
 
 // Utility Functions
 const formatCurrency = (amount) => `₹${amount.toFixed(2)}`;
@@ -81,8 +83,8 @@ const CategoryCard = ({ category, onUpdateBudget }) => {
   );
 };
 
-// Transaction Item Component
-const TransactionItem = ({ transaction, category }) => (
+// Transaction Item Component with Edit/Delete buttons
+const TransactionItem = ({ transaction, category, onEdit, onDelete }) => (
   <View style={styles.transactionItem}>
     <View style={styles.transactionLeft}>
       <View style={[styles.transactionIcon, { backgroundColor: category.color }]}>
@@ -96,6 +98,14 @@ const TransactionItem = ({ transaction, category }) => (
     <View style={styles.transactionRight}>
       <Text style={styles.transactionAmount}>{formatCurrency(transaction.amount)}</Text>
       <Text style={styles.transactionDate}>{formatDate(transaction.date)}</Text>
+      <View style={{ flexDirection: 'row', marginTop: 4 }}>
+        <TouchableOpacity onPress={() => onEdit(transaction)}>
+          <Ionicons name="create-outline" size={16} color="#8A2BE2" style={{ marginRight: 8 }} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => onDelete(transaction.id)}>
+          <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
+        </TouchableOpacity>
+      </View>
     </View>
   </View>
 );
@@ -191,73 +201,94 @@ const RecommendationCard = ({ title, text, buttonText, onPress }) => (
 );
 
 // Transaction Modal Component with KeyboardAvoidingView
+// Modified to support both add and edit modes (if editingTransaction is provided)
 const TransactionModal = ({
   visible,
   onClose,
   onAddTransaction,
+  onUpdateTransaction,
   categories,
   newTransaction,
   setNewTransaction,
   selectedCategoryId,
   setSelectedCategoryId,
-}) => (
-  <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Add Transaction</Text>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Ionicons name="close" size={24} color="#666" />
+  editingTransaction,
+}) => {
+  const isEditMode = editingTransaction !== null;
+
+  const handleSave = () => {
+    if (isEditMode) {
+      onUpdateTransaction({
+        ...editingTransaction,
+        description: newTransaction.description,
+        amount: parseFloat(newTransaction.amount),
+        category: selectedCategoryId,
+        date: new Date().toISOString().split('T')[0],
+      });
+    } else {
+      onAddTransaction();
+    }
+  };
+
+  return (
+    <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{isEditMode ? 'Edit Transaction' : 'Add Transaction'}</Text>
+              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Description</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="What did you spend on?"
+                value={newTransaction.description}
+                onChangeText={(text) => setNewTransaction({ ...newTransaction, description: text })}
+              />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Amount</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="0.00"
+                keyboardType="decimal-pad"
+                value={newTransaction.amount}
+                onChangeText={(text) => setNewTransaction({ ...newTransaction, amount: text })}
+              />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Category</Text>
+              <View style={styles.categorySelector}>
+                {categories.map((category) => (
+                  <TouchableOpacity
+                    key={category.id}
+                    style={[
+                      styles.categoryOption,
+                      selectedCategoryId === category.id && { borderColor: category.color, borderWidth: 2 },
+                    ]}
+                    onPress={() => setSelectedCategoryId(category.id)}
+                  >
+                    <View style={[styles.categoryOptionIcon, { backgroundColor: category.color }]}>
+                      <FontAwesome5 name={category.icon} size={14} color="#FFF" />
+                    </View>
+                    <Text style={styles.categoryOptionText}>{category.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            <TouchableOpacity style={styles.addTransactionButton} onPress={handleSave}>
+              <Text style={styles.addTransactionButtonText}>{isEditMode ? 'Update Transaction' : 'Add Transaction'}</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Description</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="What did you spend on?"
-              value={newTransaction.description}
-              onChangeText={(text) => setNewTransaction({ ...newTransaction, description: text })}
-            />
-          </View>
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Amount</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="0.00"
-              keyboardType="decimal-pad"
-              value={newTransaction.amount}
-              onChangeText={(text) => setNewTransaction({ ...newTransaction, amount: text })}
-            />
-          </View>
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Category</Text>
-            <View style={styles.categorySelector}>
-              {categories.map((category) => (
-                <TouchableOpacity
-                  key={category.id}
-                  style={[
-                    styles.categoryOption,
-                    selectedCategoryId === category.id && { borderColor: category.color, borderWidth: 2 },
-                  ]}
-                  onPress={() => setSelectedCategoryId(category.id)}
-                >
-                  <View style={[styles.categoryOptionIcon, { backgroundColor: category.color }]}>
-                    <FontAwesome5 name={category.icon} size={14} color="#FFF" />
-                  </View>
-                  <Text style={styles.categoryOptionText}>{category.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-          <TouchableOpacity style={styles.addTransactionButton} onPress={onAddTransaction}>
-            <Text style={styles.addTransactionButtonText}>Add Transaction</Text>
-          </TouchableOpacity>
         </View>
-      </View>
-    </KeyboardAvoidingView>
-  </Modal>
-);
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+};
 
 // Goal Modal Component for adding new financial goals
 const GoalModal = ({ visible, onClose, onAddGoal }) => {
@@ -404,8 +435,16 @@ const BudgetToolScreen = () => {
     category: '',
   });
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+  // New state for viewing all transactions modal
+  const [allTransactionsVisible, setAllTransactionsVisible] = useState(false);
+  // New state for editing a transaction
+  const [editingTransaction, setEditingTransaction] = useState(null);
+  // New states for month filtering & historical navigation
+  const currentDate = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth());
+  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
 
-  // Calculate Totals
+  // Calculate Totals (overall)
   const totalBudget = categories.reduce((sum, cat) => sum + cat.budget, 0);
   const totalSpent = categories.reduce((sum, cat) => sum + cat.spent, 0);
   const remainingBudget = totalBudget - totalSpent;
@@ -413,7 +452,33 @@ const BudgetToolScreen = () => {
   // Helper: Get category by id
   const getCategoryById = (id) => categories.find((cat) => cat.id === id) || {};
 
-  // Function to add a new transaction
+  // Filter transactions for selected month and year
+  const filteredTransactions = transactions.filter((txn) => {
+    const d = new Date(txn.date);
+    return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+  });
+
+  // Monthly summaries
+  const monthlySpent = filteredTransactions.reduce((sum, txn) => sum + txn.amount, 0);
+  // For monthly budget, assume each category's budget applies every month.
+  const monthlyBudget = categories.reduce((sum, cat) => sum + cat.budget, 0);
+  const monthlyRemaining = monthlyBudget - monthlySpent;
+
+  // Data for PieChart (category breakdown for filtered transactions)
+  const pieData = categories.map((cat) => {
+    const catTotal = filteredTransactions
+      .filter((txn) => txn.category === cat.id)
+      .reduce((sum, txn) => sum + txn.amount, 0);
+    return {
+      name: cat.name,
+      amount: catTotal,
+      color: cat.color,
+      legendFontColor: '#333',
+      legendFontSize: 12,
+    };
+  }).filter(item => item.amount > 0);
+
+  // Function to add a new transaction (if not editing)
   const addTransaction = () => {
     if (!newTransaction.description || !newTransaction.amount || !selectedCategoryId) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -443,6 +508,47 @@ const BudgetToolScreen = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
+  // Function to update a transaction (edit mode)
+  const updateTransaction = (updatedTxn) => {
+    setTransactions(
+      transactions.map((txn) =>
+        txn.id === updatedTxn.id ? updatedTxn : txn
+      )
+    );
+    setEditingTransaction(null);
+    setModalVisible(false);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  // Function to delete a transaction
+  const deleteTransaction = (txnId) => {
+    const txnToDelete = transactions.find(txn => txn.id === txnId);
+    if (txnToDelete) {
+      setTransactions(transactions.filter(txn => txn.id !== txnId));
+      setCategories(
+        categories.map((cat) =>
+          cat.id === txnToDelete.category ? { ...cat, spent: cat.spent - txnToDelete.amount } : cat
+        )
+      );
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  };
+
+  // Use effect to recalculate category spent amounts from transactions
+  useEffect(() => {
+    setCategories(prevCategories =>
+      prevCategories.map(cat => {
+        const newSpent = transactions
+          .filter(txn => txn.category === cat.id)
+          .reduce((sum, txn) => sum + txn.amount, 0);
+        if (newSpent !== cat.spent) {
+          return { ...cat, spent: newSpent };
+        }
+        return cat;
+      })
+    );
+  }, [transactions]);
+
   // Function to update a goal's progress (current & target)
   const updateGoal = (goalId, newCurrent, newTarget) => {
     setGoals(
@@ -456,6 +562,24 @@ const BudgetToolScreen = () => {
   const addGoal = (newGoal) => {
     setGoals([newGoal, ...goals]);
   };
+
+  // Function to export monthly report as CSV and share
+  const handleExportReport = async () => {
+    const header = 'ID,Description,Amount,Category,Date\n';
+    const rows = filteredTransactions.map(txn => {
+      const cat = getCategoryById(txn.category);
+      return `${txn.id},"${txn.description}",${txn.amount},"${cat.name}",${txn.date}`;
+    }).join('\n');
+    const csvString = header + rows;
+    try {
+      await Share.share({ message: csvString });
+    } catch (error) {
+      console.error('Error sharing report:', error);
+    }
+  };
+
+  // Functions to handle month navigation
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   return (
     <KeyboardAvoidingView
@@ -515,6 +639,73 @@ const BudgetToolScreen = () => {
       <ScrollView style={styles.content}>
         {activeTab === 'budget' && (
           <>
+            {/* Moved and enhanced monthly data section */}
+            <View style={styles.monthFilterContainer}>
+              <TouchableOpacity onPress={() => setSelectedYear(selectedYear - 1)}>
+                <Ionicons name="chevron-back-outline" size={24} color="#8A2BE2" />
+              </TouchableOpacity>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.monthScroll}>
+                {monthNames.map((m, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.monthButton,
+                      selectedMonth === index && styles.activeMonthButton,
+                    ]}
+                    onPress={() => setSelectedMonth(index)}
+                  >
+                    <Text style={[styles.monthText, selectedMonth === index && styles.activeMonthText]}>{m}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              <TouchableOpacity onPress={() => setSelectedYear(selectedYear + 1)}>
+                <Ionicons name="chevron-forward-outline" size={24} color="#8A2BE2" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.monthlySummaryContainer}>
+              <Text style={styles.monthlySummaryTitle}>
+                {monthNames[selectedMonth]} {selectedYear} Summary
+              </Text>
+              <View style={styles.summaryContainer}>
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryLabel}>Budget</Text>
+                  <Text style={styles.summaryValue}>{formatCurrency(monthlyBudget)}</Text>
+                </View>
+                <View style={styles.summaryDivider} />
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryLabel}>Spent</Text>
+                  <Text style={styles.summaryValue}>{formatCurrency(monthlySpent)}</Text>
+                </View>
+                <View style={styles.summaryDivider} />
+                <View style={styles.summaryItem}>
+                  <Text style={[styles.summaryLabel, { color: monthlyRemaining >= 0 ? '#2EC4B6' : '#FF6B6B' }]}>
+                    Remaining
+                  </Text>
+                  <Text style={[styles.summaryValue, { color: monthlyRemaining >= 0 ? '#2EC4B6' : '#FF6B6B' }]}>
+                    {formatCurrency(monthlyRemaining)}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.chartContainer}>
+                <PieChart
+                  data={pieData}
+                  width={Dimensions.get('window').width - 80}
+                  height={200}
+                  chartConfig={{
+                    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                  }}
+                  accessor="amount"
+                  backgroundColor="transparent"
+                  paddingLeft="15"
+                  absolute
+                />
+              </View>
+              <TouchableOpacity style={styles.exportButton} onPress={handleExportReport}>
+                <Text style={styles.exportButtonText}>Export Report</Text>
+              </TouchableOpacity>
+            </View>
+
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Categories</Text>
             </View>
@@ -538,6 +729,9 @@ const BudgetToolScreen = () => {
               <TouchableOpacity
                 style={styles.addButton}
                 onPress={() => {
+                  setNewTransaction({ description: '', amount: '', category: '' });
+                  setSelectedCategoryId(null);
+                  setEditingTransaction(null);
                   setModalVisible(true);
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 }}
@@ -546,10 +740,25 @@ const BudgetToolScreen = () => {
               </TouchableOpacity>
             </View>
             {transactions.slice(0, 5).map((txn) => (
-              <TransactionItem key={txn.id} transaction={txn} category={getCategoryById(txn.category)} />
+              <TransactionItem
+                key={txn.id}
+                transaction={txn}
+                category={getCategoryById(txn.category)}
+                onEdit={(txn) => {
+                  setEditingTransaction(txn);
+                  setNewTransaction({
+                    description: txn.description,
+                    amount: txn.amount.toString(),
+                    category: txn.category,
+                  });
+                  setSelectedCategoryId(txn.category);
+                  setModalVisible(true);
+                }}
+                onDelete={deleteTransaction}
+              />
             ))}
             {transactions.length > 5 && (
-              <TouchableOpacity style={styles.viewAllButton}>
+              <TouchableOpacity style={styles.viewAllButton} onPress={() => setAllTransactionsVisible(true)}>
                 <Text style={styles.viewAllText}>View all transactions</Text>
               </TouchableOpacity>
             )}
@@ -649,13 +858,18 @@ const BudgetToolScreen = () => {
 
       <TransactionModal
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
+        onClose={() => {
+          setModalVisible(false);
+          setEditingTransaction(null);
+        }}
         onAddTransaction={addTransaction}
+        onUpdateTransaction={updateTransaction}
         categories={categories}
         newTransaction={newTransaction}
         setNewTransaction={setNewTransaction}
         selectedCategoryId={selectedCategoryId}
         setSelectedCategoryId={setSelectedCategoryId}
+        editingTransaction={editingTransaction}
       />
 
       <GoalModal
@@ -663,6 +877,45 @@ const BudgetToolScreen = () => {
         onClose={() => setGoalModalVisible(false)}
         onAddGoal={addGoal}
       />
+
+      {/* Modal for viewing all transactions */}
+      <Modal
+        animationType="slide"
+        transparent
+        visible={allTransactionsVisible}
+        onRequestClose={() => setAllTransactionsVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>All Transactions</Text>
+              <TouchableOpacity style={styles.closeButton} onPress={() => setAllTransactionsVisible(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: Dimensions.get('window').height * 0.6 }}>
+              {transactions.map((txn) => (
+                <TransactionItem
+                  key={txn.id}
+                  transaction={txn}
+                  category={getCategoryById(txn.category)}
+                  onEdit={(txn) => {
+                    setEditingTransaction(txn);
+                    setNewTransaction({
+                      description: txn.description,
+                      amount: txn.amount.toString(),
+                      category: txn.category,
+                    });
+                    setSelectedCategoryId(txn.category);
+                    setModalVisible(true);
+                  }}
+                  onDelete={deleteTransaction}
+                />
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 };
@@ -688,6 +941,50 @@ const styles = StyleSheet.create({
   summaryDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.3)' },
   summaryLabel: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginBottom: 5 },
   summaryValue: { fontSize: 16, fontWeight: 'bold', color: '#FFF' },
+  monthFilterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 20,
+    marginTop: 10,
+  },
+  monthScroll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  monthButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginHorizontal: 4,
+    backgroundColor: '#EAEAEA',
+  },
+  activeMonthButton: { backgroundColor: '#8A2BE2' },
+  monthText: { color: '#333' },
+  activeMonthText: { color: '#FFF', fontWeight: 'bold' },
+  monthlySummaryContainer: {
+    marginHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 15,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  monthlySummaryTitle: { fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 10 },
+  chartContainer: { marginTop: 10, alignItems: 'center' },
+  exportButton: {
+    backgroundColor: '#8A2BE2',
+    paddingVertical: 10,
+    borderRadius: 6,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  exportButtonText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
   tabContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
