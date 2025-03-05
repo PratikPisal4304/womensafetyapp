@@ -10,11 +10,8 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
-
-// For the pink gradient
 import { LinearGradient } from 'expo-linear-gradient';
 
-// Firebase imports (MODULAR SYNTAX v9+)
 import {
   collection,
   doc,
@@ -23,57 +20,32 @@ import {
   where,
   updateDoc,
   addDoc,
-  setDoc,
   getDocs,
   serverTimestamp,
   orderBy,
   limit,
 } from 'firebase/firestore';
 
-import { db } from '../../config/firebaseConfig'; // <-- Your Firestore instance
+import { db } from '../../config/firebaseConfig';
 
 const InAppChatScreen = () => {
-  // ---------------------------------------
-  // 1. STATES
-  // ---------------------------------------
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-
-  // "Close Friends" from Firestore
   const [closeFriends, setCloseFriends] = useState([]);
   const [loadingCloseFriends, setLoadingCloseFriends] = useState(true);
-
-  // "Requests" from Firestore
   const [requests, setRequests] = useState([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
-
-  // "Messages" list (accepted chats)
   const [messagesList, setMessagesList] = useState([]);
   const [loadingMessages, setLoadingMessages] = useState(true);
-
-  // Chat data: for each threadId, store an array of messages
   const [chatData, setChatData] = useState({});
-
-  // Which user's chat is currently open?
   const [selectedChat, setSelectedChat] = useState(null);
-
-  // Input for sending a new message in Chat Detail
   const [inputText, setInputText] = useState('');
+  const currentUserId = 'CURRENT_USER_ID';
 
-  // For demonstration, assume we have a current user ID (replace with real auth)
-  const currentUserId = 'CURRENT_USER_ID'; // e.g. from Firebase Auth
-
-  // We'll store an unsubscribe reference for the chat detail's real-time listener
   const unsubscribeRef = useRef(null);
 
-  // ---------------------------------------
-  // 2. USE EFFECTS: FETCH DATA ON MOUNT
-  // ---------------------------------------
-  // Example: fetch "close friends" from Firestore
   useEffect(() => {
-    // Suppose each user doc has a subcollection "closeFriends"
-    // We'll assume doc path: users/CURRENT_USER_ID/closeFriends
     const closeFriendsRef = collection(db, 'users', currentUserId, 'closeFriends');
     const unsubscribe = onSnapshot(closeFriendsRef, (snapshot) => {
       const friends = [];
@@ -83,15 +55,10 @@ const InAppChatScreen = () => {
       setCloseFriends(friends);
       setLoadingCloseFriends(false);
     });
-
     return () => unsubscribe();
   }, [currentUserId]);
 
-  // Example: fetch "requests" from Firestore
   useEffect(() => {
-    // Suppose there's a collection "requests" with docs containing
-    // { fromUserId, toUserId, status, fromUserName, fromUserImage, ... }
-    // We only fetch requests where toUserId == currentUserId and status == "pending"
     const requestsRef = collection(db, 'requests');
     const q = query(
       requestsRef,
@@ -111,10 +78,7 @@ const InAppChatScreen = () => {
     return () => unsubscribe();
   }, [currentUserId]);
 
-  // Example: fetch "messagesList" (active chats) from Firestore
   useEffect(() => {
-    // Suppose there's a collection "threads" that references participants
-    // We fetch any doc where participants array includes currentUserId
     const messagesRef = collection(db, 'threads');
     const q = query(messagesRef, where('participants', 'array-contains', currentUserId));
 
@@ -122,13 +86,11 @@ const InAppChatScreen = () => {
       const msgs = [];
       snapshot.forEach((docSnap) => {
         const data = docSnap.data();
-        // The other user info for display (assuming we store in doc)
-        // "userData" might be an array of objects for each participant
         const otherUser = data?.userData?.find((u) => u.id !== currentUserId);
 
         msgs.push({
           threadId: docSnap.id,
-          ...otherUser, // e.g. name, image, etc.
+          ...otherUser,
           lastMessage: data.lastMessage || '',
           lastTimestamp: data.lastTimestamp || null,
         });
@@ -140,9 +102,6 @@ const InAppChatScreen = () => {
     return () => unsubscribe();
   }, [currentUserId]);
 
-  // ---------------------------------------
-  // 3. SEARCH LOGIC
-  // ---------------------------------------
   const handleSearch = useCallback(async () => {
     if (!searchTerm.trim()) {
       setSearchResults([]);
@@ -150,9 +109,7 @@ const InAppChatScreen = () => {
     }
     setIsSearching(true);
     try {
-      // Example: search in "users" collection by name
       const usersRef = collection(db, 'users');
-      // naive "startsWith" style query (case sensitive)
       const q = query(
         usersRef,
         where('name', '>=', searchTerm),
@@ -172,17 +129,10 @@ const InAppChatScreen = () => {
     }
   }, [searchTerm]);
 
-  // ---------------------------------------
-  // 4. REQUEST HANDLERS
-  // ---------------------------------------
-  // Accept a request => update request doc => create "thread"
   const handleAcceptRequest = async (requestItem) => {
     try {
-      // 1. Update request doc to "accepted"
       const requestDocRef = doc(db, 'requests', requestItem.id);
       await updateDoc(requestDocRef, { status: 'accepted' });
-
-      // 2. Create or update a "thread" doc in "threads"
       const newThread = {
         participants: [requestItem.fromUserId, requestItem.toUserId],
         lastMessage: '',
@@ -195,19 +145,17 @@ const InAppChatScreen = () => {
           },
           {
             id: requestItem.toUserId,
-            name: 'CurrentUserName', // replace with real user name
-            image: 'CurrentUserImage', // replace with real user image
+            name: 'CurrentUserName',
+            image: 'CurrentUserImage',
           },
         ],
       };
-
       await addDoc(collection(db, 'threads'), newThread);
     } catch (error) {
       console.log('Accept request error:', error);
     }
   };
 
-  // Decline a request => update request doc to "declined"
   const handleDeclineRequest = async (requestItem) => {
     try {
       const requestDocRef = doc(db, 'requests', requestItem.id);
@@ -217,19 +165,11 @@ const InAppChatScreen = () => {
     }
   };
 
-  // ---------------------------------------
-  // 5. OPEN CHAT & LOAD MESSAGES
-  // ---------------------------------------
   const handleSelectChat = async (chatItem) => {
-    // chatItem might contain { threadId, name, image, ... }
     setSelectedChat(chatItem);
-
-    // Listen to real-time messages for this thread
-    // subcollection: threads/{threadId}/messages
     const messagesRef = collection(db, 'threads', chatItem.threadId, 'messages');
     const q = query(messagesRef, orderBy('createdAt', 'asc'));
 
-    // unsubscribe any previous
     if (unsubscribeRef.current) {
       unsubscribeRef.current();
     }
@@ -240,8 +180,6 @@ const InAppChatScreen = () => {
         loadedMessages.push({ id: docSnap.id, ...docSnap.data() });
       });
 
-      // Convert to local chat format
-      // { id, sender: 'me'|'them', text, time }
       const formatted = loadedMessages.map((msg) => {
         const senderType = msg.senderId === currentUserId ? 'me' : 'them';
         let timeString = '';
@@ -268,7 +206,6 @@ const InAppChatScreen = () => {
     unsubscribeRef.current = unsubscribe;
   };
 
-  // Clean up on unmount
   useEffect(() => {
     return () => {
       if (unsubscribeRef.current) {
@@ -277,48 +214,37 @@ const InAppChatScreen = () => {
     };
   }, []);
 
-  // ---------------------------------------
-  // 6. SEND MESSAGE
-  // ---------------------------------------
   const handleSendMessage = async () => {
     if (!inputText.trim() || !selectedChat?.threadId) return;
     const threadId = selectedChat.threadId;
     const textToSend = inputText.trim();
 
     try {
-      // 1. Add a new doc to subcollection "threads/{threadId}/messages"
       await addDoc(collection(db, 'threads', threadId, 'messages'), {
         senderId: currentUserId,
         text: textToSend,
         createdAt: serverTimestamp(),
       });
-
-      // 2. Update parent "threads/{threadId}" doc's lastMessage & lastTimestamp
       const threadDocRef = doc(db, 'threads', threadId);
       await updateDoc(threadDocRef, {
         lastMessage: textToSend,
         lastTimestamp: serverTimestamp(),
       });
-
       setInputText('');
     } catch (error) {
       console.log('Send message error:', error);
     }
   };
 
-  // ---------------------------------------
-  // 7. RENDER: MAIN LIST (Search, Close Friends, Requests, Messages)
-  // ---------------------------------------
   const renderMainList = () => (
     <View style={styles.container}>
       <Text style={styles.screenTitle}>RaskhaSetu Chat</Text>
 
-      {/* SEARCH BAR */}
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
           placeholder="Search users by name..."
-          placeholderTextColor="#999"
+          placeholderTextColor="#aaa"
           value={searchTerm}
           onChangeText={setSearchTerm}
         />
@@ -327,7 +253,6 @@ const InAppChatScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* SEARCH RESULTS */}
       {isSearching && <ActivityIndicator color="#333" style={{ marginBottom: 10 }} />}
       {searchResults.length > 0 && (
         <View style={{ marginBottom: 20 }}>
@@ -341,6 +266,7 @@ const InAppChatScreen = () => {
               <TouchableOpacity
                 style={styles.requestCard}
                 onPress={() => console.log('Open profile or request chat:', item.name)}
+                activeOpacity={0.8}
               >
                 <Image source={{ uri: item.image }} style={styles.requestAvatar} />
                 <Text style={styles.requestName}>{item.name}</Text>
@@ -350,7 +276,6 @@ const InAppChatScreen = () => {
         </View>
       )}
 
-      {/* CLOSE FRIENDS */}
       <Text style={styles.sectionTitle}>Close Friends</Text>
       {loadingCloseFriends ? (
         <ActivityIndicator color="#333" style={{ marginBottom: 10 }} />
@@ -367,6 +292,7 @@ const InAppChatScreen = () => {
             <TouchableOpacity
               style={styles.requestCard}
               onPress={() => console.log('Close friend tapped:', item.name)}
+              activeOpacity={0.8}
             >
               <Image source={{ uri: item.image }} style={styles.requestAvatar} />
               <Text style={styles.requestName}>{item.name}</Text>
@@ -375,7 +301,6 @@ const InAppChatScreen = () => {
         />
       )}
 
-      {/* REQUESTS */}
       {loadingRequests ? (
         <ActivityIndicator color="#333" style={{ marginBottom: 10 }} />
       ) : requests.length > 0 ? (
@@ -395,12 +320,14 @@ const InAppChatScreen = () => {
                   <TouchableOpacity
                     style={styles.acceptButton}
                     onPress={() => handleAcceptRequest(item)}
+                    activeOpacity={0.8}
                   >
                     <Text style={styles.requestButtonText}>Accept</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.declineButton}
                     onPress={() => handleDeclineRequest(item)}
+                    activeOpacity={0.8}
                   >
                     <Text style={styles.requestButtonText}>Decline</Text>
                   </TouchableOpacity>
@@ -411,7 +338,6 @@ const InAppChatScreen = () => {
         </>
       ) : null}
 
-      {/* MESSAGES (Active Chats) */}
       <Text style={styles.sectionTitle}>Messages</Text>
       {loadingMessages ? (
         <ActivityIndicator color="#333" />
@@ -423,21 +349,20 @@ const InAppChatScreen = () => {
           keyExtractor={(item) => item.threadId}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => {
-            // Format lastTimestamp if it exists
             let dateStr = '';
             if (item.lastTimestamp?.toDate) {
               dateStr = item.lastTimestamp
                 .toDate()
                 .toLocaleDateString([], { month: 'short', day: 'numeric' });
             }
-
             return (
               <TouchableOpacity
                 style={styles.messageItem}
                 onPress={() => handleSelectChat(item)}
+                activeOpacity={0.8}
               >
                 <Image source={{ uri: item.image }} style={styles.avatar} />
-                <View style={{ marginLeft: 10, flex: 1 }}>
+                <View style={styles.messageContent}>
                   <Text style={styles.messageName}>{item.name}</Text>
                   <Text style={styles.messageText}>{item.lastMessage}</Text>
                 </View>
@@ -450,28 +375,23 @@ const InAppChatScreen = () => {
     </View>
   );
 
-  // ---------------------------------------
-  // 8. RENDER: CHAT DETAIL SCREEN
-  // ---------------------------------------
   const renderChatDetailScreen = () => {
-    // Grab messages from chatData for the thread
     const threadId = selectedChat?.threadId;
     const conversation = chatData[threadId] || [];
 
     return (
       <View style={styles.container}>
-        {/* Header with "Back" button */}
         <View style={styles.chatHeader}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => setSelectedChat(null)}
+            activeOpacity={0.8}
           >
             <Text style={styles.backButtonText}>{'<'} Back</Text>
           </TouchableOpacity>
           <Text style={styles.chatHeaderText}>{selectedChat?.name}</Text>
         </View>
 
-        {/* Conversation Messages */}
         <FlatList
           data={conversation}
           keyExtractor={(item) => item.id}
@@ -490,16 +410,15 @@ const InAppChatScreen = () => {
           )}
         />
 
-        {/* Input to send new message */}
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.textInput}
             placeholder="Type your message..."
-            placeholderTextColor="#999"
+            placeholderTextColor="#aaa"
             value={inputText}
             onChangeText={setInputText}
           />
-          <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage}>
+          <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage} activeOpacity={0.8}>
             <Text style={styles.sendButtonText}>Send</Text>
           </TouchableOpacity>
         </View>
@@ -507,15 +426,8 @@ const InAppChatScreen = () => {
     );
   };
 
-  // ---------------------------------------
-  // MAIN RETURN
-  // ---------------------------------------
   return (
-    <LinearGradient
-      // Light pink gradient
-      colors={['#FFC0CB', '#FFB6C1']}
-      style={styles.gradientWrapper}
-    >
+    <LinearGradient colors={['#FFC0CB', '#FFB6C1']} style={styles.gradientWrapper}>
       <SafeAreaView style={{ flex: 1 }}>
         {selectedChat ? renderChatDetailScreen() : renderMainList()}
       </SafeAreaView>
@@ -525,82 +437,96 @@ const InAppChatScreen = () => {
 
 export default InAppChatScreen;
 
-// ---------------------------------------
-// STYLES
-// ---------------------------------------
 const styles = StyleSheet.create({
   gradientWrapper: {
     flex: 1,
   },
   container: {
     flex: 1,
-    paddingHorizontal: 15,
-    paddingTop: 10,
+    paddingHorizontal: 20,
+    paddingTop: 15,
+    backgroundColor: 'transparent',
   },
   screenTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 26,
+    fontWeight: '700',
     color: '#333',
     marginBottom: 20,
     textAlign: 'center',
+    textShadowColor: '#fff',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     marginBottom: 10,
     color: '#333',
   },
   noMessagesText: {
-    color: '#333',
+    color: '#555',
     fontStyle: 'italic',
     marginBottom: 10,
   },
-
-  // Search
   searchContainer: {
     flexDirection: 'row',
     marginBottom: 15,
   },
   searchInput: {
     flex: 1,
-    backgroundColor: '#FFF',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    marginRight: 5,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    marginRight: 8,
     color: '#333',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
   },
   searchButton: {
-    backgroundColor: '#FFF',
-    borderRadius: 8,
+    backgroundColor: '#fff',
+    borderRadius: 12,
     paddingHorizontal: 15,
     justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
   },
   searchButtonText: {
     color: '#FF69B4',
-    fontWeight: 'bold',
+    fontWeight: '600',
+    fontSize: 16,
   },
-
-  // Request Cards / Close Friends
   requestCard: {
-    width: 120,
-    backgroundColor: 'rgba(255,255,255,0.4)',
-    borderRadius: 10,
-    padding: 10,
-    marginRight: 10,
+    width: 130,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    borderRadius: 15,
+    padding: 12,
+    marginRight: 12,
     alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 3,
   },
   requestAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginBottom: 5,
-    backgroundColor: '#FFF',
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    marginBottom: 8,
+    backgroundColor: '#fff',
   },
   requestName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 6,
+    marginBottom: 8,
     textAlign: 'center',
   },
   requestButtons: {
@@ -610,17 +536,17 @@ const styles = StyleSheet.create({
   },
   acceptButton: {
     flex: 1,
-    backgroundColor: '#6BFFB4',
+    backgroundColor: '#C8FACC',
     paddingVertical: 6,
-    borderRadius: 6,
+    borderRadius: 8,
     marginRight: 5,
     alignItems: 'center',
   },
   declineButton: {
     flex: 1,
-    backgroundColor: '#FF6B6B',
+    backgroundColor: '#FFC0C0',
     paddingVertical: 6,
-    borderRadius: 6,
+    borderRadius: 8,
     marginLeft: 5,
     alignItems: 'center',
   },
@@ -628,117 +554,148 @@ const styles = StyleSheet.create({
     color: '#333',
     fontWeight: 'bold',
   },
-
-  // Messages
   messageItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.5)',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 10,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    padding: 15,
+    borderRadius: 15,
+    marginBottom: 12,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 3,
   },
   avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#FFF',
+    width: 55,
+    height: 55,
+    borderRadius: 28,
+    backgroundColor: '#fff',
+  },
+  messageContent: {
+    marginLeft: 15,
+    flex: 1,
   },
   messageName: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#333',
-    marginBottom: 2,
+    marginBottom: 3,
   },
   messageText: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#666',
   },
   messageTime: {
     color: '#666',
-    fontSize: 12,
+    fontSize: 13,
     marginLeft: 'auto',
   },
-
-  // Chat Detail
   chatHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.6)',
-    paddingVertical: 15,
-    borderRadius: 10,
-    marginBottom: 10,
-    position: 'relative',
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingVertical: 18,
+    borderRadius: 15,
+    marginBottom: 12,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 3,
   },
   backButton: {
     position: 'absolute',
-    left: 15,
-    padding: 5,
+    left: 20,
+    padding: 8,
   },
   backButtonText: {
     color: '#333',
     fontWeight: '600',
-    fontSize: 16,
+    fontSize: 17,
   },
   chatHeaderText: {
     flex: 1,
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#333',
     textAlign: 'center',
   },
   chatList: {
     flex: 1,
-    marginBottom: 10,
+    marginBottom: 15,
   },
   chatBubble: {
     maxWidth: '75%',
-    padding: 10,
-    borderRadius: 12,
+    padding: 12,
+    borderRadius: 15,
     marginBottom: 10,
   },
   myMessage: {
-    backgroundColor: '#FFF',
+    backgroundColor: '#fff',
     alignSelf: 'flex-end',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
   },
   theirMessage: {
-    backgroundColor: 'rgba(255,255,255,0.4)',
+    backgroundColor: 'rgba(255,255,255,0.9)',
     alignSelf: 'flex-start',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
   },
   chatBubbleText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#333',
   },
   chatBubbleTime: {
-    fontSize: 10,
+    fontSize: 11,
     color: '#666',
     marginTop: 5,
     textAlign: 'right',
   },
-
-  // Message Input
   inputContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.6)',
-    borderRadius: 25,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 30,
     alignItems: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
     marginBottom: 20,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 3,
   },
   textInput: {
     flex: 1,
     padding: 10,
     color: '#333',
+    fontSize: 16,
   },
   sendButton: {
-    backgroundColor: '#FFF',
+    backgroundColor: '#fff',
     borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 15,
-    marginLeft: 5,
+    marginLeft: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
   },
   sendButtonText: {
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#FF69B4',
+    fontSize: 16,
   },
 });
+
