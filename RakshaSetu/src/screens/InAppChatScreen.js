@@ -32,15 +32,12 @@ import {
   deleteDoc,
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getAuth } from 'firebase/auth';
 import { db } from '../../config/firebaseConfig';
 
-// Initialize Firebase Storage
+// Initialize Firebase Storage and Auth
 const storage = getStorage();
-
-// Replace these with your auth user's actual data
-const CURRENT_USER_ID = 'CURRENT_USER_ID';
-const CURRENT_USER_NAME = 'My Name';
-const CURRENT_USER_IMAGE = 'https://example.com/my-default.png';
+const auth = getAuth();
 
 const ChatBubble = ({ item, onLongPress }) => {
   return (
@@ -76,6 +73,7 @@ const InAppChatScreen = () => {
   // ----------------------------
   // STATES
   // ----------------------------
+  const [user, setUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -97,12 +95,31 @@ const InAppChatScreen = () => {
   const chatListRef = useRef(null);
   const searchTimeoutRef = useRef(null);
 
-  const currentUserId = CURRENT_USER_ID;
+  // ----------------------------
+  // GET CURRENT USER FROM AUTH
+  // ----------------------------
+  useEffect(() => {
+    const unsubscribeAuth = auth.onAuthStateChanged((currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+      } else {
+        // Handle user not being signed in as needed
+        setError('User not authenticated');
+      }
+    });
+    return () => unsubscribeAuth();
+  }, []);
+
+  // Use authenticated user's data or fallback defaults
+  const currentUserId = user?.uid;
+  const currentUserName = user?.displayName || 'My Name';
+  const currentUserImage = user?.photoURL || 'https://example.com/my-default.png';
 
   // ----------------------------
   // FETCH DATA ON MOUNT
   // ----------------------------
   useEffect(() => {
+    if (!currentUserId) return;
     const closeFriendsRef = collection(db, 'users', currentUserId, 'closeFriends');
     const unsubscribe = onSnapshot(
       closeFriendsRef,
@@ -120,6 +137,7 @@ const InAppChatScreen = () => {
   }, [currentUserId]);
 
   useEffect(() => {
+    if (!currentUserId) return;
     const requestsRef = collection(db, 'requests');
     const q = query(
       requestsRef,
@@ -142,6 +160,7 @@ const InAppChatScreen = () => {
   }, [currentUserId]);
 
   useEffect(() => {
+    if (!currentUserId) return;
     const messagesRef = collection(db, 'threads');
     const q = query(messagesRef, where('participants', 'array-contains', currentUserId));
     const unsubscribe = onSnapshot(
@@ -229,8 +248,8 @@ const InAppChatScreen = () => {
           },
           {
             id: requestItem.toUserId,
-            name: CURRENT_USER_NAME,
-            image: CURRENT_USER_IMAGE,
+            name: currentUserName,
+            image: currentUserImage,
           },
         ],
       };
@@ -477,7 +496,7 @@ const InAppChatScreen = () => {
           lastMessage: '',
           lastTimestamp: serverTimestamp(),
           userData: [
-            { id: currentUserId, name: CURRENT_USER_NAME, image: CURRENT_USER_IMAGE },
+            { id: currentUserId, name: currentUserName, image: currentUserImage },
             { id: profile.id, name: profileName, image: profileImage },
           ],
         };
