@@ -10,8 +10,8 @@ import {
   Platform,
   Modal,
   Dimensions,
-  Share,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -23,10 +23,11 @@ const formatDate = (dateString) => {
   const date = new Date(dateString);
   return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 };
-const calculatePercentage = (spent, budget) => Math.min((spent / budget) * 100, 100);
+const calculatePercentage = (spent, budget) =>
+  Math.min((spent / budget) * 100, 100);
 
 // Category Card Component with inline budget editing
-const CategoryCard = ({ category, onUpdateBudget }) => {
+const CategoryCard = ({ category, onUpdateBudget, computedSpent }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedBudget, setEditedBudget] = useState(category.budget.toString());
 
@@ -60,7 +61,7 @@ const CategoryCard = ({ category, onUpdateBudget }) => {
         ) : (
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={styles.categoryAmount}>
-              {formatCurrency(category.spent)} / {formatCurrency(category.budget)}
+              {formatCurrency(computedSpent)} / {formatCurrency(category.budget)}
             </Text>
             <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.iconButton}>
               <FontAwesome5 name="edit" size={16} color="#8A2BE2" />
@@ -73,8 +74,9 @@ const CategoryCard = ({ category, onUpdateBudget }) => {
           style={[
             styles.progressBar,
             {
-              width: `${calculatePercentage(category.spent, category.budget)}%`,
-              backgroundColor: category.spent > category.budget ? '#FF6B6B' : category.color,
+              width: `${calculatePercentage(computedSpent, category.budget)}%`,
+              backgroundColor:
+                computedSpent > category.budget ? '#FF6B6B' : category.color,
             },
           ]}
         />
@@ -200,8 +202,7 @@ const RecommendationCard = ({ title, text, buttonText, onPress }) => (
   </View>
 );
 
-// Transaction Modal Component with KeyboardAvoidingView
-// Modified to support both add and edit modes (if editingTransaction is provided)
+// Transaction Modal Component with KeyboardAvoidingView (supports both add and edit modes)
 const TransactionModal = ({
   visible,
   onClose,
@@ -232,7 +233,10 @@ const TransactionModal = ({
 
   return (
     <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -281,7 +285,9 @@ const TransactionModal = ({
               </View>
             </View>
             <TouchableOpacity style={styles.addTransactionButton} onPress={handleSave}>
-              <Text style={styles.addTransactionButtonText}>{isEditMode ? 'Update Transaction' : 'Add Transaction'}</Text>
+              <Text style={styles.addTransactionButtonText}>
+                {isEditMode ? 'Update Transaction' : 'Add Transaction'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -330,7 +336,10 @@ const GoalModal = ({ visible, onClose, onAddGoal }) => {
 
   return (
     <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -387,16 +396,16 @@ const GoalModal = ({ visible, onClose, onAddGoal }) => {
   );
 };
 
-// Main BudgetToolScreen Component
+// Main BudgetToolScreen Component with AsyncStorage integration
 const BudgetToolScreen = () => {
   // Data States
   const [categories, setCategories] = useState([
-    { id: '1', name: 'Housing', budget: 30000, spent: 28000, color: '#FF6B6B', icon: 'home' },
-    { id: '2', name: 'Groceries', budget: 10000, spent: 8500, color: '#4ECDC4', icon: 'shopping-basket' },
-    { id: '3', name: 'Transport', budget: 5000, spent: 4500, color: '#FFD166', icon: 'car' },
-    { id: '4', name: 'Healthcare', budget: 4000, spent: 3200, color: '#6B5CA5', icon: 'heartbeat' },
-    { id: '5', name: 'Childcare', budget: 8000, spent: 8000, color: '#FF9F1C', icon: 'child' },
-    { id: '6', name: 'Savings', budget: 10000, spent: 10000, color: '#2EC4B6', icon: 'piggy-bank' },
+    { id: '1', name: 'Housing', budget: 30000, color: '#FF6B6B', icon: 'home' },
+    { id: '2', name: 'Groceries', budget: 10000, color: '#4ECDC4', icon: 'shopping-basket' },
+    { id: '3', name: 'Transport', budget: 5000, color: '#FFD166', icon: 'car' },
+    { id: '4', name: 'Healthcare', budget: 4000, color: '#6B5CA5', icon: 'heartbeat' },
+    { id: '5', name: 'Childcare', budget: 8000, color: '#FF9F1C', icon: 'child' },
+    { id: '6', name: 'Savings', budget: 10000, color: '#2EC4B6', icon: 'piggy-bank' },
   ]);
 
   const [transactions, setTransactions] = useState([
@@ -435,22 +444,81 @@ const BudgetToolScreen = () => {
     category: '',
   });
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
-  // New state for viewing all transactions modal
   const [allTransactionsVisible, setAllTransactionsVisible] = useState(false);
-  // New state for editing a transaction
   const [editingTransaction, setEditingTransaction] = useState(null);
-  // New states for month filtering & historical navigation
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth());
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
 
-  // Calculate Totals (overall)
+  // AsyncStorage: Load data on mount
+  React.useEffect(() => {
+    const loadData = async () => {
+      try {
+        const storedTransactions = await AsyncStorage.getItem('@transactions');
+        const storedCategories = await AsyncStorage.getItem('@categories');
+        const storedGoals = await AsyncStorage.getItem('@goals');
+        if (storedTransactions) setTransactions(JSON.parse(storedTransactions));
+        if (storedCategories) setCategories(JSON.parse(storedCategories));
+        if (storedGoals) setGoals(JSON.parse(storedGoals));
+      } catch (error) {
+        console.error('Error loading data', error);
+      }
+    };
+    loadData();
+  }, []);
+
+  // Save transactions to AsyncStorage whenever they change
+  React.useEffect(() => {
+    const saveTransactions = async () => {
+      try {
+        await AsyncStorage.setItem('@transactions', JSON.stringify(transactions));
+      } catch (error) {
+        console.error('Error saving transactions', error);
+      }
+    };
+    saveTransactions();
+  }, [transactions]);
+
+  // Save categories to AsyncStorage whenever they change
+  React.useEffect(() => {
+    const saveCategories = async () => {
+      try {
+        await AsyncStorage.setItem('@categories', JSON.stringify(categories));
+      } catch (error) {
+        console.error('Error saving categories', error);
+      }
+    };
+    saveCategories();
+  }, [categories]);
+
+  // Save goals to AsyncStorage whenever they change
+  React.useEffect(() => {
+    const saveGoals = async () => {
+      try {
+        await AsyncStorage.setItem('@goals', JSON.stringify(goals));
+      } catch (error) {
+        console.error('Error saving goals', error);
+      }
+    };
+    saveGoals();
+  }, [goals]);
+
+  // Compute category spending based on transactions
+  const computedCategories = categories.map((cat) => {
+    const spent = transactions
+      .filter((txn) => txn.category === cat.id)
+      .reduce((sum, txn) => sum + txn.amount, 0);
+    return { ...cat, spent };
+  });
+
+  // Overall totals
   const totalBudget = categories.reduce((sum, cat) => sum + cat.budget, 0);
-  const totalSpent = categories.reduce((sum, cat) => sum + cat.spent, 0);
+  const totalSpent = computedCategories.reduce((sum, cat) => sum + cat.spent, 0);
   const remainingBudget = totalBudget - totalSpent;
 
-  // Helper: Get category by id
-  const getCategoryById = (id) => categories.find((cat) => cat.id === id) || {};
+  // Helper: Get category by id from computedCategories
+  const getCategoryById = (id) =>
+    computedCategories.find((cat) => cat.id === id) || {};
 
   // Filter transactions for selected month and year
   const filteredTransactions = transactions.filter((txn) => {
@@ -460,25 +528,21 @@ const BudgetToolScreen = () => {
 
   // Monthly summaries
   const monthlySpent = filteredTransactions.reduce((sum, txn) => sum + txn.amount, 0);
-  // For monthly budget, assume each category's budget applies every month.
   const monthlyBudget = categories.reduce((sum, cat) => sum + cat.budget, 0);
   const monthlyRemaining = monthlyBudget - monthlySpent;
 
-  // Data for PieChart (category breakdown for filtered transactions)
-  const pieData = categories.map((cat) => {
-    const catTotal = filteredTransactions
+  // PieChart data using computedCategories (all categories included)
+  const pieData = computedCategories.map((cat) => ({
+    name: cat.name,
+    amount: transactions
       .filter((txn) => txn.category === cat.id)
-      .reduce((sum, txn) => sum + txn.amount, 0);
-    return {
-      name: cat.name,
-      amount: catTotal,
-      color: cat.color,
-      legendFontColor: '#333',
-      legendFontSize: 12,
-    };
-  }).filter(item => item.amount > 0);
+      .reduce((sum, txn) => sum + txn.amount, 0),
+    color: cat.color,
+    legendFontColor: '#333',
+    legendFontSize: 12,
+  }));
 
-  // Function to add a new transaction (if not editing)
+  // Function to add a new transaction
   const addTransaction = () => {
     if (!newTransaction.description || !newTransaction.amount || !selectedCategoryId) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -497,23 +561,16 @@ const BudgetToolScreen = () => {
       date: new Date().toISOString().split('T')[0],
     };
     setTransactions([transaction, ...transactions]);
-    setCategories(
-      categories.map((cat) =>
-        cat.id === selectedCategoryId ? { ...cat, spent: cat.spent + amount } : cat
-      )
-    );
     setNewTransaction({ description: '', amount: '', category: '' });
     setSelectedCategoryId(null);
     setModalVisible(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
-  // Function to update a transaction (edit mode)
+  // Function to update a transaction
   const updateTransaction = (updatedTxn) => {
     setTransactions(
-      transactions.map((txn) =>
-        txn.id === updatedTxn.id ? updatedTxn : txn
-      )
+      transactions.map((txn) => (txn.id === updatedTxn.id ? updatedTxn : txn))
     );
     setEditingTransaction(null);
     setModalVisible(false);
@@ -522,34 +579,14 @@ const BudgetToolScreen = () => {
 
   // Function to delete a transaction
   const deleteTransaction = (txnId) => {
-    const txnToDelete = transactions.find(txn => txn.id === txnId);
-    if (txnToDelete) {
-      setTransactions(transactions.filter(txn => txn.id !== txnId));
-      setCategories(
-        categories.map((cat) =>
-          cat.id === txnToDelete.category ? { ...cat, spent: cat.spent - txnToDelete.amount } : cat
-        )
-      );
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }
+    setTransactions(transactions.filter((txn) => txn.id !== txnId));
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
-  // Use effect to recalculate category spent amounts from transactions
-  useEffect(() => {
-    setCategories(prevCategories =>
-      prevCategories.map(cat => {
-        const newSpent = transactions
-          .filter(txn => txn.category === cat.id)
-          .reduce((sum, txn) => sum + txn.amount, 0);
-        if (newSpent !== cat.spent) {
-          return { ...cat, spent: newSpent };
-        }
-        return cat;
-      })
-    );
-  }, [transactions]);
+  // Month navigation names
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-  // Function to update a goal's progress (current & target)
+  // Function to update a goal's progress
   const updateGoal = (goalId, newCurrent, newTarget) => {
     setGoals(
       goals.map((goal) =>
@@ -562,24 +599,6 @@ const BudgetToolScreen = () => {
   const addGoal = (newGoal) => {
     setGoals([newGoal, ...goals]);
   };
-
-  // Function to export monthly report as CSV and share
-  const handleExportReport = async () => {
-    const header = 'ID,Description,Amount,Category,Date\n';
-    const rows = filteredTransactions.map(txn => {
-      const cat = getCategoryById(txn.category);
-      return `${txn.id},"${txn.description}",${txn.amount},"${cat.name}",${txn.date}`;
-    }).join('\n');
-    const csvString = header + rows;
-    try {
-      await Share.share({ message: csvString });
-    } catch (error) {
-      console.error('Error sharing report:', error);
-    }
-  };
-
-  // Functions to handle month navigation
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   return (
     <KeyboardAvoidingView
@@ -639,7 +658,7 @@ const BudgetToolScreen = () => {
       <ScrollView style={styles.content}>
         {activeTab === 'budget' && (
           <>
-            {/* Moved and enhanced monthly data section */}
+            {/* Monthly Data Section */}
             <View style={styles.monthFilterContainer}>
               <TouchableOpacity onPress={() => setSelectedYear(selectedYear - 1)}>
                 <Ionicons name="chevron-back-outline" size={24} color="#8A2BE2" />
@@ -654,7 +673,9 @@ const BudgetToolScreen = () => {
                     ]}
                     onPress={() => setSelectedMonth(index)}
                   >
-                    <Text style={[styles.monthText, selectedMonth === index && styles.activeMonthText]}>{m}</Text>
+                    <Text style={[styles.monthText, selectedMonth === index && styles.activeMonthText]}>
+                      {m}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -701,19 +722,17 @@ const BudgetToolScreen = () => {
                   absolute
                 />
               </View>
-              <TouchableOpacity style={styles.exportButton} onPress={handleExportReport}>
-                <Text style={styles.exportButtonText}>Export Report</Text>
-              </TouchableOpacity>
             </View>
 
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Categories</Text>
             </View>
             <View style={styles.categoriesContainer}>
-              {categories.map((cat) => (
+              {computedCategories.map((cat) => (
                 <CategoryCard
                   key={cat.id}
                   category={cat}
+                  computedSpent={cat.spent}
                   onUpdateBudget={(id, newBudget) => {
                     setCategories(
                       categories.map((cat) =>
@@ -780,7 +799,7 @@ const BudgetToolScreen = () => {
             </View>
             <View style={styles.breakdownCard}>
               <Text style={styles.breakdownTitle}>Top 3 Expenses</Text>
-              {categories
+              {computedCategories
                 .sort((a, b) => b.spent - a.spent)
                 .slice(0, 3)
                 .map((cat) => (
@@ -798,19 +817,19 @@ const BudgetToolScreen = () => {
               <View style={styles.breakdownStats}>
                 <View style={styles.statItem}>
                   <Text style={styles.statValue}>
-                    {Math.round((categories.find(c => c.name === 'Savings')?.spent || 0) / totalSpent * 100)}%
+                    {Math.round((computedCategories.find(c => c.name === 'Savings')?.spent || 0) / totalSpent * 100)}%
                   </Text>
                   <Text style={styles.statLabel}>Savings Rate</Text>
                 </View>
                 <View style={styles.statItem}>
                   <Text style={styles.statValue}>
-                    {Math.round((categories.find(c => c.name === 'Housing')?.spent || 0) / totalSpent * 100)}%
+                    {Math.round((computedCategories.find(c => c.name === 'Housing')?.spent || 0) / totalSpent * 100)}%
                   </Text>
                   <Text style={styles.statLabel}>Housing %</Text>
                 </View>
                 <View style={styles.statItem}>
                   <Text style={styles.statValue}>
-                    {Math.round((categories.find(c => c.name === 'Childcare')?.spent || 0) / totalSpent * 100)}%
+                    {Math.round((computedCategories.find(c => c.name === 'Childcare')?.spent || 0) / totalSpent * 100)}%
                   </Text>
                   <Text style={styles.statLabel}>Childcare %</Text>
                 </View>
@@ -977,14 +996,6 @@ const styles = StyleSheet.create({
   },
   monthlySummaryTitle: { fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 10 },
   chartContainer: { marginTop: 10, alignItems: 'center' },
-  exportButton: {
-    backgroundColor: '#8A2BE2',
-    paddingVertical: 10,
-    borderRadius: 6,
-    marginTop: 10,
-    alignItems: 'center',
-  },
-  exportButtonText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
   tabContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -1011,7 +1022,13 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 14, color: '#666', marginLeft: 5 },
   activeTabText: { color: '#8A2BE2', fontWeight: 'bold' },
   content: { flex: 1, padding: 20 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, marginBottom: 15 },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 15,
+  },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333' },
   addButton: {
     backgroundColor: '#8A2BE2',
@@ -1039,10 +1056,24 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   categoryHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  categoryIcon: { height: 32, width: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
+  categoryIcon: {
+    height: 32,
+    width: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
   categoryName: { flex: 1, fontSize: 16, fontWeight: '600', color: '#333' },
   categoryAmount: { fontSize: 14, color: '#666' },
-  editInput: { borderBottomWidth: 1, width: 80, textAlign: 'right', marginRight: 5, fontSize: 14, color: '#333' },
+  editInput: {
+    borderBottomWidth: 1,
+    width: 80,
+    textAlign: 'right',
+    marginRight: 5,
+    fontSize: 14,
+    color: '#333',
+  },
   iconButton: { padding: 4 },
   progressBarContainer: { height: 8, backgroundColor: '#EAEAEA', borderRadius: 4, overflow: 'hidden' },
   progressBar: { height: '100%', borderRadius: 4 },
@@ -1061,7 +1092,14 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   transactionLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  transactionIcon: { height: 28, width: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
+  transactionIcon: {
+    height: 28,
+    width: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
   transactionDetails: { flex: 1 },
   transactionDescription: { fontSize: 15, fontWeight: '500', color: '#333' },
   transactionCategory: { fontSize: 13, color: '#666', marginTop: 2 },
@@ -1085,7 +1123,15 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  insightIconContainer: { height: 36, width: 36, borderRadius: 18, backgroundColor: 'rgba(138,43,226,0.1)', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+  insightIconContainer: {
+    height: 36,
+    width: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(138,43,226,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
   insightText: { flex: 1, fontSize: 14, lineHeight: 20, color: '#333' },
   breakdownCard: {
     backgroundColor: '#FFF',
