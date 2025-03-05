@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,12 +10,16 @@ import {
   Platform,
   Modal,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { PieChart } from 'react-native-chart-kit';
+
+const { width } = Dimensions.get('window');
+const themeColor = '#ff5f96';
 
 // Utility Functions
 const formatCurrency = (amount) => `₹${amount.toFixed(2)}`;
@@ -64,7 +68,7 @@ const CategoryCard = ({ category, onUpdateBudget, computedSpent }) => {
               {formatCurrency(computedSpent)} / {formatCurrency(category.budget)}
             </Text>
             <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.iconButton}>
-              <FontAwesome5 name="edit" size={16} color="#8A2BE2" />
+              <FontAwesome5 name="edit" size={16} color={themeColor} />
             </TouchableOpacity>
           </View>
         )}
@@ -102,7 +106,7 @@ const TransactionItem = ({ transaction, category, onEdit, onDelete }) => (
       <Text style={styles.transactionDate}>{formatDate(transaction.date)}</Text>
       <View style={{ flexDirection: 'row', marginTop: 4 }}>
         <TouchableOpacity onPress={() => onEdit(transaction)}>
-          <Ionicons name="create-outline" size={16} color="#8A2BE2" style={{ marginRight: 8 }} />
+          <Ionicons name="create-outline" size={16} color={themeColor} style={{ marginRight: 8 }} />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => onDelete(transaction.id)}>
           <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
@@ -116,7 +120,7 @@ const TransactionItem = ({ transaction, category, onEdit, onDelete }) => (
 const InsightCard = ({ insight }) => (
   <View style={styles.insightCard}>
     <View style={styles.insightIconContainer}>
-      <FontAwesome5 name="lightbulb" size={18} color="#8A2BE2" />
+      <FontAwesome5 name="lightbulb" size={18} color={themeColor} />
     </View>
     <Text style={styles.insightText}>{insight}</Text>
   </View>
@@ -396,9 +400,8 @@ const GoalModal = ({ visible, onClose, onAddGoal }) => {
   );
 };
 
-// Main BudgetToolScreen Component with AsyncStorage integration
+// Main BudgetToolScreen Component with AsyncStorage integration and dynamic monthly pie chart data
 const BudgetToolScreen = () => {
-  // Data States
   const [categories, setCategories] = useState([
     { id: '1', name: 'Housing', budget: 30000, color: '#FF6B6B', icon: 'home' },
     { id: '2', name: 'Groceries', budget: 10000, color: '#4ECDC4', icon: 'shopping-basket' },
@@ -446,12 +449,14 @@ const BudgetToolScreen = () => {
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [allTransactionsVisible, setAllTransactionsVisible] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
+
+  // Month & Year filter states
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth());
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
 
-  // AsyncStorage: Load data on mount
-  React.useEffect(() => {
+  // Load data from AsyncStorage on mount
+  useEffect(() => {
     const loadData = async () => {
       try {
         const storedTransactions = await AsyncStorage.getItem('@transactions');
@@ -467,8 +472,8 @@ const BudgetToolScreen = () => {
     loadData();
   }, []);
 
-  // Save transactions to AsyncStorage whenever they change
-  React.useEffect(() => {
+  // Save transactions to AsyncStorage
+  useEffect(() => {
     const saveTransactions = async () => {
       try {
         await AsyncStorage.setItem('@transactions', JSON.stringify(transactions));
@@ -479,8 +484,8 @@ const BudgetToolScreen = () => {
     saveTransactions();
   }, [transactions]);
 
-  // Save categories to AsyncStorage whenever they change
-  React.useEffect(() => {
+  // Save categories to AsyncStorage
+  useEffect(() => {
     const saveCategories = async () => {
       try {
         await AsyncStorage.setItem('@categories', JSON.stringify(categories));
@@ -491,8 +496,8 @@ const BudgetToolScreen = () => {
     saveCategories();
   }, [categories]);
 
-  // Save goals to AsyncStorage whenever they change
-  React.useEffect(() => {
+  // Save goals to AsyncStorage
+  useEffect(() => {
     const saveGoals = async () => {
       try {
         await AsyncStorage.setItem('@goals', JSON.stringify(goals));
@@ -503,7 +508,7 @@ const BudgetToolScreen = () => {
     saveGoals();
   }, [goals]);
 
-  // Compute category spending based on transactions
+  // Compute category spending based on all transactions
   const computedCategories = categories.map((cat) => {
     const spent = transactions
       .filter((txn) => txn.category === cat.id)
@@ -531,16 +536,21 @@ const BudgetToolScreen = () => {
   const monthlyBudget = categories.reduce((sum, cat) => sum + cat.budget, 0);
   const monthlyRemaining = monthlyBudget - monthlySpent;
 
-  // PieChart data using computedCategories (all categories included)
-  const pieData = computedCategories.map((cat) => ({
-    name: cat.name,
-    amount: transactions
-      .filter((txn) => txn.category === cat.id)
-      .reduce((sum, txn) => sum + txn.amount, 0),
-    color: cat.color,
-    legendFontColor: '#333',
-    legendFontSize: 12,
-  }));
+  // PieChart data based on transactions for the selected month/year
+  const pieData = useMemo(() => {
+    return categories.map((cat) => {
+      const monthlySpentForCat = filteredTransactions
+        .filter((txn) => txn.category === cat.id)
+        .reduce((sum, txn) => sum + txn.amount, 0);
+      return {
+        name: cat.name,
+        amount: monthlySpentForCat,
+        color: cat.color,
+        legendFontColor: '#333',
+        legendFontSize: 12,
+      };
+    }).filter(item => item.amount > 0);
+  }, [categories, filteredTransactions]);
 
   // Function to add a new transaction
   const addTransaction = () => {
@@ -601,11 +611,8 @@ const BudgetToolScreen = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <LinearGradient colors={['#8A2BE2', '#4B0082']} style={styles.headerGradient}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <LinearGradient colors={[themeColor, themeColor]} style={styles.headerGradient}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Mahila Arthik Dashboard</Text>
           <View style={styles.summaryContainer}>
@@ -636,21 +643,21 @@ const BudgetToolScreen = () => {
           style={[styles.tabButton, activeTab === 'budget' && styles.activeTabButton]}
           onPress={() => setActiveTab('budget')}
         >
-          <FontAwesome5 name="coins" size={16} color={activeTab === 'budget' ? '#8A2BE2' : '#666'} />
+          <FontAwesome5 name="coins" size={16} color={activeTab === 'budget' ? themeColor : '#666'} />
           <Text style={[styles.tabText, activeTab === 'budget' && styles.activeTabText]}>Budget</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tabButton, activeTab === 'insights' && styles.activeTabButton]}
           onPress={() => setActiveTab('insights')}
         >
-          <FontAwesome5 name="lightbulb" size={16} color={activeTab === 'insights' ? '#8A2BE2' : '#666'} />
+          <FontAwesome5 name="lightbulb" size={16} color={activeTab === 'insights' ? themeColor : '#666'} />
           <Text style={[styles.tabText, activeTab === 'insights' && styles.activeTabText]}>Insights</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tabButton, activeTab === 'goals' && styles.activeTabButton]}
           onPress={() => setActiveTab('goals')}
         >
-          <FontAwesome5 name="flag" size={16} color={activeTab === 'goals' ? '#8A2BE2' : '#666'} />
+          <FontAwesome5 name="flag" size={16} color={activeTab === 'goals' ? themeColor : '#666'} />
           <Text style={[styles.tabText, activeTab === 'goals' && styles.activeTabText]}>Goals</Text>
         </TouchableOpacity>
       </View>
@@ -661,26 +668,21 @@ const BudgetToolScreen = () => {
             {/* Monthly Data Section */}
             <View style={styles.monthFilterContainer}>
               <TouchableOpacity onPress={() => setSelectedYear(selectedYear - 1)}>
-                <Ionicons name="chevron-back-outline" size={24} color="#8A2BE2" />
+                <Ionicons name="chevron-back-outline" size={24} color={themeColor} />
               </TouchableOpacity>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.monthScroll}>
                 {monthNames.map((m, index) => (
                   <TouchableOpacity
                     key={index}
-                    style={[
-                      styles.monthButton,
-                      selectedMonth === index && styles.activeMonthButton,
-                    ]}
+                    style={[styles.monthButton, selectedMonth === index && styles.activeMonthButton]}
                     onPress={() => setSelectedMonth(index)}
                   >
-                    <Text style={[styles.monthText, selectedMonth === index && styles.activeMonthText]}>
-                      {m}
-                    </Text>
+                    <Text style={[styles.monthText, selectedMonth === index && styles.activeMonthText]}>{m}</Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
               <TouchableOpacity onPress={() => setSelectedYear(selectedYear + 1)}>
-                <Ionicons name="chevron-forward-outline" size={24} color="#8A2BE2" />
+                <Ionicons name="chevron-forward-outline" size={24} color={themeColor} />
               </TouchableOpacity>
             </View>
 
@@ -735,9 +737,7 @@ const BudgetToolScreen = () => {
                   computedSpent={cat.spent}
                   onUpdateBudget={(id, newBudget) => {
                     setCategories(
-                      categories.map((cat) =>
-                        cat.id === id ? { ...cat, budget: newBudget } : cat
-                      )
+                      categories.map((cat) => (cat.id === id ? { ...cat, budget: newBudget } : cat))
                     );
                   }}
                 />
@@ -967,10 +967,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 10,
   },
-  monthScroll: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+  monthScroll: { flexDirection: 'row', alignItems: 'center' },
   monthButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -978,7 +975,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
     backgroundColor: '#EAEAEA',
   },
-  activeMonthButton: { backgroundColor: '#8A2BE2' },
+  activeMonthButton: { backgroundColor: '#ff5f96' },
   monthText: { color: '#333' },
   activeMonthText: { color: '#FFF', fontWeight: 'bold' },
   monthlySummaryContainer: {
@@ -1018,26 +1015,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
   },
-  activeTabButton: { backgroundColor: 'rgba(138,43,226,0.1)' },
+  activeTabButton: { backgroundColor: 'rgba(255,95,150,0.1)' },
   tabText: { fontSize: 14, color: '#666', marginLeft: 5 },
-  activeTabText: { color: '#8A2BE2', fontWeight: 'bold' },
+  activeTabText: { color: '#ff5f96', fontWeight: 'bold' },
   content: { flex: 1, padding: 20 },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 15,
-  },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, marginBottom: 15 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333' },
   addButton: {
-    backgroundColor: '#8A2BE2',
+    backgroundColor: '#ff5f96',
     borderRadius: 20,
     height: 36,
     width: 36,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#8A2BE2',
+    shadowColor: '#ff5f96',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -1056,24 +1047,10 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   categoryHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  categoryIcon: {
-    height: 32,
-    width: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
+  categoryIcon: { height: 32, width: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   categoryName: { flex: 1, fontSize: 16, fontWeight: '600', color: '#333' },
   categoryAmount: { fontSize: 14, color: '#666' },
-  editInput: {
-    borderBottomWidth: 1,
-    width: 80,
-    textAlign: 'right',
-    marginRight: 5,
-    fontSize: 14,
-    color: '#333',
-  },
+  editInput: { borderBottomWidth: 1, width: 80, textAlign: 'right', marginRight: 5, fontSize: 14, color: '#333' },
   iconButton: { padding: 4 },
   progressBarContainer: { height: 8, backgroundColor: '#EAEAEA', borderRadius: 4, overflow: 'hidden' },
   progressBar: { height: '100%', borderRadius: 4 },
@@ -1092,14 +1069,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   transactionLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  transactionIcon: {
-    height: 28,
-    width: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
+  transactionIcon: { height: 28, width: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   transactionDetails: { flex: 1 },
   transactionDescription: { fontSize: 15, fontWeight: '500', color: '#333' },
   transactionCategory: { fontSize: 13, color: '#666', marginTop: 2 },
@@ -1107,7 +1077,7 @@ const styles = StyleSheet.create({
   transactionAmount: { fontSize: 15, fontWeight: '600', color: '#333' },
   transactionDate: { fontSize: 12, color: '#999', marginTop: 2 },
   viewAllButton: { alignItems: 'center', padding: 12, marginTop: 5, marginBottom: 20 },
-  viewAllText: { fontSize: 14, color: '#8A2BE2', fontWeight: '600' },
+  viewAllText: { fontSize: 14, color: '#ff5f96', fontWeight: '600' },
   bottomSpacer: { height: 40 },
   insightsContainer: { marginBottom: 20 },
   insightCard: {
@@ -1127,7 +1097,7 @@ const styles = StyleSheet.create({
     height: 36,
     width: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(138,43,226,0.1)',
+    backgroundColor: 'rgba(255,95,150,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
@@ -1153,7 +1123,7 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: '#EAEAEA', marginVertical: 15 },
   breakdownStats: { flexDirection: 'row', justifyContent: 'space-between' },
   statItem: { alignItems: 'center', flex: 1 },
-  statValue: { fontSize: 18, fontWeight: 'bold', color: '#8A2BE2', marginBottom: 5 },
+  statValue: { fontSize: 18, fontWeight: 'bold', color: '#ff5f96', marginBottom: 5 },
   statLabel: { fontSize: 12, color: '#666' },
   goalCard: {
     backgroundColor: '#FFF',
@@ -1170,7 +1140,7 @@ const styles = StyleSheet.create({
   goalName: { fontSize: 16, fontWeight: 'bold', color: '#333' },
   editButton: { padding: 5 },
   goalProgressContainer: { height: 8, backgroundColor: '#EAEAEA', borderRadius: 4, overflow: 'hidden', marginBottom: 10 },
-  goalProgressBar: { height: '100%', backgroundColor: '#8A2BE2' },
+  goalProgressBar: { height: '100%', backgroundColor: '#ff5f96' },
   goalDetails: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   goalProgress: { fontSize: 14, color: '#333' },
   goalDeadline: { fontSize: 12, color: '#666' },
@@ -1178,7 +1148,7 @@ const styles = StyleSheet.create({
   goalEditField: { flexDirection: 'row', alignItems: 'center' },
   goalEditLabel: { fontSize: 14, color: '#333', marginRight: 5 },
   goalEditInput: { borderWidth: 1, borderColor: '#DDD', borderRadius: 4, padding: 5, fontSize: 14, width: 80, textAlign: 'center' },
-  goalSaveButton: { backgroundColor: '#2EC4B6', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 4 },
+  goalSaveButton: { backgroundColor: '#ff5f96', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 4 },
   goalSaveText: { color: '#FFF', fontSize: 14, fontWeight: 'bold' },
   recommendationCard: {
     backgroundColor: '#FFF',
@@ -1194,7 +1164,7 @@ const styles = StyleSheet.create({
   recommendationHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   recommendationTitle: { fontSize: 16, fontWeight: 'bold', color: '#333', marginLeft: 10 },
   recommendationText: { fontSize: 14, color: '#333', marginBottom: 10 },
-  recommendationButton: { backgroundColor: '#8A2BE2', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, alignSelf: 'flex-start' },
+  recommendationButton: { backgroundColor: '#ff5f96', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, alignSelf: 'flex-start' },
   recommendationButtonText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   modalContent: { backgroundColor: '#FFF', width: '90%', borderRadius: 12, padding: 20 },
@@ -1208,7 +1178,7 @@ const styles = StyleSheet.create({
   categoryOption: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#DDD', borderRadius: 6, padding: 8, marginRight: 8, marginBottom: 8 },
   categoryOptionIcon: { height: 24, width: 24, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 5 },
   categoryOptionText: { fontSize: 14, color: '#333' },
-  addTransactionButton: { backgroundColor: '#8A2BE2', paddingVertical: 12, borderRadius: 6, alignItems: 'center', marginTop: 10 },
+  addTransactionButton: { backgroundColor: '#ff5f96', paddingVertical: 12, borderRadius: 6, alignItems: 'center', marginTop: 10 },
   addTransactionButtonText: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
   bottomSpacer: { height: 40 },
 });
