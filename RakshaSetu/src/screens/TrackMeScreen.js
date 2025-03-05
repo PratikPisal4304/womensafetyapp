@@ -20,7 +20,8 @@ import PolylineDecoder from '@mapbox/polyline';
 import { Ionicons } from '@expo/vector-icons';
 
 // ============ Google API Key ============
-const GOOGLE_MAPS_API_KEY = 'AIzaSyBzqSJUt0MVs3xFjFWTvLwiyjXwnzbkXok'; // <-- Replace with your actual key
+// Replace with your actual key.
+const GOOGLE_MAPS_API_KEY = 'AIzaSyBzqSJUt0MVs3xFjFWTvLwiyjXwnzbkXok';
 
 // Basic UI constants
 const PINK = '#ff5f96';
@@ -147,7 +148,7 @@ export default function TrackMeScreen() {
     }
   };
 
-  // Toggle map type
+  // Toggle map type (standard, satellite, hybrid, terrain)
   const toggleMapType = () => {
     const types = ['standard', 'satellite', 'hybrid', 'terrain'];
     const currentIndex = types.indexOf(mapType);
@@ -223,7 +224,7 @@ export default function TrackMeScreen() {
   };
 
   // Search function using Geocoding API.
-  // Now: After geocoding, the map animates to the destination and the Safety Assessment Modal is opened.
+  // After geocoding, the map animates to the destination and the Safety Assessment Modal is opened.
   const handleSearch = async (query) => {
     const searchQuery = query || destination;
     if (!searchQuery.trim()) {
@@ -360,7 +361,7 @@ export default function TrackMeScreen() {
       setETA(routeData.legs[0].duration.text);
     }
     // Close modals
-    setRoutesModalVisible(false);
+    setAlternativeModalVisible(false);
     setSafetyModalVisible(false);
   };
 
@@ -423,7 +424,7 @@ export default function TrackMeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Header with current journey data */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Track Me</Text>
         <Text style={styles.headerSubtitle}>
@@ -448,7 +449,28 @@ export default function TrackMeScreen() {
             showsTraffic={showTraffic}
             mapType={mapType}
           >
-            {/* ... [Keep map children the same] ... */}
+            {/* Destination Marker */}
+            {destinationCoord && (
+              <Marker coordinate={destinationCoord}>
+                <Ionicons name="location" size={30} color="#FF6347" />
+              </Marker>
+            )}
+            {/* Render route polyline */}
+            {routeCoords.length > 0 && (
+              <Polyline coordinates={routeCoords} strokeWidth={4} strokeColor={PINK} />
+            )}
+            {/* Nearby Places Markers */}
+            {showNearbyPlaces && nearbyPlaces.map((place) => (
+              <Marker
+                key={place.place_id}
+                coordinate={{
+                  latitude: place.geometry.location.lat,
+                  longitude: place.geometry.location.lng,
+                }}
+              >
+                <Ionicons name="business" size={24} color={PINK} />
+              </Marker>
+            ))}
           </MapView>
         ) : (
           <View style={styles.loadingContainer}>
@@ -489,7 +511,7 @@ export default function TrackMeScreen() {
           </View>
         )}
 
-        {/* Right-side Map Controls */}
+        {/* Top-right Map Controls */}
         <View style={styles.mapControlsContainer}>
           <TouchableOpacity 
             style={styles.mapControlButton}
@@ -507,33 +529,36 @@ export default function TrackMeScreen() {
           
           <TouchableOpacity 
             style={styles.mapControlButton}
-            onPress={cycleNearbyCategory}
+            onPress={() => {
+              cycleNearbyCategory();
+              setShowNearbyPlaces((prev) => !prev);
+              if (!showNearbyPlaces) fetchNearbyPlaces();
+            }}
           >
             <Ionicons name="business" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
 
-        {/* Recenter FAB */}
+        {/* Bottom-right Recenter Button */}
         <TouchableOpacity style={styles.recenterButton} onPress={handleRecenter}>
           <Ionicons name="locate" size={24} color="#fff" />
         </TouchableOpacity>
 
-        {/* Bottom Center Journey Button */}
-        {destinationCoord && routeCoords.length > 1 && (
-          <TouchableOpacity style={styles.journeyButton} onPress={toggleJourney}>
-            <Text style={styles.journeyButtonText}>
-              {journeyStarted ? 'End Journey' : 'Start Journey'}
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        {/* Alternative Routes Button */}
+        {/* Bottom Center Buttons */}
+        {/* Alternative Routes Button placed above the journey button */}
         {alternativeRoutes.length > 0 && (
           <TouchableOpacity 
             style={styles.altRouteButton}
             onPress={() => setAlternativeModalVisible(true)}
           >
             <Text style={styles.altRouteButtonText}>Alternatives</Text>
+          </TouchableOpacity>
+        )}
+        {destinationCoord && routeCoords.length > 1 && (
+          <TouchableOpacity style={styles.journeyButton} onPress={toggleJourney}>
+            <Text style={styles.journeyButtonText}>
+              {journeyStarted ? 'End Journey' : 'Start Journey'}
+            </Text>
           </TouchableOpacity>
         )}
       </View>
@@ -553,7 +578,7 @@ export default function TrackMeScreen() {
                 <Ionicons name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
-            <ScrollView style={styles.safetyContent}>
+            <ScrollView style={styles.modalBody}>
               {directionsSteps.map((step, index) => (
                 <View key={index} style={styles.directionStep}>
                   <Text style={styles.directionStepText}>
@@ -581,7 +606,7 @@ export default function TrackMeScreen() {
                 <Ionicons name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
-            <ScrollView style={styles.safetyContent}>
+            <ScrollView style={styles.modalBody}>
               {alternativeRoutes.map((route, index) => (
                 <TouchableOpacity key={index} style={styles.altRouteItem} onPress={() => selectRouteAndStart(route)}>
                   <Text style={styles.altRouteText}>
@@ -609,7 +634,7 @@ export default function TrackMeScreen() {
                 <Ionicons name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
-            <Image style={{ width: '100%', height: 400 }} source={{ uri: getStreetViewUrl() }} resizeMode="cover" />
+            <Image style={{ width: '100%', height: 400, borderRadius: 10 }} source={{ uri: getStreetViewUrl() }} resizeMode="cover" />
           </View>
         </View>
       </Modal>
@@ -630,7 +655,7 @@ export default function TrackMeScreen() {
               </TouchableOpacity>
             </View>
             {safetyData && (
-              <ScrollView style={styles.safetyContent}>
+              <ScrollView style={styles.modalBody}>
                 <View style={styles.safetyHeaderRow}>
                   <Text style={styles.safetyTitle}>Overall Safety</Text>
                   <SafetyRatingIndicator score={safetyData.safetyScore} />
@@ -687,8 +712,6 @@ export default function TrackMeScreen() {
                   <TouchableOpacity
                     style={styles.safetyButton}
                     onPress={async () => {
-                      // When "Show Directions" is pressed, fetch routes for driving mode,
-                      // then close the safety modal and open the directions modal.
                       await fetchRoute('driving');
                       setSafetyModalVisible(false);
                       setDirectionsModalVisible(true);
@@ -699,7 +722,6 @@ export default function TrackMeScreen() {
                   <TouchableOpacity
                     style={styles.safetyButton}
                     onPress={() => {
-                      // Start journey immediately.
                       setSafetyModalVisible(false);
                       startJourney();
                     }}
@@ -720,14 +742,12 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: PINK },
   header: {
     paddingTop: 50,
-    paddingBottom: 20,
+    paddingBottom: 15,
     paddingHorizontal: 20,
     backgroundColor: PINK,
   },
-  // Header
-  headerTitle: { fontSize: 26, fontWeight: '700', color: '#fff', marginBottom: 5 },
+  headerTitle: { fontSize: 26, fontWeight: '700', color: '#fff', marginBottom: 3 },
   headerSubtitle: { fontSize: 14, color: '#fff' },
-  // Map Section
   mapContainer: {
     flex: 1,
     backgroundColor: '#fff',
@@ -736,24 +756,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   map: { width: '100%', height: '100%' },
-  searchCard: {
-    position: 'absolute',
-    top: 20,
-    alignSelf: 'center',
-    width: width * 0.9,
-    backgroundColor: '#fff',
-    borderRadius: 30,
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  // Search Card
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { fontSize: 16, color: '#333' },
   searchCard: {
     position: 'absolute',
     top: 20,
@@ -773,9 +777,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-  searchButton: { backgroundColor: '#FF69B4', paddingHorizontal: 15, paddingVertical: 10, borderRadius: 10, marginLeft: 5 },
-  searchButtonText: { color: '#fff', fontWeight: '600' },
-  // Suggestions
   suggestionsContainer: {
     position: 'absolute',
     top: 80,
@@ -789,11 +790,11 @@ const styles = StyleSheet.create({
   },
   suggestionItem: { padding: 10, borderBottomWidth: 0.5, borderBottomColor: '#ccc' },
   suggestionText: { fontSize: 14, color: '#333' },
-
+  // Top-right map controls for traffic, map type, and nearby places
   mapControlsContainer: {
     position: 'absolute',
-    bottom: 120,
-    right: 20,
+    top: 80,
+    right: 10,
     backgroundColor: 'rgba(255,105,180,0.9)',
     borderRadius: 25,
     padding: 10,
@@ -809,9 +810,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 3,
   },
+  // Bottom-right recenter button
   recenterButton: {
     position: 'absolute',
-    bottom: 60,
+    bottom: 80,
     right: 20,
     width: 50,
     height: 50,
@@ -821,49 +823,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 5,
   },
-  // Bottom Controls Container
-  bottomControlsContainer: {
-    position: 'absolute',
-    bottom: 10,
-    left: 10,
-    right: 10,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-evenly',
-    backgroundColor: 'rgba(255,105,180,0.9)',
-    paddingVertical: 10,
-    borderRadius: 30,
-  },
-  controlButton: {
-    alignItems: 'center',
-    margin: 5,
-  },
-  controlButtonText: { color: '#fff', fontSize: 12, marginTop: 2 },
-  // Journey Button
+  // Bottom center journey button
   journeyButton: {
     position: 'absolute',
-    bottom: 60,
+    bottom: 50,
     alignSelf: 'center',
     backgroundColor: PINK,
-    paddingVertical: 30,
-    paddingHorizontal: 40,
+    paddingVertical: 15,
+    paddingHorizontal: 30,
     borderRadius: 25,
     elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
   },
   journeyButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
-  // Alternative Routes Button
+  // Alternative Routes Button placed above the journey button
   altRouteButton: {
     position: 'absolute',
-    bottom: 70,
-    left: 20,
+    bottom: 100,
+    alignSelf: 'center',
     backgroundColor: PINK,
     paddingVertical: 10,
     paddingHorizontal: 15,
@@ -875,13 +855,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
-  // Modal Styles
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 25, borderTopRightRadius: 25, paddingVertical: 20, maxHeight: height * 0.7 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: '#eee' },
   modalTitle: { fontSize: 20, fontWeight: '700', color: '#333' },
   closeButton: { padding: 5 },
-  safetyContent: { paddingHorizontal: 20, paddingVertical: 10 },
+  modalBody: { paddingHorizontal: 20, paddingVertical: 10 },
+  directionStep: { paddingVertical: 8, borderBottomWidth: 0.5, borderBottomColor: '#eee' },
+  directionStepText: { fontSize: 14, color: '#333' },
   safetyHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   safetyTitle: { fontSize: 18, fontWeight: '600', color: '#333' },
   safetyScore: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center' },
@@ -898,16 +879,11 @@ const styles = StyleSheet.create({
   crimeType: { fontSize: 16, fontWeight: '500', color: '#333' },
   crimeDate: { fontSize: 14, color: '#666', marginTop: 2 },
   noCrimeText: { fontSize: 14, color: '#4CAF50', fontStyle: 'italic', padding: 10 },
-  acknowledgeButton: { backgroundColor: PINK, padding: 15, borderRadius: 10, alignItems: 'center', marginTop: 20, marginBottom: 10 },
-  acknowledgeButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  // Safety Modal Options Buttons
   safetyButtonContainer: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 20 },
   safetyButton: { backgroundColor: '#FF69B4', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
   safetyButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  // Alternative route item
   altRouteItem: { padding: 15, borderBottomWidth: 1, borderBottomColor: '#eee', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   altRouteText: { fontSize: 16, color: '#333' },
-  // Directions Step
-  directionStep: { padding: 10, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  directionStepText: { fontSize: 14, color: '#333' },
 });
+
+export { TrackMeScreen };
