@@ -20,15 +20,11 @@ import * as Location from 'expo-location';
 import PolylineDecoder from '@mapbox/polyline';
 import { Ionicons } from '@expo/vector-icons';
 
-// Get device dimensions
 const { width, height } = Dimensions.get('window');
-// UI constant
 const PINK = '#ff5f96';
-
 // Replace with your actual Google Maps API Key
 const GOOGLE_MAPS_API_KEY = 'AIzaSyBzqSJUt0MVs3xFjFWTvLwiyjXwnzbkXok';
 
-// Custom Map Style (example)
 const customMapStyle = [
   { elementType: 'geometry', stylers: [{ color: '#ebe3cd' }] },
   { elementType: 'labels.text.fill', stylers: [{ color: '#523735' }] },
@@ -38,7 +34,7 @@ const customMapStyle = [
 // Helper: Haversine formula to calculate distance (in meters)
 const haversineDistance = (coords1, coords2) => {
   const toRad = (value) => (value * Math.PI) / 180;
-  const R = 6371000; // Earth's radius in meters
+  const R = 6371000;
   const dLat = toRad(coords2.latitude - coords1.latitude);
   const dLon = toRad(coords2.longitude - coords1.longitude);
   const lat1 = toRad(coords1.latitude);
@@ -50,7 +46,7 @@ const haversineDistance = (coords1, coords2) => {
   return R * c;
 };
 
-// Mock safety data service – replace with real API as needed
+// Mock safety data service – replace with your real API as needed
 const fetchSafetyData = async (coordinates) => {
   await new Promise((resolve) => setTimeout(resolve, 1000));
   return {
@@ -77,8 +73,11 @@ const SafetyRatingIndicator = ({ score }) => {
   );
 };
 
-// --- Additional features states ---
-// Alternative Route Options, Navigation Instructions, Customization Options
+// Navigation Instructions rendering function (splitting text if needed)
+const renderInstructions = (step) => {
+  return step.html_instructions.replace(/<[^>]*>/g, '');
+};
+
 export default function TrackMeScreen() {
   const mapRef = useRef(null);
   const debounceTimerRef = useRef(null);
@@ -117,7 +116,6 @@ export default function TrackMeScreen() {
   // Suggestions UI state
   const [suggestionsVisible, setSuggestionsVisible] = useState(false);
 
-  // --- Location & Destination ---
   useEffect(() => {
     requestLocationPermission();
   }, []);
@@ -201,6 +199,24 @@ export default function TrackMeScreen() {
     }, 500);
   };
 
+  // Reset the full screen: clear destination data, route, safety info, etc., and recenter map
+  const resetRoute = () => {
+    setDestination('');
+    setDestinationCoord(null);
+    setSuggestions([]);
+    setSuggestionsVisible(false);
+    setRouteCoords([]);
+    setETA(null);
+    setDirectionsSteps([]);
+    setAlternativeRoutes([]);
+    setSafetyData(null);
+    setSafetyModalVisible(false);
+    setInstructionsModalVisible(false);
+    setCustomizationModalVisible(false);
+    // Recenter the map to current location
+    handleRecenter();
+  };
+
   const selectSuggestion = (suggestion) => {
     setDestination(suggestion.description);
     setSuggestions([]);
@@ -255,7 +271,7 @@ export default function TrackMeScreen() {
     }
   };
 
-  // Fetch route (primary route and alternatives) using Google Directions API
+  // Fetch route (primary and alternatives) using Google Directions API
   const fetchRoute = async (mode = 'driving') => {
     if (!location || !destinationCoord) return;
     try {
@@ -288,7 +304,7 @@ export default function TrackMeScreen() {
     }
   };
 
-  // Navigation Instructions Modal (for turn-by-turn steps)
+  // Navigation Instructions Modal
   const renderInstructionsModal = () => (
     <Modal
       animationType="slide"
@@ -344,7 +360,6 @@ export default function TrackMeScreen() {
                 key={index}
                 style={styles.altRouteItem}
                 onPress={() => {
-                  // Select this route
                   const points = PolylineDecoder.decode(route.overview_polyline.points);
                   const coords = points.map((point) => ({
                     latitude: point[0],
@@ -414,7 +429,7 @@ export default function TrackMeScreen() {
     </Modal>
   );
 
-  // Recenter map
+  // Recenter map to current location
   const handleRecenter = () => {
     if (mapRef.current && location) {
       mapRef.current.animateToRegion(
@@ -463,12 +478,6 @@ export default function TrackMeScreen() {
 
   const toggleJourney = () => {
     journeyStarted ? endJourney() : startJourney();
-  };
-
-  const resetRoute = () => {
-    setDestination('');
-    setDestinationCoord(null);
-    setSuggestions([]);
   };
 
   return (
@@ -795,7 +804,6 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   journeyButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  // Route Button
   routeButton: {
     position: 'absolute',
     bottom: 120,
@@ -807,7 +815,6 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   routeButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  // Instructions Button
   instructionsButton: {
     position: 'absolute',
     bottom: 180,
@@ -819,28 +826,9 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   instructionsButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
-    paddingVertical: 20,
-    maxHeight: height * 0.7,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 25, borderTopRightRadius: 25, paddingVertical: 20, maxHeight: height * 0.7 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: '#eee' },
   modalTitle: { fontSize: 20, fontWeight: '700', color: '#333' },
   closeButton: { padding: 5 },
   modalBody: { paddingHorizontal: 20, paddingVertical: 10 },
@@ -863,11 +851,8 @@ const styles = StyleSheet.create({
   safetyButtonContainer: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 20 },
   safetyButton: { backgroundColor: '#FF69B4', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
   safetyButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  // Additional Customization Modal Styles
   customOption: { paddingVertical: 10 },
-  // Search Card & Suggestions
   searchContainer: { flexDirection: 'row', marginBottom: 15 },
   searchButton: { backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 15, justifyContent: 'center', elevation: 2 },
   searchButtonText: { color: '#FF69B4', fontWeight: '600', fontSize: 16 },
 });
-
