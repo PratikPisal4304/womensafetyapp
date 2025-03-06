@@ -1,5 +1,5 @@
 import { OPENAI_API_KEY } from '@env'; // Import API key from .env
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -17,12 +17,28 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import * as Speech from 'expo-speech';
+import { StatusBar } from 'expo-status-bar';
 
 const PINK = '#ff5f96';
 const AI_BUBBLE = '#f8f8f8';
 const USER_BUBBLE = PINK;
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+
+// Define a constant light theme
+const theme = {
+  background: '#fff',
+  text: '#333',
+  lightText: '#999',
+  card: '#fff',
+  border: '#eee',
+  aiBackground: AI_BUBBLE,
+  statusBar: 'dark',
+  primary: PINK,
+  danger: '#ff5f96'
+};
 
 export default function GeminiChatScreen({ navigation }) {
   const [messages, setMessages] = useState([]);
@@ -32,7 +48,6 @@ export default function GeminiChatScreen({ navigation }) {
   const [showOptions, setShowOptions] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
   const [showIntroduction, setShowIntroduction] = useState(true);
   const [previousChats, setPreviousChats] = useState([]);
   const [showChatHistory, setShowChatHistory] = useState(false);
@@ -97,7 +112,7 @@ export default function GeminiChatScreen({ navigation }) {
     if (messages.length > 0) {
       saveData();
     }
-  }, [messages, darkMode, showIntroduction]);
+  }, [messages]);
 
   // Animated loading dots
   useEffect(() => {
@@ -247,11 +262,10 @@ export default function GeminiChatScreen({ navigation }) {
     const diff = now - timestamp;
     
     if (diff < 60000) return 'Just now';
-    return timestamp.toLocaleTimeString([], { 
+    return new Date(timestamp).toLocaleTimeString([], { 
       hour: '2-digit', 
       minute: '2-digit' 
     });
-    return date.toLocaleDateString();
   };
   
   // Message actions
@@ -263,7 +277,6 @@ export default function GeminiChatScreen({ navigation }) {
   
   const handleCopy = async () => {
     if (selectedMessage) {
-      // Using React Native's built-in Clipboard API instead of Expo's
       Clipboard.setString(selectedMessage.text);
       Alert.alert('Copied', 'Message copied to clipboard');
       setShowOptions(false);
@@ -354,31 +367,6 @@ export default function GeminiChatScreen({ navigation }) {
     setShowChatHistory(false);
   };
 
-  // Toggle dark mode
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-
-  // Theme styles based on dark mode
-  const theme = darkMode ? {
-    background: '#1a1a2e',
-    text: '#ffffff',
-    lightText: '#aaaaaa',
-    card: '#252542',
-    border: '#333355',
-    aiBackground: '#252542',
-    statusBar: 'light',
-  } : {
-    background: THEME.background,
-    text: THEME.text,
-    lightText: THEME.lightText,
-    card: '#ffffff',
-    border: '#eeeeee',
-    aiBackground: THEME.aiBackground,
-    statusBar: 'dark',
-  };
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar style={theme.statusBar} />
@@ -392,10 +380,6 @@ export default function GeminiChatScreen({ navigation }) {
         <Text style={[styles.headerTitle, { color: theme.text }]}>Legal Assistant</Text>
         
         <View style={styles.headerActions}>
-          <TouchableOpacity onPress={toggleDarkMode} style={styles.headerIcon}>
-            <Ionicons name={darkMode ? "sunny" : "moon"} size={22} color={theme.text} />
-          </TouchableOpacity>
-          
           <TouchableOpacity onPress={() => setShowChatHistory(true)} style={styles.headerIcon}>
             <Ionicons name="time-outline" size={22} color={theme.text} />
           </TouchableOpacity>
@@ -413,7 +397,6 @@ export default function GeminiChatScreen({ navigation }) {
         keyboardVerticalOffset={90}
       >
         <ScrollView
-          
           ref={scrollViewRef}
           onContentSizeChange={() =>
             scrollViewRef.current?.scrollToEnd({ animated: true })
@@ -432,30 +415,31 @@ export default function GeminiChatScreen({ navigation }) {
           )}
 
           {messages.map((message, index) => (
-            <View
-              key={index}
-              style={[
-                styles.messageBubble,
-                message.isUser ? styles.userBubble : styles.aiBubble,
-                styles.messageShadow
-              ]}
-            >
-              {!message.isUser && (
-                <Ionicons 
-                  name="sparkles" 
-                  size={16} 
-                  color="#666" 
-                  style={styles.aiIcon} 
-                />
-              )}
-              <Text style={message.isUser ? styles.userText : styles.aiText}>
-                {message.text}
-              </Text>
-              <Text style={styles.timestamp}>
-                {formatTimestamp(message.timestamp)}
-                {message.isUser && ' • ✓'}
-              </Text>
-            </View>
+            <TouchableOpacity key={index} onLongPress={() => handleLongPress(message, index)}>
+              <View
+                style={[
+                  styles.messageBubble,
+                  message.isUser ? styles.userBubble : styles.aiBubble,
+                  styles.messageShadow
+                ]}
+              >
+                {!message.isUser && (
+                  <Ionicons 
+                    name="sparkles" 
+                    size={16} 
+                    color="#666" 
+                    style={styles.aiIcon} 
+                  />
+                )}
+                <Text style={message.isUser ? styles.userText : styles.aiText}>
+                  {message.text}
+                </Text>
+                <Text style={styles.timestamp}>
+                  {formatTimestamp(message.timestamp)}
+                  {message.isUser && ' • ✓'}
+                </Text>
+              </View>
+            </TouchableOpacity>
           ))}
 
           {isLoading && (
@@ -470,7 +454,7 @@ export default function GeminiChatScreen({ navigation }) {
           <TextInput
             ref={inputRef}
             style={[styles.input, { 
-              backgroundColor: darkMode ? '#252542' : '#f5f5f5',
+              backgroundColor: '#f5f5f5',
               color: theme.text,
               borderColor: theme.border 
             }]}
@@ -522,8 +506,8 @@ export default function GeminiChatScreen({ navigation }) {
             
             {selectedMessage?.isUser && (
               <TouchableOpacity style={styles.optionItem} onPress={handleDelete}>
-                <Ionicons name="trash-outline" size={24} color={THEME.danger} />
-                <Text style={[styles.optionText, { color: THEME.danger }]}>Delete</Text>
+                <Ionicons name="trash-outline" size={24} color={theme.danger} />
+                <Text style={[styles.optionText, { color: theme.danger }]}>Delete</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -560,7 +544,7 @@ export default function GeminiChatScreen({ navigation }) {
                   onPress={() => handleLoadChat(chat)}
                 >
                   <View style={styles.historyItemContent}>
-                    <MaterialIcons name="history" size={20} color={THEME.primary} />
+                    <MaterialIcons name="history" size={20} color={theme.primary} />
                     <View style={styles.historyItemText}>
                       <Text style={[styles.historyItemTitle, { color: theme.text }]} numberOfLines={1}>
                         {chat.title}
@@ -593,18 +577,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
     backgroundColor: '#fff',
   },
-  headerTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  headerIcon: {
+    padding: 4,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
   },
   flex: { 
     flex: 1 
@@ -621,6 +605,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  emptyState: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyStateText: {
+    color: '#999',
+    textAlign: 'center',
+    fontSize: 16,
+    marginLeft: 12,
+  },
   emptyChatContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -630,7 +625,6 @@ const styles = StyleSheet.create({
   },
   emptyChatText: {
     fontSize: 16,
-    color: THEME.lightText,
     textAlign: 'center',
     marginTop: 16,
   },
@@ -686,66 +680,24 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: '#eee',
   },
   input: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
-    borderRadius: 24,
+    backgroundColor: '#f5f5f5',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 24,
-    backgroundColor: '#f5f5f5',
     fontSize: 16,
     maxHeight: 120,
     marginRight: 10,
     borderWidth: 1,
     borderColor: 'transparent',
+    borderRadius: 24,
   },
   sendButton: { 
     width: 46,
     height: 46,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  sendButtonActive: {
-    transform: [{ scale: 1 }],
-  },
-  sendButtonGradient: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 80,
-    gap: 16,
-  },
-  emptyStateText: {
-    color: '#999',
-    textAlign: 'center',
-    fontSize: 16,
-    marginLeft: 12,
-  },
-  historyModalContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  historyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  historyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
   },
   loadingDots: {
     flexDirection: 'row',
@@ -758,5 +710,65 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: '#666',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 80,
+    gap: 16,
+  },
+  optionsContainer: {
+    padding: 16,
+    borderRadius: 8,
+    flexDirection: 'row',
+    gap: 16,
+  },
+  optionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  optionText: {
+    fontSize: 16,
+  },
+  historyModalContainer: {
+    flex: 1,
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  historyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  historyList: {
+    paddingHorizontal: 16,
+  },
+  historyItem: {
+    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    alignItems: 'center',
+  },
+  historyItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  historyItemText: {
+    flex: 1,
+  },
+  historyItemTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  historyItemDate: {
+    fontSize: 12,
   },
 });
