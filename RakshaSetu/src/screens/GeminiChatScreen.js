@@ -1,10 +1,6 @@
 import { OPENAI_API_KEY } from '@env'; // Import API key from .env
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as Speech from 'expo-speech';
-import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -19,27 +15,18 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 
-// Color scheme
-const THEME = {
-  primary: '#5271ff',
-  secondary: '#7389ff',
-  accent: '#ff5f96',
-  background: '#ffffff',
-  aiBackground: '#f0f4ff',
-  userBackground: '#5271ff',
-  text: '#333333',
-  lightText: '#999999',
-  danger: '#ff4d4d',
-};
+const PINK = '#ff5f96';
+const AI_BUBBLE = '#f8f8f8';
+const USER_BUBBLE = PINK;
 
-const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 
 export default function GeminiChatScreen({ navigation }) {
   const [messages, setMessages] = useState([]);
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
@@ -59,16 +46,7 @@ export default function GeminiChatScreen({ navigation }) {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load settings
-        const savedSettings = await AsyncStorage.getItem('legalAssistantSettings');
-        if (savedSettings) {
-          const settings = JSON.parse(savedSettings);
-          setDarkMode(settings.darkMode || false);
-          setShowIntroduction(settings.showIntroduction !== false); // Default to true
-        }
-        
-        // Load current chat
-        const savedMessages = await AsyncStorage.getItem('currentLegalChat');
+        const savedMessages = await AsyncStorage.getItem('chatMessages');
         if (savedMessages) {
           const parsedMessages = JSON.parse(savedMessages);
           setMessages(parsedMessages.map(msg => ({
@@ -86,7 +64,7 @@ export default function GeminiChatScreen({ navigation }) {
           setPreviousChats(JSON.parse(savedChats));
         }
       } catch (error) {
-        console.error('Failed to load data:', error);
+        console.error('Failed to load chat history:', error);
       }
     };
 
@@ -110,16 +88,9 @@ export default function GeminiChatScreen({ navigation }) {
   useEffect(() => {
     const saveData = async () => {
       try {
-        await AsyncStorage.setItem('currentLegalChat', JSON.stringify(messages));
-        
-        // Save settings
-        const settings = {
-          darkMode,
-          showIntroduction,
-        };
-        await AsyncStorage.setItem('legalAssistantSettings', JSON.stringify(settings));
+        await AsyncStorage.setItem('chatMessages', JSON.stringify(messages));
       } catch (error) {
-        console.error('Failed to save data:', error);
+        console.error('Failed to save chat history:', error);
       }
     };
 
@@ -170,30 +141,18 @@ export default function GeminiChatScreen({ navigation }) {
       }));
       
       const response = await fetch(OPENAI_URL, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${OPENAI_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4', // Using GPT-4 for better legal advice
+          model: 'gpt-3.5-turbo', // or 'gpt-4' if available
           messages: [
             { 
               role: 'system', 
-              content: `You are a legal assistant specialized in providing informative guidance on legal matters.
-              
-              Guidelines:
-              1. Always provide information about relevant laws, statutes, and legal principles.
-              2. When appropriate, mention specific sections of legal codes (like IPC sections in India).
-              3. Explain legal concepts in clear, simple language.
-              4. Provide context and examples when helpful.
-              5. Acknowledge jurisdiction limitations and variations in law across regions.
-              6. Clearly state when a question falls outside your expertise.
-              7. Remind users that your information is for educational purposes only and not a substitute for professional legal advice.
-              
-              Current date: ${new Date().toLocaleDateString()}`
+              content: 'You are a legal assistant. Your role is to ask the user to specify their legal problem and then provide relevant laws and IPC sections. Always respond in a professional and concise manner.' 
             },
-            ...contextMessages,
             { role: 'user', content: userMessage },
           ],
           temperature: 0.7,
@@ -208,7 +167,7 @@ export default function GeminiChatScreen({ navigation }) {
       return data.choices?.[0]?.message?.content || 'Sorry, I am unable to provide legal advice at the moment.';
     } catch (error) {
       console.error('Error calling OpenAI API:', error);
-      return 'Sorry, I am unable to provide legal advice at the moment due to a technical issue. Please check your internet connection and try again.';
+      return 'Sorry, I am unable to provide legal advice at the moment.';
     }
   };
 
@@ -227,6 +186,7 @@ export default function GeminiChatScreen({ navigation }) {
     try {
       setMessages((prev) => [...prev, userMessage]);
       setInputText('');
+
       setIsLoading(true);
       
       // Simulate typing indicator
@@ -250,23 +210,44 @@ export default function GeminiChatScreen({ navigation }) {
       setMessages((prev) => [...prev, aiResponse]);
       fadeIn();
     } catch (error) {
-      Alert.alert('Error', 'Failed to send message. Please try again.');
+      alert('Failed to send message');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const renderDots = () => {
+    const dotPosition = dotAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 10],
+    });
+
+    return (
+      <View style={styles.loadingDots}>
+        {[0, 1, 2].map((i) => (
+          <Animated.View
+            key={i}
+            style={[
+              styles.dot,
+              {
+                transform: [{
+                  translateY: i === 1 ? dotPosition : -dotPosition
+                }]
+              }
+            ]}
+          />
+        ))}
+      </View>
+    );
+  };
+
   const formatTimestamp = (timestamp) => {
     if (!timestamp) return '';
-    const date = new Date(timestamp);
-    if (isNaN(date)) return '';
-
     const now = new Date();
-    const diff = now - date;
+    const diff = now - timestamp;
     
     if (diff < 60000) return 'Just now';
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-    if (diff < 86400000) return date.toLocaleTimeString([], { 
+    return timestamp.toLocaleTimeString([], { 
       hour: '2-digit', 
       minute: '2-digit' 
     });
@@ -427,81 +408,59 @@ export default function GeminiChatScreen({ navigation }) {
 
       {/* Chat Messages */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.flex}
         keyboardVerticalOffset={90}
       >
         <ScrollView
           
           ref={scrollViewRef}
-          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+          onContentSizeChange={() =>
+            scrollViewRef.current?.scrollToEnd({ animated: true })
+          }
           style={styles.messagesContainer}
           contentContainerStyle={[
             styles.messagesContent,
             messages.length === 0 && styles.emptyChat
           ]}
         >
-          {messages.length === 0 ? (
-            <View style={styles.emptyChatContainer}>
-              <MaterialIcons name="gavel" size={60} color={theme.lightText} />
-              <Text style={[styles.emptyChatText, { color: theme.lightText }]}>
-                Start a conversation with your legal assistant
-              </Text>
+          {messages.length === 0 && (
+            <View style={styles.emptyState}>
+              <Ionicons name="chatbubbles-outline" size={48} color="#ddd" />
+              <Text style={styles.emptyStateText}>Please describe your legal problem, and I will provide relevant laws and IPC sections.</Text>
             </View>
-          ) : (
-            messages.map((message, index) => (
-              <Animated.View
-                key={index}
-                style={[
-                  styles.messageBubble,
-                  message.isUser 
-                    ? [styles.userBubble, { backgroundColor: THEME.userBackground }] 
-                    : [styles.aiBubble, { backgroundColor: theme.aiBackground }],
-                  message.isIntroduction && styles.introductionBubble,
-                  index === messages.length - 1 && { opacity: fadeAnim }
-                ]}
-              >
-                {!message.isUser && (
-                  <View style={styles.aiHeader}>
-                    <View style={styles.aiAvatar}>
-                      <MaterialIcons name="gavel" size={14} color="#fff" />
-                    </View>
-                    <Text style={[styles.aiName, { color: theme.text }]}>Legal Assistant</Text>
-                  </View>
-                )}
-                
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onLongPress={() => handleLongPress(message, index)}
-                  delayLongPress={300}
-                >
-                  <Text style={[
-                    message.isUser ? styles.userText : styles.aiText,
-                    { color: message.isUser ? '#fff' : theme.text }
-                  ]}>
-                    {message.text}
-                  </Text>
-                </TouchableOpacity>
-                
-                <View style={styles.messageFooter}>
-                  <Text style={[styles.timestamp, { color: message.isUser ? '#e0e0e0' : theme.lightText }]}>
-                    {formatTimestamp(message.timestamp)}
-                  </Text>
-                  {message.isUser && (
-                    <Ionicons name="checkmark-done" size={14} color="#e0e0e0" />
-                  )}
-                </View>
-              </Animated.View>
-            ))
           )}
 
-          {isTyping && (
-            <View style={[styles.messageBubble, styles.aiBubble, { backgroundColor: theme.aiBackground }]}>
-              <View style={styles.typingIndicator}>
-                <View style={styles.typingDot} />
-                <View style={[styles.typingDot, { animationDelay: '0.2s' }]} />
-                <View style={[styles.typingDot, { animationDelay: '0.4s' }]} />
-              </View>
+          {messages.map((message, index) => (
+            <View
+              key={index}
+              style={[
+                styles.messageBubble,
+                message.isUser ? styles.userBubble : styles.aiBubble,
+                styles.messageShadow
+              ]}
+            >
+              {!message.isUser && (
+                <Ionicons 
+                  name="sparkles" 
+                  size={16} 
+                  color="#666" 
+                  style={styles.aiIcon} 
+                />
+              )}
+              <Text style={message.isUser ? styles.userText : styles.aiText}>
+                {message.text}
+              </Text>
+              <Text style={styles.timestamp}>
+                {formatTimestamp(message.timestamp)}
+                {message.isUser && ' • ✓'}
+              </Text>
+            </View>
+          ))}
+
+          {isLoading && (
+            <View style={[styles.messageBubble, styles.aiBubble, styles.messageShadow]}>
+              {renderDots()}
             </View>
           )}
         </ScrollView>
@@ -525,23 +484,15 @@ export default function GeminiChatScreen({ navigation }) {
             editable={!isLoading}
           />
           <TouchableOpacity 
-            style={[
-              styles.sendButton,
-              inputText.trim() && !isLoading ? styles.sendButtonActive : {}
-            ]} 
+            style={styles.sendButton} 
             onPress={handleSend}
-            disabled={isLoading || !inputText.trim()}
+            disabled={isLoading || !inputText}
           >
-            <LinearGradient
-              colors={inputText.trim() && !isLoading ? [THEME.primary, THEME.secondary] : ['#dddddd', '#cccccc']}
-              style={styles.sendButtonGradient}
-            >
-              <Ionicons 
-                name="send" 
-                size={20} 
-                color="#ffffff" 
-              />
-            </LinearGradient>
+            <Ionicons 
+              name="send" 
+              size={24} 
+              color={inputText && !isLoading ? PINK : '#ddd'} 
+            />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -632,31 +583,28 @@ export default function GeminiChatScreen({ navigation }) {
 
 // Enhanced styles
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: THEME.background 
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
   },
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    padding: 16, 
-    borderBottomWidth: 1, 
-    borderBottomColor: '#eee',
-    justifyContent: 'space-between' 
-  },
-  headerTitle: { 
-    fontSize: 18, 
-    fontWeight: '600', 
-    color: THEME.text, 
-    flex: 1, 
-    textAlign: 'center' 
-  },
-  headerActions: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    backgroundColor: '#fff',
   },
-  headerIcon: {
-    padding: 8,
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
   },
   flex: { 
     flex: 1 
@@ -686,93 +634,65 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 16,
   },
-  messageBubble: { 
-    borderRadius: 20, 
-    padding: 12, 
+  messageBubble: {
+    maxWidth: '80%',
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 16,
-    maxWidth: '85%',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
+    position: 'relative',
   },
-  aiBubble: { 
-    backgroundColor: THEME.aiBackground, 
+  aiBubble: {
+    backgroundColor: AI_BUBBLE,
     alignSelf: 'flex-start',
-    borderTopLeftRadius: 4,
+    borderBottomLeftRadius: 4,
+    marginLeft: 32,
   },
-  userBubble: { 
-    backgroundColor: THEME.userBackground, 
+  userBubble: {
+    backgroundColor: USER_BUBBLE,
     alignSelf: 'flex-end',
-    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
   },
-  introductionBubble: {
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+  messageShadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  userText: { 
+  aiIcon: {
+    position: 'absolute',
+    left: -28,
+    top: 12,
+  },
+  aiText: {
+    color: '#333',
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  userText: {
     color: 'white',
     fontSize: 16,
     lineHeight: 22,
   },
-  aiText: { 
-    color: THEME.text,
-    fontSize: 16,
-    lineHeight: 22,
+  timestamp: {
+    fontSize: 10,
+    color: '#666',
+    marginTop: 8,
+    alignSelf: 'flex-end',
   },
-  aiHeader: {
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  aiAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: THEME.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  aiName: {
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  messageFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    marginTop: 6,
-    gap: 4,
-  },
-  timestamp: { 
-    fontSize: 12, 
-    color: '#999', 
-  },
-  typingIndicator: {
-    flexDirection: 'row',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  typingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: THEME.primary,
-    marginRight: 4,
-    opacity: 0.6,
-  },
-  inputContainer: { 
-    flexDirection: 'row', 
-    padding: 12, 
-    borderTopWidth: 1, 
+    padding: 16,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
     borderTopColor: '#eee',
-    alignItems: 'flex-end',
   },
-  input: { 
-    flex: 1, 
-    paddingHorizontal: 16, 
+  input: {
+    flex: 1,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 24,
+    paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 24,
     backgroundColor: '#f5f5f5',
@@ -800,24 +720,14 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 80,
+    gap: 16,
   },
-  optionsContainer: {
-    width: 250,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    overflow: 'hidden',
-  },
-  optionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  optionText: {
+  emptyStateText: {
+    color: '#999',
+    textAlign: 'center',
     fontSize: 16,
     marginLeft: 12,
   },
@@ -837,33 +747,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
-  historyList: {
-    flex: 1,
-  },
-  historyItem: {
+  loadingDots: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    height: 20,
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    gap: 4,
   },
-  historyItemContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  historyItemText: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  historyItemTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  historyItemDate: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#666',
   },
 });

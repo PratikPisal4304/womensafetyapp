@@ -24,6 +24,7 @@ import EditProfileScreen from "./screens/EditProfileScreen";
 import MyPostsScreen from "./screens/MyPostsScreen";
 import EmergencyHelplineScreen from "./screens/EmergencyHelplineScreen";
 import CommunityScreen from "./screens/CommunityScreen";
+import InAppChatScreen from "./screens/InAppChatScreen";
 import GeminiChatScreen from "./screens/GeminiChatScreen";
 import BudgetToolScreen from "./screens/BudgetToolScreen";
 import FinancialNews from "./screens/FinancialNews";
@@ -69,6 +70,7 @@ function CommunityStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="CommunityMain" component={CommunityScreen} />
       <Stack.Screen name="GeminiChat" component={GeminiChatScreen} />
+      <Stack.Screen name="InAppChat" component={InAppChatScreen} />
     </Stack.Navigator>
   );
 }
@@ -95,7 +97,7 @@ function FloatingTabBar({ state, descriptors, navigation }) {
   }
   else if (currentRouteName === "Community") {
     const childRoute = getFocusedRouteNameFromRoute(state.routes[state.index]) ?? "CommunityMain";
-    if (childRoute === "GeminiChat") {
+    if (childRoute === "GeminiChat" || childRoute === "InAppChat") {
       hideTabBar = true;
     }
   }
