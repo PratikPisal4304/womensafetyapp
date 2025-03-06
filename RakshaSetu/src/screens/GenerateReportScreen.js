@@ -322,6 +322,114 @@ const GenerateReportScreen = ({ navigation }) => {
     setFormErrors({});
   };
 
+  // Helper: Convert attached images to base64 strings for PDF embedding
+  const convertImagesToBase64 = async () => {
+    const imagePromises = images.map(async (uri) => {
+      try {
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } catch (error) {
+        console.error('Image conversion error:', error);
+        return null;
+      }
+    });
+    return (await Promise.all(imagePromises)).filter(img => img !== null);
+  };
+
+  // Function to generate PDF and share it, including attached images
+  const sharePdf = async () => {
+    if (!reportData) return;
+    try {
+      const base64Images = await convertImagesToBase64();
+      let imagesHtml = '';
+      if (base64Images.length > 0) {
+        imagesHtml = base64Images
+          .map(
+            (img, index) =>
+              `<img src="${img}" alt="Attachment ${index + 1}" style="width:120px; height:120px; margin-right:8px; border-radius:8px;" />`
+          )
+          .join('');
+      }
+
+      // Create HTML content for the PDF file
+      const htmlContent = `
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <title>Incident Report</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; }
+              h1, h2 { text-align: center; }
+              .section { margin-bottom: 20px; }
+              .images { display: flex; }
+            </style>
+          </head>
+          <body>
+            <h1>Incident Report</h1>
+            <div class="section">
+              <h2>Incident ID</h2>
+              <p>${reportData.incidentId}</p>
+            </div>
+            <div class="section">
+              <h2>Incident Type</h2>
+              <p>${reportData.incidentType}</p>
+            </div>
+            <div class="section">
+              <h2>Date & Time</h2>
+              <p>${reportData.timestamp.toLocaleString()}</p>
+            </div>
+            <div class="section">
+              <h2>Location</h2>
+              <p>${reportData.location}</p>
+              ${
+                reportData.locationCoords
+                  ? `<p>Coordinates: (${reportData.locationCoords.latitude.toFixed(6)}, ${reportData.locationCoords.longitude.toFixed(6)})</p>`
+                  : ''
+              }
+            </div>
+            <div class="section">
+              <h2>Description</h2>
+              <p>${reportData.description}</p>
+            </div>
+            <div class="section">
+              <h2>Evidence</h2>
+              <p>Photo Count: ${reportData.imageCount}</p>
+              <p>${reportData.hasRecording ? "Audio statement attached" : "No audio statement"}</p>
+            </div>
+            <div class="section">
+              <h2>Attached Photos</h2>
+              <div class="images">
+                ${imagesHtml}
+              </div>
+            </div>
+            <div class="section">
+              <h2>AI Analysis</h2>
+              <p>${reportData.reportContent.replace(/\n/g, '<br />')}</p>
+            </div>
+          </body>
+        </html>
+      `;
+      
+      // Generate the PDF file
+      const { uri } = await Print.printToFileAsync({ html: htmlContent });
+      
+      // Share the PDF file
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri);
+      } else {
+        Alert.alert('Sharing not available', 'Your device does not support sharing files.');
+      }
+    } catch (error) {
+      Alert.alert('PDF Sharing Error', error.message);
+    }
+  };
+
   // Render formatted report for modal, including attached photos and enhanced AI analysis
   const renderFormattedReport = () => {
     if (!reportData) return null;
@@ -370,74 +478,6 @@ const GenerateReportScreen = ({ navigation }) => {
         )}
       </View>
     );
-  };
-
-  // Function to generate PDF and share it using Expo Print and Sharing
-  const sharePdf = async () => {
-    if (!reportData) return;
-    try {
-      // Create HTML content for the PDF file
-      const htmlContent = `
-        <html>
-          <head>
-            <meta charset="utf-8" />
-            <title>Incident Report</title>
-            <style>
-              body { font-family: Arial, sans-serif; padding: 20px; }
-              h1 { text-align: center; }
-              h2 { color: #444; }
-              p { font-size: 14px; line-height: 1.5; }
-              .section { margin-bottom: 20px; }
-            </style>
-          </head>
-          <body>
-            <h1>Incident Report</h1>
-            <div class="section">
-              <h2>Incident ID</h2>
-              <p>${reportData.incidentId}</p>
-            </div>
-            <div class="section">
-              <h2>Incident Type</h2>
-              <p>${reportData.incidentType}</p>
-            </div>
-            <div class="section">
-              <h2>Date & Time</h2>
-              <p>${reportData.timestamp.toLocaleString()}</p>
-            </div>
-            <div class="section">
-              <h2>Location</h2>
-              <p>${reportData.location}</p>
-              ${reportData.locationCoords ? `<p>Coordinates: (${reportData.locationCoords.latitude.toFixed(6)}, ${reportData.locationCoords.longitude.toFixed(6)})</p>` : ''}
-            </div>
-            <div class="section">
-              <h2>Description</h2>
-              <p>${reportData.description}</p>
-            </div>
-            <div class="section">
-              <h2>Evidence</h2>
-              <p>Photo Count: ${reportData.imageCount}</p>
-              <p>${reportData.hasRecording ? "Audio statement attached" : "No audio statement"}</p>
-            </div>
-            <div class="section">
-              <h2>AI Analysis</h2>
-              <p>${reportData.reportContent.replace(/\n/g, '<br />')}</p>
-            </div>
-          </body>
-        </html>
-      `;
-      
-      // Generate the PDF file
-      const { uri } = await Print.printToFileAsync({ html: htmlContent });
-      
-      // Check if sharing is available
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri);
-      } else {
-        Alert.alert('Sharing not available', 'Your device does not support sharing files.');
-      }
-    } catch (error) {
-      Alert.alert('PDF Sharing Error', error.message);
-    }
   };
 
   return (
@@ -685,17 +725,9 @@ const GenerateReportScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8f8f8' },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 50,
-    paddingBottom: 16,
-    backgroundColor: 'white',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 50, paddingBottom: 16,
+    backgroundColor: 'white', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1, shadowRadius: 2,
   },
   backButton: { padding: 8 },
   headerTitle: { marginLeft: 16, fontSize: 20, fontWeight: '600', color: '#333' },
@@ -707,49 +739,28 @@ const styles = StyleSheet.create({
   errorBorder: { borderColor: '#ff4757' },
   incidentTypesContainer: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
   incidentTypeButton: {
-    backgroundColor: '#f1f1f1',
-    borderRadius: 50,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    margin: 4,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    backgroundColor: '#f1f1f1', borderRadius: 50, paddingHorizontal: 16, paddingVertical: 10,
+    margin: 4, borderWidth: 1, borderColor: '#e0e0e0',
   },
   incidentTypeText: { fontSize: 14, color: '#666' },
   selectedIncidentType: { backgroundColor: '#ffebf1', borderColor: '#ff6b93' },
   selectedIncidentTypeText: { color: '#ff6b93', fontWeight: '500' },
   locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 8, padding: 12,
+    borderWidth: 1, borderColor: '#e0e0e0',
   },
   locationIconContainer: { marginRight: 12 },
   locationText: { flex: 1, color: '#666', fontSize: 14 },
   editLocationButton: { alignSelf: 'flex-end', marginTop: 8 },
   editLocationText: { color: '#ff6b93', fontSize: 12 },
   descriptionInput: {
-    backgroundColor: 'white',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    padding: 12,
-    height: 120,
-    fontSize: 14,
-    color: '#333',
+    backgroundColor: 'white', borderRadius: 8, borderWidth: 1, borderColor: '#e0e0e0', padding: 12,
+    height: 120, fontSize: 14, color: '#333',
   },
   characterCount: { alignSelf: 'flex-end', fontSize: 12, color: '#999', marginTop: 4 },
   voiceButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ff6b93',
-    borderRadius: 50,
-    paddingVertical: 12,
-    marginTop: 16,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ff6b93',
+    borderRadius: 50, paddingVertical: 12, marginTop: 16,
   },
   recordingActive: { backgroundColor: '#ff4757' },
   voiceButtonText: { color: 'white', fontWeight: '500', marginLeft: 8 },
@@ -757,15 +768,8 @@ const styles = StyleSheet.create({
   playButtonText: { color: '#ff6b93', marginLeft: 4, fontWeight: '500' },
   imageOptionsContainer: { flexDirection: 'row', justifyContent: 'space-between' },
   imageOption: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 12,
-    marginHorizontal: 4,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 8,
+    padding: 12, marginHorizontal: 4, borderWidth: 1, borderColor: '#e0e0e0',
   },
   imageOptionIconContainer: { marginRight: 12 },
   imageOptionText: { color: '#666', fontSize: 14 },
@@ -775,14 +779,8 @@ const styles = StyleSheet.create({
   removeImageButton: { position: 'absolute', top: -8, right: -8, backgroundColor: 'white', borderRadius: 12, elevation: 2 },
   privacyNotice: { fontSize: 12, color: '#999', textAlign: 'center', marginTop: 16 },
   generateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ff6b93',
-    borderRadius: 8,
-    paddingVertical: 16,
-    margin: 16,
-    elevation: 2,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ff6b93',
+    borderRadius: 8, paddingVertical: 16, margin: 16, elevation: 2,
   },
   generateButtonText: { color: 'white', fontWeight: '600', fontSize: 16, marginLeft: 8 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
