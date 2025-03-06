@@ -23,6 +23,7 @@ import SOSScreen from "./screens/SOSScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
 import MyPostsScreen from "./screens/MyPostsScreen";
+import MyReportsScreen from "./screens/MyReportsScreen";
 import EmergencyHelplineScreen from "./screens/EmergencyHelplineScreen";
 import CommunityScreen from "./screens/CommunityScreen";
 import InAppChatScreen from "./screens/InAppChatScreen";
@@ -62,6 +63,7 @@ function ProfileStack() {
       <Stack.Screen name="ProfileMain" component={(ProfileScreen)} />
       <Stack.Screen name="EditProfile" component={(EditProfileScreen)} />
       <Stack.Screen name="MyPosts" component={(MyPostsScreen)} />
+      <Stack.Screen name="MyReports" component={(MyReportsScreen)} />
       <Stack.Screen name="EmergencyHelpline" component={(EmergencyHelplineScreen)} />
     </Stack.Navigator>
   );
@@ -93,7 +95,7 @@ function FloatingTabBar({ state, descriptors, navigation }) {
   // Example: If inside ProfileStack => EditProfile or EmergencyHelpline
   else if (currentRouteName === "Profile") {
     const childRoute = getFocusedRouteNameFromRoute(state.routes[state.index]) ?? "ProfileMain";
-    if (childRoute === "EditProfile" || childRoute === "EmergencyHelpline" || childRoute === "MyPosts") {
+    if (childRoute === "EditProfile" || childRoute === "EmergencyHelpline" || childRoute === "MyPosts" || childRoute === "MyReports") {
       hideTabBar = true;
     }
   }
