@@ -219,27 +219,7 @@ const GenerateReportScreen = ({ navigation }) => {
     return Object.keys(errors).length === 0;
   };
 
-  // Prepare images for Gemini (convert to base64)
-  const prepareImagesForGemini = async () => {
-    const imagePromises = images.map(async (uri) => {
-      try {
-        const response = await fetch(uri);
-        const blob = await response.blob();
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-      } catch (error) {
-        console.error('Image conversion error:', error);
-        return null;
-      }
-    });
-    return (await Promise.all(imagePromises)).filter(img => img !== null);
-  };
-
-  // Build prompt for Gemini API
+  // Build prompt for Gemini API (text-only)
   const buildPrompt = () => {
     return `
       Create a detailed incident report with the following format:
@@ -253,8 +233,8 @@ const GenerateReportScreen = ({ navigation }) => {
       ${description}
 
       EVIDENCE:
-      - ${images.length} Photo(s) attached
-      - ${recordingUri ? "Audio statement recording attached" : "No audio statement"}
+      - ${images.length} Photo(s) attached separately
+      - ${recordingUri ? "Audio statement attached" : "No audio statement"}
 
       Please provide a structured report with these sections:
       1. SUMMARY - A brief overview of what occurred.
@@ -266,7 +246,7 @@ const GenerateReportScreen = ({ navigation }) => {
     `;
   };
 
-  // Generate AI Report and display in modal
+  // Generate AI Report and display in modal (without sending images to Gemini)
   const generateAIReport = async () => {
     if (!validateForm()) {
       Alert.alert('Validation Error', 'Please fix the errors and try again.');
@@ -275,28 +255,11 @@ const GenerateReportScreen = ({ navigation }) => {
     
     try {
       setLoading(true);
-      const prompt = buildPrompt();
-      let processedImages = [];
-      if (images.length > 0) {
-        processedImages = await prepareImagesForGemini();
-      }
+      const promptText = buildPrompt();
       
-      // Log prompt for debugging
-      console.log('Prompt:', prompt);
-      
-      // Initialize Gemini model (update identifiers as needed)
+      // Call Gemini using text-only prompt
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-      let result;
-      if (processedImages.length > 0) {
-        const visionModel = genAI.getGenerativeModel({ model: "gemini-1.5-vision" });
-        const imagePrompt = [
-          prompt,
-          ...processedImages.map(img => ({ inlineData: { data: img, mimeType: "image/jpeg" } }))
-        ];
-        result = await visionModel.generateContent({ contents: [{ role: "user", parts: imagePrompt }] });
-      } else {
-        result = await model.generateContent(prompt);
-      }
+      const result = await model.generateContent(promptText);
       
       const aiResponse = await result.response;
       const aiReport = aiResponse.text();
@@ -312,7 +275,8 @@ const GenerateReportScreen = ({ navigation }) => {
         description,
         hasRecording: !!recordingUri,
         imageCount: images.length,
-        reportContent: aiReport
+        reportContent: aiReport,
+        attachedImages: images  // Save the image URIs to display later
       };
       
       await saveReport(formattedReportData);
@@ -350,7 +314,7 @@ const GenerateReportScreen = ({ navigation }) => {
     setFormErrors({});
   };
 
-  // Render formatted report for modal
+  // Render formatted report for modal, including attached photos
   const renderFormattedReport = () => {
     if (!reportData) return null;
     
@@ -370,6 +334,16 @@ const GenerateReportScreen = ({ navigation }) => {
         <Text style={styles.reportSectionTitle}>EVIDENCE</Text>
         <Text style={styles.reportText}>• {reportData.imageCount} Photo(s) attached</Text>
         <Text style={styles.reportText}>• {reportData.hasRecording ? "Audio statement attached" : "No audio statement"}</Text>
+        {reportData.attachedImages && reportData.attachedImages.length > 0 && (
+          <>
+            <Text style={styles.reportSectionTitle}>ATTACHED PHOTOS</Text>
+            <ScrollView horizontal style={styles.photoScroll}>
+              {reportData.attachedImages.map((uri, index) => (
+                <Image key={index} source={{ uri }} style={styles.reportPhoto} />
+              ))}
+            </ScrollView>
+          </>
+        )}
         {reportData.reportContent && (
           <>
             <Text style={styles.reportSectionTitle}>AI ANALYSIS</Text>
@@ -893,6 +867,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#444',
     lineHeight: 20,
+  },
+  photoScroll: {
+    marginVertical: 8,
+  },
+  reportPhoto: {
+    width: 120,
+    height: 120,
+    borderRadius: 8,
+    marginRight: 8,
   },
   modalFooter: {
     flexDirection: 'row',
