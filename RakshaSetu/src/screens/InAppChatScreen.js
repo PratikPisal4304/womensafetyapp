@@ -15,6 +15,8 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Linking,
+  Modal,
+  Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
@@ -35,6 +37,7 @@ import {
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getAuth } from 'firebase/auth';
+import { Ionicons } from '@expo/vector-icons';
 import { db } from '../../config/firebaseConfig';
 
 // Initialize Firebase Storage and Auth
@@ -48,7 +51,6 @@ const isURL = (text) => {
 };
 
 // Updated function to render text with clickable URLs.
-// It splits the text into words and renders each word accordingly.
 const renderMessageText = (text) => {
   return (
     <Text style={styles.chatBubbleText}>
@@ -70,33 +72,45 @@ const renderMessageText = (text) => {
   );
 };
 
-const ChatBubble = ({ item, onLongPress }) => {
+const ChatBubble = ({ item, onLongPress, onMediaPress }) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, []);
   return (
-    <TouchableOpacity
-      onLongPress={onLongPress}
-      activeOpacity={0.8}
-      style={[
-        styles.chatBubble,
-        item.sender === 'me' ? styles.myMessage : styles.theirMessage,
-      ]}
-    >
-      {item.sender === 'them' && (
-        <Text style={styles.senderName}>{item.senderName}</Text>
-      )}
-      {item.media ? (
-        <Image source={{ uri: item.media }} style={styles.mediaImage} />
-      ) : (
-        renderMessageText(item.text)
-      )}
-      <View style={styles.bubbleFooter}>
-        <Text style={styles.chatBubbleTime}>{item.time}</Text>
-        {item.sender === 'me' && (
-          <Text style={styles.readReceipt}>
-            {item.read ? 'Read' : 'Sent'}
-          </Text>
+    <Animated.View style={{ opacity: fadeAnim }}>
+      <TouchableOpacity
+        onLongPress={onLongPress}
+        activeOpacity={0.8}
+        style={[
+          styles.chatBubble,
+          item.sender === 'me' ? styles.myMessage : styles.theirMessage,
+        ]}
+      >
+        {item.sender === 'them' && (
+          <Text style={styles.senderName}>{item.senderName}</Text>
         )}
-      </View>
-    </TouchableOpacity>
+        {item.media ? (
+          <TouchableOpacity onPress={() => onMediaPress(item.media)}>
+            <Image source={{ uri: item.media }} style={styles.mediaImage} />
+          </TouchableOpacity>
+        ) : (
+          renderMessageText(item.text)
+        )}
+        <View style={styles.bubbleFooter}>
+          <Text style={styles.chatBubbleTime}>{item.time}</Text>
+          {item.sender === 'me' && (
+            <Text style={styles.readReceipt}>
+              {item.read ? 'Read' : 'Sent'}
+            </Text>
+          )}
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
   );
 };
 
@@ -120,11 +134,14 @@ const InAppChatScreen = () => {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [error, setError] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [typingDots, setTypingDots] = useState('');
+  const [previewImage, setPreviewImage] = useState(null);
 
   // Refs
   const unsubscribeRef = useRef(null);
   const chatListRef = useRef(null);
   const searchTimeoutRef = useRef(null);
+  const errorAnim = useRef(new Animated.Value(0)).current;
 
   // ----------------------------
   // GET CURRENT USER FROM AUTH
@@ -135,6 +152,11 @@ const InAppChatScreen = () => {
         setUser(currentUser);
       } else {
         setError('User not authenticated');
+        Animated.timing(errorAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
       }
     });
     return () => unsubscribeAuth();
@@ -609,12 +631,31 @@ const InAppChatScreen = () => {
   };
 
   // ----------------------------
+  // TYPING INDICATOR ANIMATION
+  // ----------------------------
+  useEffect(() => {
+    let interval;
+    if (isTyping) {
+      interval = setInterval(() => {
+        setTypingDots((prev) => (prev.length >= 3 ? '' : prev + '.'));
+      }, 500);
+    } else {
+      setTypingDots('');
+    }
+    return () => clearInterval(interval);
+  }, [isTyping]);
+
+  // ----------------------------
   // RENDER COMPONENTS
   // ----------------------------
   const renderMainList = () => (
     <View style={styles.container}>
       <Text style={styles.screenTitle}>RaskhaSetu Chat</Text>
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && (
+        <Animated.Text style={[styles.errorText, { opacity: errorAnim }]}>
+          {error}
+        </Animated.Text>
+      )}
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <TextInput
@@ -625,6 +666,7 @@ const InAppChatScreen = () => {
           onChangeText={setSearchTerm}
         />
         <TouchableOpacity style={styles.searchButton} onPress={debouncedSearch} activeOpacity={0.8}>
+          <Ionicons name="search" size={20} color="#FF69B4" />
           <Text style={styles.searchButtonText}>Search</Text>
         </TouchableOpacity>
       </View>
@@ -698,6 +740,7 @@ const InAppChatScreen = () => {
                     onPress={() => handleAcceptRequest(item)}
                     activeOpacity={0.8}
                   >
+                    <Ionicons name="checkmark-circle" size={18} color="#333" />
                     <Text style={styles.requestButtonText}>Accept</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -705,6 +748,7 @@ const InAppChatScreen = () => {
                     onPress={() => handleDeclineRequest(item)}
                     activeOpacity={0.8}
                   >
+                    <Ionicons name="close-circle" size={18} color="#333" />
                     <Text style={styles.requestButtonText}>Decline</Text>
                   </TouchableOpacity>
                 </View>
@@ -759,7 +803,7 @@ const InAppChatScreen = () => {
       <View style={styles.container}>
         <View style={styles.chatHeader}>
           <TouchableOpacity style={styles.backButton} onPress={handleBack} activeOpacity={0.8}>
-            <Text style={styles.backButtonText}>{'<'} Back</Text>
+            <Ionicons name="arrow-back" size={24} color="#333" />
           </TouchableOpacity>
           <Text style={styles.chatHeaderText}>{selectedChat?.name}</Text>
         </View>
@@ -776,12 +820,13 @@ const InAppChatScreen = () => {
               onLongPress={() => {
                 if (item.sender === 'me') handleDeleteMessage(item.id);
               }}
+              onMediaPress={(uri) => setPreviewImage(uri)}
             />
           )}
         />
         {isTyping && (
           <View style={styles.typingIndicator}>
-            <Text style={styles.typingText}>Typing...</Text>
+            <Text style={styles.typingText}>Typing{typingDots}</Text>
           </View>
         )}
         <View style={styles.inputContainer}>
@@ -798,10 +843,10 @@ const InAppChatScreen = () => {
             returnKeyType="send"
           />
           <TouchableOpacity style={styles.locationButton} onPress={handleSendLocation} activeOpacity={0.8}>
-            <Text style={styles.locationButtonText}>Location</Text>
+            <Ionicons name="location" size={20} color="#fff" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.mediaButton} onPress={handleSendMedia} activeOpacity={0.8}>
-            <Text style={styles.mediaButtonText}>Media</Text>
+            <Ionicons name="image" size={20} color="#FF69B4" />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.sendButton}
@@ -812,7 +857,10 @@ const InAppChatScreen = () => {
             {sendingMessage ? (
               <ActivityIndicator color="#FF69B4" />
             ) : (
-              <Text style={styles.sendButtonText}>Send</Text>
+              <>
+                <Ionicons name="send" size={20} color="#FF69B4" />
+                <Text style={styles.sendButtonText}>Send</Text>
+              </>
             )}
           </TouchableOpacity>
         </View>
@@ -832,6 +880,15 @@ const InAppChatScreen = () => {
           </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      {/* Media Preview Modal */}
+      <Modal visible={!!previewImage} transparent={true} animationType="fade">
+        <View style={styles.modalContainer}>
+          <TouchableOpacity style={styles.modalClose} onPress={() => setPreviewImage(null)}>
+            <Ionicons name="close" size={30} color="#fff" />
+          </TouchableOpacity>
+          <Image source={{ uri: previewImage }} style={styles.fullScreenImage} resizeMode="contain" />
+        </View>
+      </Modal>
     </LinearGradient>
   );
 };
@@ -874,8 +931,16 @@ const styles = StyleSheet.create({
     color: '#333',
     elevation: 2,
   },
-  searchButton: { backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 15, justifyContent: 'center', elevation: 2 },
-  searchButtonText: { color: '#FF69B4', fontWeight: '600', fontSize: 16 },
+  searchButton: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+  },
+  searchButtonText: { color: '#FF69B4', fontWeight: '600', fontSize: 16, marginLeft: 5 },
   requestCard: {
     width: 130,
     backgroundColor: 'rgba(255,255,255,0.85)',
@@ -888,16 +953,16 @@ const styles = StyleSheet.create({
   requestAvatar: { width: 70, height: 70, borderRadius: 35, marginBottom: 8, backgroundColor: '#fff' },
   requestName: { fontSize: 15, fontWeight: '600', color: '#333', marginBottom: 8, textAlign: 'center' },
   requestButtons: { flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
-  acceptButton: { flex: 1, backgroundColor: '#C8FACC', paddingVertical: 6, borderRadius: 8, marginRight: 5, alignItems: 'center' },
-  declineButton: { flex: 1, backgroundColor: '#FFC0C0', paddingVertical: 6, borderRadius: 8, marginLeft: 5, alignItems: 'center' },
-  requestButtonText: { color: '#333', fontWeight: 'bold' },
+  acceptButton: { flex: 1, backgroundColor: '#C8FACC', paddingVertical: 6, borderRadius: 8, marginRight: 5, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+  declineButton: { flex: 1, backgroundColor: '#FFC0C0', paddingVertical: 6, borderRadius: 8, marginLeft: 5, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+  requestButtonText: { color: '#333', fontWeight: 'bold', marginLeft: 3 },
   messageItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.95)', padding: 15, borderRadius: 15, marginBottom: 12, elevation: 3 },
   avatar: { width: 55, height: 55, borderRadius: 28, backgroundColor: '#fff' },
   messageContent: { marginLeft: 15, flex: 1 },
   messageName: { fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 3 },
   messageText: { fontSize: 15, color: '#666' },
   messageTime: { color: '#666', fontSize: 13, marginLeft: 'auto' },
-  chatHeader: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.9)', paddingVertical: 18, borderRadius: 15, marginBottom: 12, elevation: 3 },
+  chatHeader: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.9)', paddingVertical: 18, borderRadius: 15, marginBottom: 12, elevation: 3, justifyContent: 'center' },
   backButton: { position: 'absolute', left: 20, padding: 8, zIndex: 1 },
   backButtonText: { color: '#333', fontWeight: '600', fontSize: 17 },
   chatHeaderText: { flex: 1, fontSize: 20, fontWeight: '700', color: '#333', textAlign: 'center' },
@@ -910,22 +975,45 @@ const styles = StyleSheet.create({
   bubbleFooter: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 5 },
   chatBubbleTime: { fontSize: 11, color: '#666' },
   readReceipt: { fontSize: 11, color: '#FF69B4' },
-  inputContainer: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 30, alignItems: 'center', paddingHorizontal: 15, paddingVertical: 8, marginBottom: 20, elevation: 3 },
-  textInput: { flex: 1, padding: 10, color: '#333', fontSize: 16 },
+  inputContainer: { 
+    flexDirection: 'row', 
+    backgroundColor: 'rgba(255,255,255,0.9)', 
+    borderRadius: 30, 
+    alignItems: 'center', 
+    paddingHorizontal: 15, 
+    paddingVertical: 8, 
+    marginBottom: 20, 
+    elevation: 3 
+  },
+  textInput: { flex: 1, paddingVertical: 0, paddingHorizontal: 10, color: '#333', fontSize: 16 },
   locationButton: {
     backgroundColor: '#007AFF',
     borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginLeft: 8,
+    padding: 8,
+    marginLeft: 5,
     elevation: 2,
   },
-  locationButtonText: { fontWeight: '600', color: '#fff', fontSize: 16 },
-  mediaButton: { backgroundColor: '#fff', borderRadius: 20, paddingVertical: 8, paddingHorizontal: 12, marginLeft: 8, elevation: 2 },
-  mediaButtonText: { fontWeight: '600', color: '#FF69B4', fontSize: 16 },
-  sendButton: { backgroundColor: '#fff', borderRadius: 20, paddingVertical: 8, paddingHorizontal: 15, marginLeft: 8, elevation: 2 },
-  sendButtonText: { fontWeight: '600', color: '#FF69B4', fontSize: 16 },
+  mediaButton: { 
+    backgroundColor: '#fff', 
+    borderRadius: 20, 
+    padding: 8, 
+    marginLeft: 5, 
+    elevation: 2 
+  },
+  sendButton: { 
+    backgroundColor: '#fff', 
+    borderRadius: 20, 
+    padding: 8, 
+    marginLeft: 5, 
+    elevation: 2, 
+    flexDirection: 'row', 
+    alignItems: 'center' 
+  },
+  sendButtonText: { fontWeight: '600', color: '#FF69B4', fontSize: 16, marginLeft: 5 },
   typingIndicator: { alignItems: 'center', marginVertical: 5 },
-  typingText: { fontStyle: 'italic', color: '#666' },
+  typingText: { fontStyle: 'italic', color: '#666', fontSize: 16 },
   mediaImage: { width: 200, height: 200, borderRadius: 10, marginBottom: 5 },
+  modalContainer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' },
+  modalClose: { position: 'absolute', top: 40, right: 20 },
+  fullScreenImage: { width: '90%', height: '70%' },
 });
