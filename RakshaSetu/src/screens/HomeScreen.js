@@ -149,6 +149,23 @@ const HomeScreen = ({ navigation }) => {
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
 
+        {/* AI Report Generator Section */}
+        <TouchableOpacity style={styles.journeySection} onPress={() => navigation.navigate('GenerateReport')}> 
+          <View style={styles.journeyContent}>
+            <Image
+              source={require('../../assets/report.png')}
+              style={styles.journeyIcon}
+            />
+            <View>
+              <Text style={styles.journeyTitle}>Generate a Report</Text>
+              <Text style={styles.journeySubtitle}>
+                Enter your destination, and the app{'\n'}will track your route in real-time.
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="black" />
+        </TouchableOpacity>
+
         {/* Emergency Buttons */}
         <TouchableOpacity style={styles.emergencyButton}>
           <FontAwesome5 name="shield-alt" size={20} color="black" />

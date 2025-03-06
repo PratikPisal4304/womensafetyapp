@@ -17,6 +17,7 @@ import HomeScreen from "./screens/HomeScreen";
 import FakeCallScreen from "./screens/FakeCallScreen";
 import AddFriendsScreen from "./screens/AddCloseFriendsScreen";
 import SkillDevelopmentScreen from "./screens/SkillDevelopmentScreen";
+import GenerateReportScreen from "./screens/GenerateReportScreen";
 import TrackMeScreen from "./screens/TrackMeScreen";
 import SOSScreen from "./screens/SOSScreen";
 import ProfileScreen from "./screens/ProfileScreen";
@@ -45,6 +46,7 @@ function HomeStack() {
       <Stack.Screen name="HomeMain" component={HomeScreen} />
       <Stack.Screen name="FakeCall" component={FakeCallScreen} />
       <Stack.Screen name="AddFriends" component={AddFriendsScreen} />
+      <Stack.Screen name="GenerateReport" component={GenerateReportScreen} />
       <Stack.Screen name="SkillDevelopment" component={SkillDevelopmentScreen} />
       <Stack.Screen name="BudgetTool" component={BudgetToolScreen} />
       <Stack.Screen name="FinancialNews" component={FinancialNews} />
@@ -84,7 +86,7 @@ function FloatingTabBar({ state, descriptors, navigation }) {
   // Example: If inside HomeStack => FakeCall
   if (currentRouteName === "Home") {
     const childRoute = getFocusedRouteNameFromRoute(state.routes[state.index]) ?? "HomeMain";
-    if (childRoute === "FakeCall" || childRoute === "AddFriends") {
+    if (childRoute === "FakeCall" || childRoute === "AddFriends" || childRoute === "GenerateReport" ) {
       hideTabBar = true;
     }
   }
