@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import {
   collection,
   doc,
@@ -103,7 +104,6 @@ const InAppChatScreen = () => {
       if (currentUser) {
         setUser(currentUser);
       } else {
-        // Handle user not being signed in as needed
         setError('User not authenticated');
       }
     });
@@ -454,6 +454,51 @@ const InAppChatScreen = () => {
     }
   };
 
+  // New function to send current location as a link
+  const handleSendLocation = async () => {
+    if (!selectedChat?.threadId) return;
+    setSendingMessage(true);
+    try {
+      const loc = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = loc.coords;
+      const message = `My current location: https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+
+      // Send location message
+      await addDoc(collection(db, 'threads', selectedChat.threadId, 'messages'), {
+        senderId: currentUserId,
+        text: message,
+        media: null,
+        createdAt: serverTimestamp(),
+        read: false,
+      });
+      const threadDocRef = doc(db, 'threads', selectedChat.threadId);
+      await updateDoc(threadDocRef, {
+        lastMessage: message,
+        lastTimestamp: serverTimestamp(),
+      });
+      // Update UI optimistically
+      const newMsg = {
+        id: Date.now().toString(),
+        sender: 'me',
+        senderName: currentUserName,
+        text: message,
+        media: null,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        read: false,
+      };
+      setChatData((prev) => {
+        const existing = prev[selectedChat.threadId] || [];
+        return { ...prev, [selectedChat.threadId]: [...existing, newMsg] };
+      });
+    } catch (error) {
+      console.log('Send location error:', error);
+      setError('Failed to send location.');
+      Alert.alert('Error', 'Location message failed to send.');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
   const handleDeleteMessage = (msgId) => {
     Alert.alert(
       'Delete Message',
@@ -733,6 +778,9 @@ const InAppChatScreen = () => {
             onSubmitEditing={handleSendMessage}
             returnKeyType="send"
           />
+          <TouchableOpacity style={styles.locationButton} onPress={handleSendLocation} activeOpacity={0.8}>
+            <Text style={styles.locationButtonText}>Location</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.mediaButton} onPress={handleSendMedia} activeOpacity={0.8}>
             <Text style={styles.mediaButtonText}>Media</Text>
           </TouchableOpacity>
@@ -845,6 +893,15 @@ const styles = StyleSheet.create({
   readReceipt: { fontSize: 11, color: '#FF69B4' },
   inputContainer: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 30, alignItems: 'center', paddingHorizontal: 15, paddingVertical: 8, marginBottom: 20, elevation: 3 },
   textInput: { flex: 1, padding: 10, color: '#333', fontSize: 16 },
+  locationButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginLeft: 8,
+    elevation: 2,
+  },
+  locationButtonText: { fontWeight: '600', color: '#fff', fontSize: 16 },
   mediaButton: { backgroundColor: '#fff', borderRadius: 20, paddingVertical: 8, paddingHorizontal: 12, marginLeft: 8, elevation: 2 },
   mediaButtonText: { fontWeight: '600', color: '#FF69B4', fontSize: 16 },
   sendButton: { backgroundColor: '#fff', borderRadius: 20, paddingVertical: 8, paddingHorizontal: 15, marginLeft: 8, elevation: 2 },
