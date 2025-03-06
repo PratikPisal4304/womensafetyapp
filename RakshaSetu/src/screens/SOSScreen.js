@@ -12,12 +12,11 @@ import * as Location from 'expo-location';
 import * as SMS from 'expo-sms';
 import MapView, { Marker } from 'react-native-maps';
 import { doc, onSnapshot, collection, query, where, getDocs, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../../config/firebaseConfig'; // Adjust path if needed
-
-// Add your valid Google API key here
-const GOOGLE_API_KEY = 'AIzaSyBzqSJUt0MVs3xFjFWTvLwiyjXwnzbkXok';
+import { auth, db } from '../../config/firebaseConfig';
+import { useRoute } from '@react-navigation/native';
 
 export default function SOSScreen() {
+  const route = useRoute();
   const [isSOSActive, setIsSOSActive] = useState(false);
   const [countdown, setCountdown] = useState(10);
   const [isSendingSOS, setIsSendingSOS] = useState(false);
@@ -90,6 +89,13 @@ export default function SOSScreen() {
     return () => timer && clearInterval(timer);
   }, [isSOSActive, countdown]);
 
+  // Automatically start SOS if autoActivate param is passed
+  useEffect(() => {
+    if (route.params && route.params.autoActivate && !isSOSActive) {
+      startSOS();
+    }
+  }, [route.params]);
+
   const startSOS = () => {
     setIsSOSActive(true);
     setCountdown(10);
@@ -138,15 +144,7 @@ export default function SOSScreen() {
       setLocation(loc.coords);
       const { latitude, longitude } = loc.coords;
 
-      // Create a Street View URL using the Street View API
-      const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=235&pitch=10&key=${GOOGLE_API_KEY}`;
-
-      // Compose the SOS message including the Google Maps link and the Street View link
-      const message = `Emergency! I need help immediately.
-
-My location: https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}
-
-Street View: ${streetViewUrl}`;
+      const message = `Emergency! I need help immediately. My location: https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
 
       // Send SMS to emergency contacts (closeFriends if available, fallback otherwise)
       const allContacts = closeFriends.length > 0 ? closeFriends : emergencyContacts;
@@ -177,7 +175,7 @@ Street View: ${streetViewUrl}`;
     <View style={styles.container}>
       <Text style={styles.header}>RakshaSetu SOS</Text>
       <Text style={styles.infoText}>
-        If you feel unsafe, press the button below. An alert with your current location will be sent to your emergency contacts and via in-app chat to all your conversations.
+        If you feel unsafe, press the button below. An alert with your current location will be sent to your emergency contacts and via in-app chat.
       </Text>
       
       {!isSOSActive && !isSendingSOS && (

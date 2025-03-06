@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -8,16 +8,21 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  Switch,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../../config/firebaseConfig'; // Adjust path if needed
+import { ShakeDetectionContext } from '../../src/context/ShakeDetectionContext'; // Adjust path if needed
 
 const ProfileScreen = ({ navigation }) => {
   // State for user profile data
   const [name, setName] = useState('Lucy');
   const [phone, setPhone] = useState('+91 12345 678910');
   const [isLoading, setIsLoading] = useState(true);
+
+  // Get shake detection setting from context
+  const { isShakeEnabled, setIsShakeEnabled } = useContext(ShakeDetectionContext);
 
   // Preferences and More arrays remain unchanged
   const preferences = [
@@ -43,19 +48,23 @@ const ProfileScreen = ({ navigation }) => {
       return;
     }
     const docRef = doc(db, 'users', user.uid);
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data.name) setName(data.name);
-        if (data.phone) setPhone(data.phone);
-      } else {
-        Alert.alert('No Data', 'No profile data found for this user.');
+    const unsubscribe = onSnapshot(
+      docRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.name) setName(data.name);
+          if (data.phone) setPhone(data.phone);
+        } else {
+          Alert.alert('No Data', 'No profile data found for this user.');
+        }
+        setIsLoading(false);
+      },
+      (error) => {
+        Alert.alert('Error', error.message);
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    }, (error) => {
-      Alert.alert('Error', error.message);
-      setIsLoading(false);
-    });
+    );
     return () => unsubscribe();
   }, []);
 
@@ -133,6 +142,20 @@ const ProfileScreen = ({ navigation }) => {
               <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
             </TouchableOpacity>
           ))}
+        </View>
+
+        {/* Shake Detection Toggle Section */}
+        <Text style={styles.sectionTitle}>Shake Detection</Text>
+        <View style={[styles.sectionContainer, { paddingHorizontal: 20, paddingVertical: 15 }]}>
+          <View style={styles.toggleRow}>
+            <Text style={styles.itemText}>Enable Shake to Activate SOS</Text>
+            <Switch
+              value={isShakeEnabled}
+              onValueChange={(value) => setIsShakeEnabled(value)}
+              thumbColor={isShakeEnabled ? "#ff5f96" : "#ccc"}
+              trackColor={{ false: "#eee", true: "#ffd1e1" }}
+            />
+          </View>
         </View>
 
         {/* Logout Button */}
@@ -234,6 +257,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 15,
     color: '#333',
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   logoutButton: {
     backgroundColor: '#FF4B8C',

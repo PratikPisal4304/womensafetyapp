@@ -1,11 +1,12 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from "react-native";
+import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
 
 import KeyboardAwareWrapper from "./components/KeyboardAwareWrapper";
+import ShakeHandler from "../src/components/ShakeHandler";
 
 import SplashScreen from "./screens/SplashScreen";
 import LoginScreen from "./screens/LoginScreen";
@@ -55,16 +56,15 @@ function HomeStack() {
   );
 }
 
-
 /** ========== Profile Stack ========== **/
 function ProfileStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="ProfileMain" component={(ProfileScreen)} />
-      <Stack.Screen name="EditProfile" component={(EditProfileScreen)} />
-      <Stack.Screen name="MyPosts" component={(MyPostsScreen)} />
-      <Stack.Screen name="MyReports" component={(MyReportsScreen)} />
-      <Stack.Screen name="EmergencyHelpline" component={(EmergencyHelplineScreen)} />
+      <Stack.Screen name="ProfileMain" component={ProfileScreen} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="MyPosts" component={MyPostsScreen} />
+      <Stack.Screen name="MyReports" component={MyReportsScreen} />
+      <Stack.Screen name="EmergencyHelpline" component={EmergencyHelplineScreen} />
     </Stack.Navigator>
   );
 }
@@ -81,25 +81,20 @@ function CommunityStack() {
 
 /** ========== Example Floating Tab Bar ========== **/
 function FloatingTabBar({ state, descriptors, navigation }) {
-  // Decide if we hide the bar, e.g. on FakeCall or EditProfile
   const currentRouteName = state.routes[state.index].name;
   let hideTabBar = false;
 
-  // Example: If inside HomeStack => FakeCall
   if (currentRouteName === "Home") {
     const childRoute = getFocusedRouteNameFromRoute(state.routes[state.index]) ?? "HomeMain";
-    if (childRoute === "FakeCall" || childRoute === "AddFriends" || childRoute === "GenerateReport" ) {
+    if (childRoute === "FakeCall" || childRoute === "AddFriends" || childRoute === "GenerateReport") {
       hideTabBar = true;
     }
-  }
-  // Example: If inside ProfileStack => EditProfile or EmergencyHelpline
-  else if (currentRouteName === "Profile") {
+  } else if (currentRouteName === "Profile") {
     const childRoute = getFocusedRouteNameFromRoute(state.routes[state.index]) ?? "ProfileMain";
     if (childRoute === "EditProfile" || childRoute === "EmergencyHelpline" || childRoute === "MyPosts" || childRoute === "MyReports") {
       hideTabBar = true;
     }
-  }
-  else if (currentRouteName === "Community") {
+  } else if (currentRouteName === "Community") {
     const childRoute = getFocusedRouteNameFromRoute(state.routes[state.index]) ?? "CommunityMain";
     if (childRoute === "GeminiChat" || childRoute === "InAppChat") {
       hideTabBar = true;
@@ -153,12 +148,7 @@ function FloatingTabBar({ state, descriptors, navigation }) {
             onPress={onPress}
             style={styles.tabItem}
           >
-            <Animated.View
-              style={[
-                styles.iconContainer,
-                isFocused && styles.iconFocused,
-              ]}
-            >
+            <Animated.View style={[styles.iconContainer, isFocused && styles.iconFocused]}>
               <IconComponent
                 name={iconName}
                 size={24}
@@ -166,12 +156,7 @@ function FloatingTabBar({ state, descriptors, navigation }) {
                 style={{ transform: [{ translateY: isFocused ? -2 : 0 }] }}
               />
             </Animated.View>
-            <Text
-              style={[
-                styles.tabLabel,
-                { color: isFocused ? "#FF4B8C" : "#8e8e8e" },
-              ]}
-            >
+            <Text style={[styles.tabLabel, { color: isFocused ? "#FF4B8C" : "#8e8e8e" }]}>
               {label}
             </Text>
           </TouchableOpacity>
@@ -185,11 +170,8 @@ function FloatingTabBar({ state, descriptors, navigation }) {
 function MainTabs() {
   return (
     <Tab.Navigator
-      // Our custom floating tab bar
       tabBar={(props) => <FloatingTabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-      }}
+      screenOptions={{ headerShown: false }}
     >
       <Tab.Screen name="Home" component={HomeStack} />
       <Tab.Screen name="Navigation" component={TrackMeScreen} options={{ title: "Track Me" }} />
@@ -203,15 +185,19 @@ function MainTabs() {
 /** ========== Root Stack ========== **/
 export default function Routes() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
-      <Stack.Screen name="Splash" component={SplashScreen} />
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
-      <Stack.Screen name="CreatePinScreen" component={CreatePinScreen} />
-      <Stack.Screen name="TellUsAboutYourselfScreen" component={TellUsAboutYourselfScreen} />
-      <Stack.Screen name="OTPVerificationScreen" component={OTPVerificationScreen} />
-      <Stack.Screen name="MainTabs" component={MainTabs} />
-    </Stack.Navigator>
+    <>
+      {/* Always active ShakeHandler to detect shakes and navigate to SOS */}
+      <ShakeHandler />
+      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
+        <Stack.Screen name="Splash" component={SplashScreen} />
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
+        <Stack.Screen name="CreatePinScreen" component={CreatePinScreen} />
+        <Stack.Screen name="TellUsAboutYourselfScreen" component={TellUsAboutYourselfScreen} />
+        <Stack.Screen name="OTPVerificationScreen" component={OTPVerificationScreen} />
+        <Stack.Screen name="MainTabs" component={MainTabs} />
+      </Stack.Navigator>
+    </>
   );
 }
 
@@ -227,12 +213,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    // shadow for iOS
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: -2 },
     shadowRadius: 6,
-    // elevation for Android
     elevation: 8,
   },
   tabItem: {
