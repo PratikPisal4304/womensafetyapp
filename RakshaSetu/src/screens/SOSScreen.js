@@ -14,6 +14,9 @@ import MapView, { Marker } from 'react-native-maps';
 import { doc, onSnapshot, collection, query, where, getDocs, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../config/firebaseConfig'; // Adjust path if needed
 
+// Add your valid Google API key here
+const GOOGLE_API_KEY = 'AIzaSyBzqSJUt0MVs3xFjFWTvLwiyjXwnzbkXok';
+
 export default function SOSScreen() {
   const [isSOSActive, setIsSOSActive] = useState(false);
   const [countdown, setCountdown] = useState(10);
@@ -135,7 +138,15 @@ export default function SOSScreen() {
       setLocation(loc.coords);
       const { latitude, longitude } = loc.coords;
 
-      const message = `Emergency! I need help immediately. My location: https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+      // Create a Street View URL using the Street View API
+      const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=235&pitch=10&key=${GOOGLE_API_KEY}`;
+
+      // Compose the SOS message including the Google Maps link and the Street View link
+      const message = `Emergency! I need help immediately.
+
+My location: https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}
+
+Street View: ${streetViewUrl}`;
 
       // Send SMS to emergency contacts (closeFriends if available, fallback otherwise)
       const allContacts = closeFriends.length > 0 ? closeFriends : emergencyContacts;

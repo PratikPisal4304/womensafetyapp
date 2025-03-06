@@ -133,10 +133,8 @@ const InAppChatScreen = () => {
   const [inputText, setInputText] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [error, setError] = useState(null);
-  // Local state to detect if current user is typing (used for updating Firebase)
   const [isTyping, setIsTyping] = useState(false);
-  // State for remote typing indicator (other user typing)
-  const [otherTyping, setOtherTyping] = useState(false);
+  const [typingDots, setTypingDots] = useState('');
   const [previewImage, setPreviewImage] = useState(null);
 
   // Refs
@@ -332,7 +330,6 @@ const InAppChatScreen = () => {
     setInputText('');
     setIsTyping(false);
     const messagesRef = collection(db, 'threads', chatItem.threadId, 'messages');
-    // Now using a limit query can be added later for pagination
     const q = query(messagesRef, orderBy('createdAt', 'asc'));
 
     if (unsubscribeRef.current) {
@@ -358,7 +355,7 @@ const InAppChatScreen = () => {
           return {
             id: msg.id,
             sender: senderType,
-            senderName: senderType === 'them' ? chatItem.name : currentUserName,
+            senderName: senderType === 'them' ? selectedChat?.name : currentUserName,
             text: msg.text || '',
             media: msg.media || null,
             time: timeString,
@@ -385,62 +382,6 @@ const InAppChatScreen = () => {
       }
     };
   }, []);
-
-  // ----------------------------
-  // Mark messages as read (Read Receipts)
-  // ----------------------------
-  useEffect(() => {
-    if (selectedChat) {
-      const threadId = selectedChat.threadId;
-      const conversation = chatData[threadId] || [];
-      conversation.forEach((msg) => {
-        if (msg.sender === 'them' && !msg.read) {
-          const messageDocRef = doc(db, 'threads', threadId, 'messages', msg.id);
-          updateDoc(messageDocRef, { read: true })
-            .then(() => {
-              setChatData((prev) => {
-                const updatedMessages = prev[threadId].map((m) => {
-                  if (m.id === msg.id) {
-                    return { ...m, read: true };
-                  }
-                  return m;
-                });
-                return { ...prev, [threadId]: updatedMessages };
-              });
-            })
-            .catch((err) => console.log("Error updating read status: ", err));
-        }
-      });
-    }
-  }, [chatData, selectedChat]);
-
-  // ----------------------------
-  // REAL-TIME TYPING INDICATOR (Other User)
-  // ----------------------------
-  useEffect(() => {
-    if (selectedChat) {
-      const threadId = selectedChat.threadId;
-      const threadDocRef = doc(db, 'threads', threadId);
-      const unsubscribe = onSnapshot(
-        threadDocRef,
-        (docSnap) => {
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            // If the typing field exists and is not the current user, show remote typing indicator
-            if (data.typing && data.typing !== currentUserId) {
-              setOtherTyping(true);
-            } else {
-              setOtherTyping(false);
-            }
-          }
-        },
-        (err) => {
-          console.log("Error listening to typing status: ", err);
-        }
-      );
-      return () => unsubscribe();
-    }
-  }, [selectedChat, currentUserId]);
 
   // ----------------------------
   // UPLOAD MEDIA HELPER
@@ -498,10 +439,6 @@ const InAppChatScreen = () => {
       Alert.alert('Error', 'Message failed to send.');
     } finally {
       setSendingMessage(false);
-      // Clear typing status on send
-      if (selectedChat?.threadId) {
-        updateDoc(doc(db, 'threads', selectedChat.threadId), { typing: null });
-      }
     }
   };
 
@@ -694,6 +631,21 @@ const InAppChatScreen = () => {
   };
 
   // ----------------------------
+  // TYPING INDICATOR ANIMATION
+  // ----------------------------
+  useEffect(() => {
+    let interval;
+    if (isTyping) {
+      interval = setInterval(() => {
+        setTypingDots((prev) => (prev.length >= 3 ? '' : prev + '.'));
+      }, 500);
+    } else {
+      setTypingDots('');
+    }
+    return () => clearInterval(interval);
+  }, [isTyping]);
+
+  // ----------------------------
   // RENDER COMPONENTS
   // ----------------------------
   const renderMainList = () => (
@@ -872,10 +824,9 @@ const InAppChatScreen = () => {
             />
           )}
         />
-        {/* Remote Typing Indicator */}
-        {otherTyping && (
+        {isTyping && (
           <View style={styles.typingIndicator}>
-            <Text style={styles.typingText}>{selectedChat?.name} is typing...</Text>
+            <Text style={styles.typingText}>Typing{typingDots}</Text>
           </View>
         )}
         <View style={styles.inputContainer}>
@@ -887,10 +838,6 @@ const InAppChatScreen = () => {
             onChangeText={(text) => {
               setInputText(text);
               setIsTyping(text.length > 0);
-              if (selectedChat?.threadId) {
-                // Update typing status in Firestore (debouncing could be added here)
-                updateDoc(doc(db, 'threads', selectedChat.threadId), { typing: text.length > 0 ? currentUserId : null });
-              }
             }}
             onSubmitEditing={handleSendMessage}
             returnKeyType="send"
