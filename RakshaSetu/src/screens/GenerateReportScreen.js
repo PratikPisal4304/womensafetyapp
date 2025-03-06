@@ -233,18 +233,18 @@ const GenerateReportScreen = ({ navigation }) => {
       ${description}
 
       Evidence:
-      - ${images.length} Photo(s) (attached separately)
+      - ${images.length} Photo(s) attached separately
       - ${recordingUri ? "Audio statement attached" : "No audio statement"}
 
       ------------------------------------------------------------
-      Please generate a structured report with the following sections:
-      
-      1. Summary: A brief overview of the incident.
-      2. Severity Assessment: Analysis of the seriousness and any potential legal implications.
-      3. Recommendations: Next steps for both the reporter and law enforcement.
-      4. Safety Advice: Specific recommendations for the reporter’s safety.
-      
-      Format the report in a professional, formal style as if it were filed by law enforcement.
+      Please generate a structured, professional report with the following sections:
+
+      1. Summary: Provide a concise overview of the incident.
+      2. Severity Assessment: Analyze the seriousness of the incident and discuss any legal implications.
+      3. Recommendations: Outline next steps for both the reporter and law enforcement.
+      4. Safety Advice: Offer detailed recommendations to ensure the reporter's safety.
+
+      Your analysis should be thorough and written in a formal, investigative tone.
     `;
   };
 
@@ -349,7 +349,12 @@ const GenerateReportScreen = ({ navigation }) => {
         {reportData.reportContent && (
           <>
             <Text style={styles.reportSectionTitle}>AI ANALYSIS</Text>
-            <Text style={styles.reportText}>{reportData.reportContent}</Text>
+            {/* Enhanced AI Analysis Presentation */}
+            <View style={styles.aiAnalysisContainer}>
+              {reportData.reportContent.split('\n').map((line, index) => (
+                <Text key={index} style={styles.aiAnalysisText}>• {line.trim()}</Text>
+              ))}
+            </View>
           </>
         )}
       </View>
@@ -601,316 +606,91 @@ const GenerateReportScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#f8f8f8' 
-  },
+  container: { flex: 1, backgroundColor: '#f8f8f8' },
   header: {
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    paddingHorizontal: 16, 
-    paddingTop: 50, 
-    paddingBottom: 16,
-    backgroundColor: 'white', 
-    elevation: 2, 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1, 
-    shadowRadius: 2,
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 50, paddingBottom: 16,
+    backgroundColor: 'white', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1, shadowRadius: 2,
   },
-  backButton: { 
-    padding: 8 
-  },
-  headerTitle: { 
-    marginLeft: 16, 
-    fontSize: 20, 
-    fontWeight: '600', 
-    color: '#333' 
-  },
-  scrollView: { 
-    flex: 1 
-  },
-  section: { 
-    marginVertical: 12, 
-    paddingHorizontal: 16 
-  },
-  sectionTitle: { 
-    fontSize: 16, 
-    fontWeight: '600', 
-    marginBottom: 12, 
-    color: '#333' 
-  },
-  required: { 
-    color: '#ff4757' 
-  },
-  errorText: { 
-    color: '#ff4757', 
-    fontSize: 12, 
-    marginBottom: 8 
-  },
-  errorBorder: { 
-    borderColor: '#ff4757' 
-  },
-  incidentTypesContainer: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap', 
-    marginHorizontal: -4 
-  },
+  backButton: { padding: 8 },
+  headerTitle: { marginLeft: 16, fontSize: 20, fontWeight: '600', color: '#333' },
+  scrollView: { flex: 1 },
+  section: { marginVertical: 12, paddingHorizontal: 16 },
+  sectionTitle: { fontSize: 16, fontWeight: '600', marginBottom: 12, color: '#333' },
+  required: { color: '#ff4757' },
+  errorText: { color: '#ff4757', fontSize: 12, marginBottom: 8 },
+  errorBorder: { borderColor: '#ff4757' },
+  incidentTypesContainer: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
   incidentTypeButton: {
-    backgroundColor: '#f1f1f1', 
-    borderRadius: 50, 
-    paddingHorizontal: 16, 
-    paddingVertical: 10,
-    margin: 4, 
-    borderWidth: 1, 
-    borderColor: '#e0e0e0',
+    backgroundColor: '#f1f1f1', borderRadius: 50, paddingHorizontal: 16, paddingVertical: 10,
+    margin: 4, borderWidth: 1, borderColor: '#e0e0e0',
   },
-  incidentTypeText: { 
-    fontSize: 14, 
-    color: '#666' 
-  },
-  selectedIncidentType: { 
-    backgroundColor: '#ffebf1', 
-    borderColor: '#ff6b93' 
-  },
-  selectedIncidentTypeText: { 
-    color: '#ff6b93', 
-    fontWeight: '500' 
-  },
+  incidentTypeText: { fontSize: 14, color: '#666' },
+  selectedIncidentType: { backgroundColor: '#ffebf1', borderColor: '#ff6b93' },
+  selectedIncidentTypeText: { color: '#ff6b93', fontWeight: '500' },
   locationContainer: {
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: 'white', 
-    borderRadius: 8, 
-    padding: 12,
-    borderWidth: 1, 
-    borderColor: '#e0e0e0',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 8, padding: 12,
+    borderWidth: 1, borderColor: '#e0e0e0',
   },
-  locationIconContainer: { 
-    marginRight: 12 
-  },
-  locationText: { 
-    flex: 1, 
-    color: '#666', 
-    fontSize: 14 
-  },
-  editLocationButton: { 
-    alignSelf: 'flex-end', 
-    marginTop: 8 
-  },
-  editLocationText: { 
-    color: '#ff6b93', 
-    fontSize: 12 
-  },
+  locationIconContainer: { marginRight: 12 },
+  locationText: { flex: 1, color: '#666', fontSize: 14 },
+  editLocationButton: { alignSelf: 'flex-end', marginTop: 8 },
+  editLocationText: { color: '#ff6b93', fontSize: 12 },
   descriptionInput: {
-    backgroundColor: 'white', 
-    borderRadius: 8, 
-    borderWidth: 1, 
-    borderColor: '#e0e0e0', 
-    padding: 12,
-    height: 120, 
-    fontSize: 14, 
-    color: '#333',
+    backgroundColor: 'white', borderRadius: 8, borderWidth: 1, borderColor: '#e0e0e0', padding: 12,
+    height: 120, fontSize: 14, color: '#333',
   },
-  characterCount: { 
-    alignSelf: 'flex-end', 
-    fontSize: 12, 
-    color: '#999', 
-    marginTop: 4 
-  },
+  characterCount: { alignSelf: 'flex-end', fontSize: 12, color: '#999', marginTop: 4 },
   voiceButton: {
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    backgroundColor: '#ff6b93',
-    borderRadius: 50, 
-    paddingVertical: 12, 
-    marginTop: 16,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ff6b93',
+    borderRadius: 50, paddingVertical: 12, marginTop: 16,
   },
-  recordingActive: { 
-    backgroundColor: '#ff4757' 
-  },
-  voiceButtonText: { 
-    color: 'white', 
-    fontWeight: '500', 
-    marginLeft: 8 
-  },
-  playButton: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    marginTop: 8 
-  },
-  playButtonText: { 
-    color: '#ff6b93', 
-    marginLeft: 4, 
-    fontWeight: '500' 
-  },
-  imageOptionsContainer: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between' 
-  },
+  recordingActive: { backgroundColor: '#ff4757' },
+  voiceButtonText: { color: 'white', fontWeight: '500', marginLeft: 8 },
+  playButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  playButtonText: { color: '#ff6b93', marginLeft: 4, fontWeight: '500' },
+  imageOptionsContainer: { flexDirection: 'row', justifyContent: 'space-between' },
   imageOption: {
-    flex: 1, 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: 'white', 
-    borderRadius: 8,
-    padding: 12, 
-    marginHorizontal: 4, 
-    borderWidth: 1, 
-    borderColor: '#e0e0e0',
+    flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 8,
+    padding: 12, marginHorizontal: 4, borderWidth: 1, borderColor: '#e0e0e0',
   },
-  imageOptionIconContainer: { 
-    marginRight: 12 
-  },
-  imageOptionText: { 
-    color: '#666', 
-    fontSize: 14 
-  },
-  selectedImagesContainer: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap', 
-    marginTop: 16 
-  },
-  imageContainer: {
-    width: '30%', 
-    aspectRatio: 1, 
-    margin: '1.5%', 
-    position: 'relative',
-  },
-  selectedImage: { 
-    width: '100%', 
-    height: '100%', 
-    borderRadius: 8 
-  },
+  imageOptionIconContainer: { marginRight: 12 },
+  imageOptionText: { color: '#666', fontSize: 14 },
+  selectedImagesContainer: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 16 },
+  imageContainer: { width: '30%', aspectRatio: 1, margin: '1.5%', position: 'relative' },
+  selectedImage: { width: '100%', height: '100%', borderRadius: 8 },
   removeImageButton: {
-    position: 'absolute', 
-    top: -8, 
-    right: -8, 
-    backgroundColor: 'white', 
-    borderRadius: 12, 
-    elevation: 2,
+    position: 'absolute', top: -8, right: -8, backgroundColor: 'white', borderRadius: 12, elevation: 2,
   },
-  privacyNotice: { 
-    fontSize: 12, 
-    color: '#999', 
-    textAlign: 'center', 
-    marginTop: 16 
-  },
+  privacyNotice: { fontSize: 12, color: '#999', textAlign: 'center', marginTop: 16 },
   generateButton: {
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    backgroundColor: '#ff6b93',
-    borderRadius: 8, 
-    paddingVertical: 16, 
-    margin: 16, 
-    elevation: 2,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ff6b93',
+    borderRadius: 8, paddingVertical: 16, margin: 16, elevation: 2,
   },
-  generateButtonText: { 
-    color: 'white', 
-    fontWeight: '600', 
-    fontSize: 16, 
-    marginLeft: 8 
-  },
+  generateButtonText: { color: 'white', fontWeight: '600', fontSize: 16, marginLeft: 8 },
   // Modal styles
-  modalOverlay: {
-    flex: 1, 
-    backgroundColor: 'rgba(0,0,0,0.5)', 
-    justifyContent: 'center', 
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: 'white', 
-    borderRadius: 8, 
-    padding: 20, 
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    paddingBottom: 8,
-    marginBottom: 12,
-  },
-  modalTitle: {
-    fontSize: 20, 
-    fontWeight: '600', 
-    color: '#333', 
-    textAlign: 'center',
-  },
-  modalScroll: { 
-    paddingBottom: 20 
-  },
-  reportContainer: {
-    marginBottom: 20,
-  },
-  reportTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
-    color: '#333',
-    textAlign: 'center',
-  },
-  reportTimestamp: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  reportSectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 12,
-    marginBottom: 4,
-    color: '#444',
-  },
-  reportText: {
-    fontSize: 14,
-    color: '#444',
-    lineHeight: 20,
-  },
-  photoScroll: {
-    marginVertical: 8,
-  },
-  reportPhoto: {
-    width: 120,
-    height: 120,
-    borderRadius: 8,
-    marginRight: 8,
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+  modalContent: { backgroundColor: 'white', borderRadius: 8, padding: 20, maxHeight: '80%' },
+  modalHeader: { borderBottomWidth: 1, borderBottomColor: '#ddd', paddingBottom: 8, marginBottom: 12 },
+  modalTitle: { fontSize: 20, fontWeight: '600', color: '#333', textAlign: 'center' },
+  modalScroll: { paddingBottom: 20 },
+  reportContainer: { marginBottom: 20 },
+  reportTitle: { fontSize: 18, fontWeight: '600', marginBottom: 4, color: '#333', textAlign: 'center' },
+  reportTimestamp: { fontSize: 12, color: '#666', marginBottom: 12, textAlign: 'center' },
+  reportSectionTitle: { fontSize: 16, fontWeight: '600', marginTop: 12, marginBottom: 4, color: '#444' },
+  reportText: { fontSize: 14, color: '#444', lineHeight: 20 },
+  photoScroll: { marginVertical: 8 },
+  reportPhoto: { width: 120, height: 120, borderRadius: 8, marginRight: 8 },
+  aiAnalysisContainer: { marginTop: 8 },
+  aiAnalysisText: { fontSize: 14, color: '#444', lineHeight: 20 },
+  modalFooter: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   modalActionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ff6b93',
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginHorizontal: 4,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ff6b93',
+    paddingVertical: 10, borderRadius: 8, marginHorizontal: 4,
   },
-  modalActionButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 14,
-    marginLeft: 4,
-  },
-  closeModalButton: {
-    backgroundColor: '#ff6b93',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  closeModalButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 16,
-  },
+  modalActionButtonText: { color: 'white', fontWeight: '600', fontSize: 14, marginLeft: 4 },
+  closeModalButton: { backgroundColor: '#ff6b93', paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  closeModalButtonText: { color: 'white', fontWeight: '600', fontSize: 16 },
 });
 
 export default GenerateReportScreen;
