@@ -128,6 +128,20 @@ const ProfileScreen = ({ navigation }) => {
           ))}
         </View>
 
+        {/* Shake Detection Toggle Section */}
+        <Text style={styles.sectionTitle}>Shake Detection</Text>
+        <View style={[styles.sectionContainer, { paddingHorizontal: 20, paddingVertical: 15 }]}>
+          <View style={styles.toggleRow}>
+            <Text style={styles.itemText}>Enable Shake to Activate SOS</Text>
+            <Switch
+              value={isShakeEnabled}
+              onValueChange={(value) => setIsShakeEnabled(value)}
+              thumbColor={isShakeEnabled ? "#ff5f96" : "#ccc"}
+              trackColor={{ false: "#eee", true: "#ffd1e1" }}
+            />
+          </View>
+        </View>
+
         {/* More Section */}
         <Text style={styles.sectionTitle}>More</Text>
         <View style={styles.sectionContainer}>
@@ -142,20 +156,6 @@ const ProfileScreen = ({ navigation }) => {
               <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
             </TouchableOpacity>
           ))}
-        </View>
-
-        {/* Shake Detection Toggle Section */}
-        <Text style={styles.sectionTitle}>Shake Detection</Text>
-        <View style={[styles.sectionContainer, { paddingHorizontal: 20, paddingVertical: 15 }]}>
-          <View style={styles.toggleRow}>
-            <Text style={styles.itemText}>Enable Shake to Activate SOS</Text>
-            <Switch
-              value={isShakeEnabled}
-              onValueChange={(value) => setIsShakeEnabled(value)}
-              thumbColor={isShakeEnabled ? "#ff5f96" : "#ccc"}
-              trackColor={{ false: "#eee", true: "#ffd1e1" }}
-            />
-          </View>
         </View>
 
         {/* Logout Button */}
