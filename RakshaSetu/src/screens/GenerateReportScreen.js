@@ -219,7 +219,7 @@ const GenerateReportScreen = ({ navigation }) => {
     return Object.keys(errors).length === 0;
   };
 
-  // Build prompt for Gemini API (text-only)
+  // Build prompt for Gemini API (text-only) with enhanced AI analysis request
   const buildPrompt = () => {
     return `
       INCIDENT REPORT
@@ -237,14 +237,16 @@ const GenerateReportScreen = ({ navigation }) => {
       - ${recordingUri ? "Audio statement attached" : "No audio statement"}
 
       ------------------------------------------------------------
-      Please generate a structured, professional report with the following sections:
+      Please generate a comprehensive and structured report in a formal, investigative tone.
+      
+      The report should include the following sections:
 
-      1. Summary: Provide a concise overview of the incident.
-      2. Severity Assessment: Analyze the seriousness of the incident and discuss any legal implications.
-      3. Recommendations: Outline next steps for both the reporter and law enforcement.
-      4. Safety Advice: Offer detailed recommendations to ensure the reporter's safety.
+      1. **Summary**: A concise overview of the incident.
+      2. **Severity Assessment**: Detailed analysis of the incident’s seriousness and potential legal implications.
+      3. **Recommendations**: Specific next steps for both the reporter and law enforcement.
+      4. **Safety Advice**: Concrete safety measures and recommendations for the reporter.
 
-      Your analysis should be thorough and written in a formal, investigative tone.
+      Each section should be clearly labeled and formatted. Provide thorough and logical analysis for each section.
     `;
   };
 
@@ -278,7 +280,7 @@ const GenerateReportScreen = ({ navigation }) => {
         hasRecording: !!recordingUri,
         imageCount: images.length,
         reportContent: aiReport,
-        attachedImages: images  // Save the image URIs to display later
+        attachedImages: images  // Save image URIs for display later
       };
       
       await saveReport(formattedReportData);
@@ -316,9 +318,12 @@ const GenerateReportScreen = ({ navigation }) => {
     setFormErrors({});
   };
 
-  // Render formatted report for modal, including attached photos
+  // Render formatted report for modal, including attached photos and enhanced AI analysis
   const renderFormattedReport = () => {
     if (!reportData) return null;
+    
+    // Split the AI analysis into sections based on markers (if Gemini returns them in that format)
+    const analysisSections = reportData.reportContent.split('**').filter(section => section.trim() !== '');
     
     return (
       <View style={styles.reportContainer}>
@@ -349,10 +354,11 @@ const GenerateReportScreen = ({ navigation }) => {
         {reportData.reportContent && (
           <>
             <Text style={styles.reportSectionTitle}>AI ANALYSIS</Text>
-            {/* Enhanced AI Analysis Presentation */}
             <View style={styles.aiAnalysisContainer}>
-              {reportData.reportContent.split('\n').map((line, index) => (
-                <Text key={index} style={styles.aiAnalysisText}>• {line.trim()}</Text>
+              {analysisSections.map((section, index) => (
+                <Text key={index} style={styles.aiAnalysisText}>
+                  • {section.trim()}
+                </Text>
               ))}
             </View>
           </>
@@ -659,16 +665,13 @@ const styles = StyleSheet.create({
   selectedImagesContainer: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 16 },
   imageContainer: { width: '30%', aspectRatio: 1, margin: '1.5%', position: 'relative' },
   selectedImage: { width: '100%', height: '100%', borderRadius: 8 },
-  removeImageButton: {
-    position: 'absolute', top: -8, right: -8, backgroundColor: 'white', borderRadius: 12, elevation: 2,
-  },
+  removeImageButton: { position: 'absolute', top: -8, right: -8, backgroundColor: 'white', borderRadius: 12, elevation: 2 },
   privacyNotice: { fontSize: 12, color: '#999', textAlign: 'center', marginTop: 16 },
   generateButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ff6b93',
     borderRadius: 8, paddingVertical: 16, margin: 16, elevation: 2,
   },
   generateButtonText: { color: 'white', fontWeight: '600', fontSize: 16, marginLeft: 8 },
-  // Modal styles
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
   modalContent: { backgroundColor: 'white', borderRadius: 8, padding: 20, maxHeight: '80%' },
   modalHeader: { borderBottomWidth: 1, borderBottomColor: '#ddd', paddingBottom: 8, marginBottom: 12 },
