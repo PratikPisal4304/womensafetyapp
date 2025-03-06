@@ -20,6 +20,8 @@ import { Audio } from 'expo-av';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 const GEMINI_API_KEY = 'AIzaSyCUF0kBZIejCA-MqXx59nYyAj3CN-VNQmY'; // Use environment variables in production
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
@@ -370,6 +372,74 @@ const GenerateReportScreen = ({ navigation }) => {
     );
   };
 
+  // Function to generate PDF and share it using Expo Print and Sharing
+  const sharePdf = async () => {
+    if (!reportData) return;
+    try {
+      // Create HTML content for the PDF file
+      const htmlContent = `
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <title>Incident Report</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; }
+              h1 { text-align: center; }
+              h2 { color: #444; }
+              p { font-size: 14px; line-height: 1.5; }
+              .section { margin-bottom: 20px; }
+            </style>
+          </head>
+          <body>
+            <h1>Incident Report</h1>
+            <div class="section">
+              <h2>Incident ID</h2>
+              <p>${reportData.incidentId}</p>
+            </div>
+            <div class="section">
+              <h2>Incident Type</h2>
+              <p>${reportData.incidentType}</p>
+            </div>
+            <div class="section">
+              <h2>Date & Time</h2>
+              <p>${reportData.timestamp.toLocaleString()}</p>
+            </div>
+            <div class="section">
+              <h2>Location</h2>
+              <p>${reportData.location}</p>
+              ${reportData.locationCoords ? `<p>Coordinates: (${reportData.locationCoords.latitude.toFixed(6)}, ${reportData.locationCoords.longitude.toFixed(6)})</p>` : ''}
+            </div>
+            <div class="section">
+              <h2>Description</h2>
+              <p>${reportData.description}</p>
+            </div>
+            <div class="section">
+              <h2>Evidence</h2>
+              <p>Photo Count: ${reportData.imageCount}</p>
+              <p>${reportData.hasRecording ? "Audio statement attached" : "No audio statement"}</p>
+            </div>
+            <div class="section">
+              <h2>AI Analysis</h2>
+              <p>${reportData.reportContent.replace(/\n/g, '<br />')}</p>
+            </div>
+          </body>
+        </html>
+      `;
+      
+      // Generate the PDF file
+      const { uri } = await Print.printToFileAsync({ html: htmlContent });
+      
+      // Check if sharing is available
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri);
+      } else {
+        Alert.alert('Sharing not available', 'Your device does not support sharing files.');
+      }
+    } catch (error) {
+      Alert.alert('PDF Sharing Error', error.message);
+    }
+  };
+
   return (
     <KeyboardAvoidingView 
       style={styles.container}
@@ -580,9 +650,7 @@ const GenerateReportScreen = ({ navigation }) => {
             <View style={styles.modalFooter}>
               <TouchableOpacity 
                 style={styles.modalActionButton}
-                onPress={() => {
-                  Alert.alert('Share PDF', 'This would export a PDF of the report.');
-                }}
+                onPress={sharePdf}
               >
                 <Ionicons name="share-outline" size={20} color="white" />
                 <Text style={styles.modalActionButtonText}>Share PDF</Text>
