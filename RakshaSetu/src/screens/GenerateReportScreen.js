@@ -224,6 +224,7 @@ const GenerateReportScreen = ({ navigation }) => {
     return `
       INCIDENT REPORT
 
+      Incident ID: ${new Date().toISOString()}
       Incident Type: ${incidentType}
       Date: ${new Date().toLocaleString()}
       Location: ${location}
@@ -242,11 +243,11 @@ const GenerateReportScreen = ({ navigation }) => {
       The report should include the following sections:
 
       1. **Summary**: A concise overview of the incident.
-      2. **Severity Assessment**: Detailed analysis of the incident’s seriousness and potential legal implications.
+      2. **Severity Assessment**: A detailed evaluation of the incident’s seriousness and potential legal implications.
       3. **Recommendations**: Specific next steps for both the reporter and law enforcement.
-      4. **Safety Advice**: Concrete safety measures and recommendations for the reporter.
+      4. **Safety Advice**: Concrete measures to ensure the reporter's safety.
 
-      Each section should be clearly labeled and formatted. Provide thorough and logical analysis for each section.
+      Format the output with clear headings for each section.
     `;
   };
 
@@ -268,10 +269,11 @@ const GenerateReportScreen = ({ navigation }) => {
       const aiResponse = await result.response;
       const aiReport = aiResponse.text();
       
-      // Create report data
+      // Create report data with incident id generated from timestamp
       const timestamp = new Date();
       const formattedReportData = {
         id: timestamp.toISOString(),
+        incidentId: timestamp.toISOString(), // Using ISO timestamp as incident id
         timestamp: timestamp,
         incidentType,
         location,
@@ -322,11 +324,12 @@ const GenerateReportScreen = ({ navigation }) => {
   const renderFormattedReport = () => {
     if (!reportData) return null;
     
-    // Split the AI analysis into sections based on markers (if Gemini returns them in that format)
+    // For enhanced analysis, we split the analysis content into sections based on headings if present
     const analysisSections = reportData.reportContent.split('**').filter(section => section.trim() !== '');
     
     return (
       <View style={styles.reportContainer}>
+        <Text style={styles.reportTitle}>Incident ID: {reportData.incidentId}</Text>
         <Text style={styles.reportTitle}>{reportData.incidentType} Incident Report</Text>
         <Text style={styles.reportTimestamp}>
           {reportData.timestamp.toLocaleDateString()} {reportData.timestamp.toLocaleTimeString()}
@@ -614,9 +617,17 @@ const GenerateReportScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8f8f8' },
   header: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 50, paddingBottom: 16,
-    backgroundColor: 'white', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1, shadowRadius: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 50,
+    paddingBottom: 16,
+    backgroundColor: 'white',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   backButton: { padding: 8 },
   headerTitle: { marginLeft: 16, fontSize: 20, fontWeight: '600', color: '#333' },
@@ -628,28 +639,49 @@ const styles = StyleSheet.create({
   errorBorder: { borderColor: '#ff4757' },
   incidentTypesContainer: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
   incidentTypeButton: {
-    backgroundColor: '#f1f1f1', borderRadius: 50, paddingHorizontal: 16, paddingVertical: 10,
-    margin: 4, borderWidth: 1, borderColor: '#e0e0e0',
+    backgroundColor: '#f1f1f1',
+    borderRadius: 50,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    margin: 4,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   incidentTypeText: { fontSize: 14, color: '#666' },
   selectedIncidentType: { backgroundColor: '#ffebf1', borderColor: '#ff6b93' },
   selectedIncidentTypeText: { color: '#ff6b93', fontWeight: '500' },
   locationContainer: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 8, padding: 12,
-    borderWidth: 1, borderColor: '#e0e0e0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   locationIconContainer: { marginRight: 12 },
   locationText: { flex: 1, color: '#666', fontSize: 14 },
   editLocationButton: { alignSelf: 'flex-end', marginTop: 8 },
   editLocationText: { color: '#ff6b93', fontSize: 12 },
   descriptionInput: {
-    backgroundColor: 'white', borderRadius: 8, borderWidth: 1, borderColor: '#e0e0e0', padding: 12,
-    height: 120, fontSize: 14, color: '#333',
+    backgroundColor: 'white',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    padding: 12,
+    height: 120,
+    fontSize: 14,
+    color: '#333',
   },
   characterCount: { alignSelf: 'flex-end', fontSize: 12, color: '#999', marginTop: 4 },
   voiceButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ff6b93',
-    borderRadius: 50, paddingVertical: 12, marginTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ff6b93',
+    borderRadius: 50,
+    paddingVertical: 12,
+    marginTop: 16,
   },
   recordingActive: { backgroundColor: '#ff4757' },
   voiceButtonText: { color: 'white', fontWeight: '500', marginLeft: 8 },
@@ -657,8 +689,15 @@ const styles = StyleSheet.create({
   playButtonText: { color: '#ff6b93', marginLeft: 4, fontWeight: '500' },
   imageOptionsContainer: { flexDirection: 'row', justifyContent: 'space-between' },
   imageOption: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 8,
-    padding: 12, marginHorizontal: 4, borderWidth: 1, borderColor: '#e0e0e0',
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 12,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   imageOptionIconContainer: { marginRight: 12 },
   imageOptionText: { color: '#666', fontSize: 14 },
@@ -668,8 +707,14 @@ const styles = StyleSheet.create({
   removeImageButton: { position: 'absolute', top: -8, right: -8, backgroundColor: 'white', borderRadius: 12, elevation: 2 },
   privacyNotice: { fontSize: 12, color: '#999', textAlign: 'center', marginTop: 16 },
   generateButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ff6b93',
-    borderRadius: 8, paddingVertical: 16, margin: 16, elevation: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ff6b93',
+    borderRadius: 8,
+    paddingVertical: 16,
+    margin: 16,
+    elevation: 2,
   },
   generateButtonText: { color: 'white', fontWeight: '600', fontSize: 16, marginLeft: 8 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
@@ -684,12 +729,23 @@ const styles = StyleSheet.create({
   reportText: { fontSize: 14, color: '#444', lineHeight: 20 },
   photoScroll: { marginVertical: 8 },
   reportPhoto: { width: 120, height: 120, borderRadius: 8, marginRight: 8 },
-  aiAnalysisContainer: { marginTop: 8 },
-  aiAnalysisText: { fontSize: 14, color: '#444', lineHeight: 20 },
+  aiAnalysisContainer: {
+    marginTop: 8,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    padding: 10,
+  },
+  aiAnalysisText: { fontSize: 14, color: '#333', lineHeight: 20 },
   modalFooter: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   modalActionButton: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ff6b93',
-    paddingVertical: 10, borderRadius: 8, marginHorizontal: 4,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ff6b93',
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginHorizontal: 4,
   },
   modalActionButtonText: { color: 'white', fontWeight: '600', fontSize: 14, marginLeft: 4 },
   closeModalButton: { backgroundColor: '#ff6b93', paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
