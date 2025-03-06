@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
@@ -40,6 +41,35 @@ import { db } from '../../config/firebaseConfig';
 const storage = getStorage();
 const auth = getAuth();
 
+// Helper function to check if a string is a URL
+const isURL = (text) => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  return urlRegex.test(text);
+};
+
+// Updated function to render text with clickable URLs.
+// It splits the text into words and renders each word accordingly.
+const renderMessageText = (text) => {
+  return (
+    <Text style={styles.chatBubbleText}>
+      {text.split(' ').map((word, index) => {
+        if (isURL(word)) {
+          return (
+            <Text
+              key={index}
+              style={{ color: 'blue', textDecorationLine: 'underline' }}
+              onPress={() => Linking.openURL(word)}
+            >
+              {word}{' '}
+            </Text>
+          );
+        }
+        return word + ' ';
+      })}
+    </Text>
+  );
+};
+
 const ChatBubble = ({ item, onLongPress }) => {
   return (
     <TouchableOpacity
@@ -56,7 +86,7 @@ const ChatBubble = ({ item, onLongPress }) => {
       {item.media ? (
         <Image source={{ uri: item.media }} style={styles.mediaImage} />
       ) : (
-        <Text style={styles.chatBubbleText}>{item.text}</Text>
+        renderMessageText(item.text)
       )}
       <View style={styles.bubbleFooter}>
         <Text style={styles.chatBubbleTime}>{item.time}</Text>
@@ -303,7 +333,6 @@ const InAppChatScreen = () => {
           return {
             id: msg.id,
             sender: senderType,
-            // Use currentUserName for your own messages instead of "You"
             senderName: senderType === 'them' ? selectedChat?.name : currentUserName,
             text: msg.text || '',
             media: msg.media || null,
@@ -392,21 +421,16 @@ const InAppChatScreen = () => {
   };
 
   const handleSendMedia = async () => {
-    // Request media library permission
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
       Alert.alert('Permission required', 'Permission to access media library is required!');
       return;
     }
-    // Launch the image picker
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.7,
     });
-    // Check cancellation (for both 'canceled' and 'cancelled')
     if (result.canceled === true || result.cancelled === true) return;
-
-    // For newer versions, the image data is in result.assets (an array)
     const localUri = result.assets ? result.assets[0].uri : result.uri;
     if (!localUri || !selectedChat?.threadId) return;
 
@@ -414,9 +438,7 @@ const InAppChatScreen = () => {
     const threadId = selectedChat.threadId;
     
     try {
-      // Define a unique storage path (e.g., using current user id and timestamp)
       const filePath = `messages/${currentUserId}/${Date.now()}.jpg`;
-      // Upload the image and get the download URL
       const downloadURL = await uploadImageAsync(localUri, filePath);
       
       const newMsg = {
@@ -428,7 +450,6 @@ const InAppChatScreen = () => {
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         read: false,
       };
-      // Optimistically update UI
       setChatData((prev) => {
         const existing = prev[threadId] || [];
         return { ...prev, [threadId]: [...existing, newMsg] };
@@ -454,7 +475,7 @@ const InAppChatScreen = () => {
     }
   };
 
-  // New function to send current location as a link
+  // New function to send current location as a link message
   const handleSendLocation = async () => {
     if (!selectedChat?.threadId) return;
     setSendingMessage(true);
@@ -463,7 +484,6 @@ const InAppChatScreen = () => {
       const { latitude, longitude } = loc.coords;
       const message = `My current location: https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
 
-      // Send location message
       await addDoc(collection(db, 'threads', selectedChat.threadId, 'messages'), {
         senderId: currentUserId,
         text: message,
@@ -476,7 +496,6 @@ const InAppChatScreen = () => {
         lastMessage: message,
         lastTimestamp: serverTimestamp(),
       });
-      // Update UI optimistically
       const newMsg = {
         id: Date.now().toString(),
         sender: 'me',
