@@ -222,31 +222,33 @@ const GenerateReportScreen = ({ navigation }) => {
   // Build prompt for Gemini API (text-only)
   const buildPrompt = () => {
     return `
-      Create a detailed incident report with the following format:
+      INCIDENT REPORT
 
-      INCIDENT TYPE: ${incidentType}
-      DATE: ${new Date().toLocaleString()}
-      LOCATION: ${location}
-      ${locationCoords ? `COORDINATES: (${locationCoords.latitude.toFixed(6)}, ${locationCoords.longitude.toFixed(6)})` : ''}
+      Incident Type: ${incidentType}
+      Date: ${new Date().toLocaleString()}
+      Location: ${location}
+      ${locationCoords ? `Coordinates: (${locationCoords.latitude.toFixed(6)}, ${locationCoords.longitude.toFixed(6)})` : ''}
 
-      DESCRIPTION:
+      Description:
       ${description}
 
-      EVIDENCE:
-      - ${images.length} Photo(s) attached separately
+      Evidence:
+      - ${images.length} Photo(s) (attached separately)
       - ${recordingUri ? "Audio statement attached" : "No audio statement"}
 
-      Please provide a structured report with these sections:
-      1. SUMMARY - A brief overview of what occurred.
-      2. SEVERITY ASSESSMENT - The seriousness of the incident and any legal implications.
-      3. RECOMMENDATIONS - Next steps for both the reporter and law enforcement.
-      4. SAFETY ADVICE - Specific advice for the reporter's safety.
-
-      Format the information in a professional law enforcement report style.
+      ------------------------------------------------------------
+      Please generate a structured report with the following sections:
+      
+      1. Summary: A brief overview of the incident.
+      2. Severity Assessment: Analysis of the seriousness and any potential legal implications.
+      3. Recommendations: Next steps for both the reporter and law enforcement.
+      4. Safety Advice: Specific recommendations for the reporter’s safety.
+      
+      Format the report in a professional, formal style as if it were filed by law enforcement.
     `;
   };
 
-  // Generate AI Report and display in modal (without sending images to Gemini)
+  // Generate AI Report and display in modal (text-only)
   const generateAIReport = async () => {
     if (!validateForm()) {
       Alert.alert('Validation Error', 'Please fix the errors and try again.');
