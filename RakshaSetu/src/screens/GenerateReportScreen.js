@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -22,18 +22,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
 
-const GEMINI_API_KEY = 'AIzaSyCUF0kBZIejCA-MqXx59nYyAj3CN-VNQmY'; // Use environment variables in production
+const GEMINI_API_KEY = 'AIzaSyBzqSJUt0MVs3xFjFWTvLwiyjXwnzbkXok'; // Replace with your key or use env variables
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 const GenerateReportScreen = ({ navigation }) => {
-  // State variables
   const [incidentType, setIncidentType] = useState('');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [recording, setRecording] = useState(null);
   const [recordingUri, setRecordingUri] = useState(null);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const recordingInterval = useRef(null);
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [locationCoords, setLocationCoords] = useState(null);
@@ -42,8 +44,7 @@ const GenerateReportScreen = ({ navigation }) => {
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [reportData, setReportData] = useState(null);
 
-  // Incident type options
-  const incidentTypes = [
+  const incidentTypesOptions = [
     { id: 1, name: 'Harassment' },
     { id: 2, name: 'Stalking' },
     { id: 3, name: 'Assault' },
@@ -52,7 +53,6 @@ const GenerateReportScreen = ({ navigation }) => {
     { id: 6, name: 'Trespassing' }
   ];
 
-  // Request permissions on mount
   useEffect(() => {
     (async () => {
       const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
@@ -69,9 +69,11 @@ const GenerateReportScreen = ({ navigation }) => {
         );
       }
     })();
+    return () => {
+      if (recordingInterval.current) clearInterval(recordingInterval.current);
+    };
   }, []);
 
-  // Get current location
   const getCurrentLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -80,19 +82,16 @@ const GenerateReportScreen = ({ navigation }) => {
         setFormErrors({ ...formErrors, location: 'Location permission denied' });
         return;
       }
-      
       setLocation('Getting your location...');
       const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       setLocationCoords({
         latitude: position.coords.latitude,
         longitude: position.coords.longitude
       });
-      
       const address = await Location.reverseGeocodeAsync({
         latitude: position.coords.latitude,
         longitude: position.coords.longitude
       });
-      
       if (address && address.length > 0) {
         const { street, name, city, region, postalCode, country } = address[0];
         const streetName = street || name || 'Unnamed Road';
@@ -109,7 +108,7 @@ const GenerateReportScreen = ({ navigation }) => {
     }
   };
 
-  // Voice recording functions
+  // Enhanced voice recording with timer and blinking dot indicator
   const startRecording = async () => {
     try {
       const { status } = await Audio.requestPermissionsAsync();
@@ -117,21 +116,22 @@ const GenerateReportScreen = ({ navigation }) => {
         Alert.alert('Microphone Permission Denied', 'Cannot access microphone');
         return;
       }
-      
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
         staysActiveInBackground: true,
         interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_DO_NOT_MIX,
-        interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DO_NOT_MIX,
+        interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DUCK_OTHERS,
       });
-      
       const newRecording = new Audio.Recording();
       await newRecording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
       await newRecording.startAsync();
-      
       setRecording(newRecording);
       setIsRecording(true);
+      setRecordingDuration(0);
+      recordingInterval.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
     } catch (error) {
       Alert.alert('Recording Error', error.message);
     }
@@ -139,9 +139,9 @@ const GenerateReportScreen = ({ navigation }) => {
 
   const stopRecording = async () => {
     if (!recording) return;
-    
     try {
       await recording.stopAndUnloadAsync();
+      clearInterval(recordingInterval.current);
       const uri = recording.getURI();
       setRecordingUri(uri);
       setIsRecording(false);
@@ -169,14 +169,12 @@ const GenerateReportScreen = ({ navigation }) => {
         Alert.alert('Camera Permission Required', 'Please grant camera permission.');
         return;
       }
-      
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
       });
-      
       if (!result.canceled) {
         setImages([...images, result.assets[0].uri]);
       }
@@ -192,14 +190,12 @@ const GenerateReportScreen = ({ navigation }) => {
         Alert.alert('Media Library Permission Required', 'Please grant media library permission.');
         return;
       }
-      
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
         allowsEditing: false,
         quality: 0.8,
       });
-      
       if (!result.canceled) {
         const newImages = result.assets.map(asset => asset.uri);
         setImages([...images, ...newImages]);
@@ -209,7 +205,6 @@ const GenerateReportScreen = ({ navigation }) => {
     }
   };
 
-  // Form validation
   const validateForm = () => {
     const errors = {};
     if (!incidentType) errors.incidentType = 'Select an incident type';
@@ -221,62 +216,86 @@ const GenerateReportScreen = ({ navigation }) => {
     return Object.keys(errors).length === 0;
   };
 
-  // Build prompt for Gemini API (text-only) with enhanced AI analysis request
   const buildPrompt = () => {
+    const reportDate = new Date();
     return `
-      INCIDENT REPORT
+**FIRST INFORMATION REPORT (FIR)**
 
-      Incident ID: ${new Date().toISOString()}
-      Incident Type: ${incidentType}
-      Date: ${new Date().toLocaleString()}
-      Location: ${location}
-      ${locationCoords ? `Coordinates: (${locationCoords.latitude.toFixed(6)}, ${locationCoords.longitude.toFixed(6)})` : ''}
+**1. FIR Number and Date:**
+*   **FIR Number:** [To be assigned by Police Station]
+*   **Date of Report:** ${reportDate.toLocaleDateString()}
 
-      Description:
-      ${description}
+**2. Complainant Information:**
+*   **Name:** [To be provided by Complainant]
+*   **Address:** [To be provided by Complainant]
+*   **Contact Number:** [To be provided by Complainant]
+*   **Email Address:** [To be provided by Complainant]
+*   **Occupation:** [To be provided by Complainant]
 
-      Evidence:
-      - ${images.length} Photo(s) attached separately
-      - ${recordingUri ? "Audio statement attached" : "No audio statement"}
+**3. Nature of Incident:**
+*   ${incidentType}
 
-      ------------------------------------------------------------
-      Please generate a comprehensive and structured report in a formal, investigative tone.
-      
-      The report should include the following sections:
+**4. Time and Date of Incident:**
+*   **Date:** ${reportDate.toLocaleDateString()}
+*   **Time:** ${reportDate.toLocaleTimeString()}
 
-      1. **Summary**: A concise overview of the incident.
-      2. **Severity Assessment**: A detailed evaluation of the incident’s seriousness and potential legal implications.
-      3. **Recommendations**: Specific next steps for both the reporter and law enforcement.
-      4. **Safety Advice**: Concrete measures to ensure the reporter's safety.
+**5. Location Details:**
+*   **Location:** ${location}
+*   **Pin Code:** [To be provided if available]
+*   **GPS Coordinates:** ${locationCoords ? `${locationCoords.latitude.toFixed(6)} (Latitude), ${locationCoords.longitude.toFixed(6)} (Longitude)` : '[Not Available]'}
+*   **Landmark (if any):** [To be provided by Complainant, if available]
 
-      Format the output with clear headings for each section.
+**6. Detailed Description:**
+${description}
+
+**7. Evidence:**
+*   **Photographic Evidence:** ${images.length} photo(s) attached.
+*   **Other Evidence:** [To be provided by Complainant and Investigating Officer.]
+
+**8. Action Requested:**
+The complainant requests that the police investigate this matter thoroughly, identify any perpetrator(s), and take appropriate legal action to prevent further incidents.
+
+**9. Declaration Statement:**
+I, [Complainant's Name], declare that the information provided above is true and correct to the best of my knowledge and belief. I understand that providing false information is a punishable offense.
+
+____________________________
+(Signature of Complainant)
+
+____________________________
+(Name of Complainant)
+
+**FOR POLICE USE ONLY:**
+*   **Police Station:** [To be filled by Police Station]
+*   **Investigating Officer:** [To be filled by Police Officer]
+*   **Designation:** [To be filled by Police Officer]
+*   **Date and Time of Receipt:** [To be filled by Police Officer]
+*   **Sections of Law Applied:** [To be filled by Police Officer]
+*   **Actions Taken:** [To be filled by Police Officer]
+____________________________
+(Signature of Investigating Officer)
+
+____________________________
+(Name and Designation of Investigating Officer)
     `;
   };
 
-  // Generate AI Report and display in modal (text-only)
   const generateAIReport = async () => {
     if (!validateForm()) {
       Alert.alert('Validation Error', 'Please fix the errors and try again.');
       return;
     }
-    
     try {
       setLoading(true);
       const promptText = buildPrompt();
-      
-      // Call Gemini using text-only prompt
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
       const result = await model.generateContent(promptText);
-      
       const aiResponse = await result.response;
       const aiReport = aiResponse.text();
-      
-      // Create report data with incident id generated from timestamp
       const timestamp = new Date();
       const formattedReportData = {
         id: timestamp.toISOString(),
-        incidentId: timestamp.toISOString(), // Using ISO timestamp as incident id
-        timestamp: timestamp,
+        incidentId: timestamp.toISOString(),
+        timestamp,
         incidentType,
         location,
         locationCoords,
@@ -284,9 +303,8 @@ const GenerateReportScreen = ({ navigation }) => {
         hasRecording: !!recordingUri,
         imageCount: images.length,
         reportContent: aiReport,
-        attachedImages: images  // Save image URIs for display later
+        attachedImages: images
       };
-      
       await saveReport(formattedReportData);
       setReportData(formattedReportData);
       setGeneratedReport(aiReport);
@@ -299,7 +317,6 @@ const GenerateReportScreen = ({ navigation }) => {
     }
   };
 
-  // Save report data to AsyncStorage
   const saveReport = async (reportData) => {
     try {
       const reportsJson = await AsyncStorage.getItem('incident_reports');
@@ -311,29 +328,14 @@ const GenerateReportScreen = ({ navigation }) => {
     }
   };
 
-  // Optional: Reset form after report generation
-  const resetForm = () => {
-    setIncidentType('');
-    setLocation('');
-    setDescription('');
-    setRecordingUri(null);
-    setImages([]);
-    setLocationCoords(null);
-    setFormErrors({});
-  };
-
-  // Helper: Convert attached images to base64 strings for PDF embedding
+  // Helper: Convert images to base64 strings using Expo FileSystem
   const convertImagesToBase64 = async () => {
     const imagePromises = images.map(async (uri) => {
       try {
-        const response = await fetch(uri);
-        const blob = await response.blob();
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
+        const base64 = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64,
         });
+        return `data:image/jpeg;base64,${base64}`;
       } catch (error) {
         console.error('Image conversion error:', error);
         return null;
@@ -342,7 +344,6 @@ const GenerateReportScreen = ({ navigation }) => {
     return (await Promise.all(imagePromises)).filter(img => img !== null);
   };
 
-  // Function to generate PDF and share it, including attached images
   const sharePdf = async () => {
     if (!reportData) return;
     try {
@@ -352,74 +353,62 @@ const GenerateReportScreen = ({ navigation }) => {
         imagesHtml = base64Images
           .map(
             (img, index) =>
-              `<img src="${img}" alt="Attachment ${index + 1}" style="width:120px; height:120px; margin-right:8px; border-radius:8px;" />`
+              `<img src="${img}" alt="Attachment ${index + 1}" style="width:120px; height:120px; margin:4px; border-radius:8px;" />`
           )
           .join('');
       }
-
-      // Create HTML content for the PDF file
       const htmlContent = `
         <html>
           <head>
             <meta charset="utf-8" />
-            <title>Incident Report</title>
+            <title>FIR Report</title>
             <style>
-              body { font-family: Arial, sans-serif; padding: 20px; }
-              h1, h2 { text-align: center; }
-              .section { margin-bottom: 20px; }
-              .images { display: flex; }
+              body { font-family: Arial, sans-serif; background: #f8f8f8; margin: 0; padding: 20px; }
+              .header { text-align: center; background-color: #ff6b93; color: white; padding: 10px; border-radius: 8px; margin-bottom: 20px; }
+              .header h1 { margin: 0; }
+              .section { background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+              .section h2 { color: #ff6b93; margin-bottom: 10px; border-bottom: 1px solid #e0e0e0; padding-bottom: 5px; }
+              .section p { font-size: 14px; line-height: 1.5; margin: 5px 0; }
+              .images { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+              .images img { width: 120px; height: 120px; border-radius: 8px; border: 1px solid #e0e0e0; object-fit: cover; }
             </style>
           </head>
           <body>
-            <h1>Incident Report</h1>
-            <div class="section">
-              <h2>Incident ID</h2>
-              <p>${reportData.incidentId}</p>
+            <div class="header">
+              <h1>FIRST INFORMATION REPORT (FIR)</h1>
             </div>
             <div class="section">
-              <h2>Incident Type</h2>
-              <p>${reportData.incidentType}</p>
+              <h2>FIR Number and Date</h2>
+              <p><strong>FIR Number:</strong> [To be assigned by Police Station]</p>
+              <p><strong>Date of Report:</strong> ${reportData.timestamp.toLocaleDateString()}</p>
             </div>
             <div class="section">
-              <h2>Date & Time</h2>
-              <p>${reportData.timestamp.toLocaleString()}</p>
+              <h2>Incident Details</h2>
+              <p><strong>Incident ID:</strong> ${reportData.incidentId}</p>
+              <p><strong>Incident Type:</strong> ${reportData.incidentType}</p>
+              <p><strong>Date & Time of Incident:</strong> ${reportData.timestamp.toLocaleString()}</p>
+              <p><strong>Location:</strong> ${reportData.location}</p>
+              ${reportData.locationCoords ? `<p><strong>GPS Coordinates:</strong> (${reportData.locationCoords.latitude.toFixed(6)}, ${reportData.locationCoords.longitude.toFixed(6)})</p>` : ''}
             </div>
             <div class="section">
-              <h2>Location</h2>
-              <p>${reportData.location}</p>
-              ${
-                reportData.locationCoords
-                  ? `<p>Coordinates: (${reportData.locationCoords.latitude.toFixed(6)}, ${reportData.locationCoords.longitude.toFixed(6)})</p>`
-                  : ''
-              }
-            </div>
-            <div class="section">
-              <h2>Description</h2>
+              <h2>Detailed Description</h2>
               <p>${reportData.description}</p>
             </div>
             <div class="section">
               <h2>Evidence</h2>
-              <p>Photo Count: ${reportData.imageCount}</p>
-              <p>${reportData.hasRecording ? "Audio statement attached" : "No audio statement"}</p>
+              <p><strong>Photographic Evidence:</strong> ${reportData.imageCount} photo(s) attached.</p>
+              <p><strong>Audio Statement:</strong> ${reportData.hasRecording ? "Attached" : "Not provided"}</p>
             </div>
-            <div class="section">
+            ${imagesHtml ? `<div class="section">
               <h2>Attached Photos</h2>
               <div class="images">
                 ${imagesHtml}
               </div>
-            </div>
-            <div class="section">
-              <h2>AI Analysis</h2>
-              <p>${reportData.reportContent.replace(/\n/g, '<br />')}</p>
-            </div>
+            </div>` : ''}
           </body>
         </html>
       `;
-      
-      // Generate the PDF file
       const { uri } = await Print.printToFileAsync({ html: htmlContent });
-      
-      // Share the PDF file
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri);
       } else {
@@ -430,13 +419,8 @@ const GenerateReportScreen = ({ navigation }) => {
     }
   };
 
-  // Render formatted report for modal, including attached photos and enhanced AI analysis
   const renderFormattedReport = () => {
     if (!reportData) return null;
-    
-    // For enhanced analysis, we split the analysis content into sections based on headings if present
-    const analysisSections = reportData.reportContent.split('**').filter(section => section.trim() !== '');
-    
     return (
       <View style={styles.reportContainer}>
         <Text style={styles.reportTitle}>Incident ID: {reportData.incidentId}</Text>
@@ -464,18 +448,6 @@ const GenerateReportScreen = ({ navigation }) => {
             </ScrollView>
           </>
         )}
-        {reportData.reportContent && (
-          <>
-            <Text style={styles.reportSectionTitle}>AI ANALYSIS</Text>
-            <View style={styles.aiAnalysisContainer}>
-              {analysisSections.map((section, index) => (
-                <Text key={index} style={styles.aiAnalysisText}>
-                  • {section.trim()}
-                </Text>
-              ))}
-            </View>
-          </>
-        )}
       </View>
     );
   };
@@ -486,21 +458,19 @@ const GenerateReportScreen = ({ navigation }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <StatusBar style="dark" />
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="#555" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>File Incident Report</Text>
       </View>
-      
       <ScrollView style={styles.scrollView}>
         {/* Incident Type */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Type of Incident<Text style={styles.required}>*</Text></Text>
           {formErrors.incidentType && <Text style={styles.errorText}>{formErrors.incidentType}</Text>}
           <View style={styles.incidentTypesContainer}>
-            {incidentTypes.map((type) => (
+            {incidentTypesOptions.map((type) => (
               <TouchableOpacity
                 key={type.id}
                 style={[
@@ -523,7 +493,6 @@ const GenerateReportScreen = ({ navigation }) => {
             ))}
           </View>
         </View>
-        
         {/* Location */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Location<Text style={styles.required}>*</Text></Text>
@@ -570,7 +539,6 @@ const GenerateReportScreen = ({ navigation }) => {
             </TouchableOpacity>
           )}
         </View>
-        
         {/* Description */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Describe what happened<Text style={styles.required}>*</Text></Text>
@@ -592,24 +560,30 @@ const GenerateReportScreen = ({ navigation }) => {
           <Text style={styles.characterCount}>
             {description.length} characters {description.length < 20 && '(min 20)'}
           </Text>
-          {/* Voice Recording */}
-          <TouchableOpacity
-            style={[styles.voiceButton, isRecording && styles.recordingActive]}
-            onPress={isRecording ? stopRecording : startRecording}
-          >
-            <Ionicons name={isRecording ? "stop" : "mic"} size={24} color="white" />
-            <Text style={styles.voiceButtonText}>
-              {isRecording ? 'Stop Recording' : 'Record Voice Statement'}
-            </Text>
-          </TouchableOpacity>
-          {recordingUri && (
-            <TouchableOpacity style={styles.playButton} onPress={playRecording}>
-              <Ionicons name="play" size={20} color="#ff6b93" />
-              <Text style={styles.playButtonText}>Play Recording</Text>
+          <View style={styles.recordingContainer}>
+            <TouchableOpacity
+              style={[styles.voiceButton, isRecording && styles.recordingActive]}
+              onPress={isRecording ? stopRecording : startRecording}
+            >
+              <Ionicons name={isRecording ? "stop" : "mic"} size={24} color="white" />
+              <Text style={styles.voiceButtonText}>
+                {isRecording ? 'Stop Recording' : 'Record Voice Statement'}
+              </Text>
+              {isRecording && <View style={styles.blinkingDot} />}
             </TouchableOpacity>
-          )}
+            {isRecording && (
+              <Text style={styles.recordingTimer}>
+                {new Date(recordingDuration * 1000).toISOString().substr(11, 8)}
+              </Text>
+            )}
+            {recordingUri && (
+              <TouchableOpacity style={styles.playButton} onPress={playRecording}>
+                <Ionicons name="play" size={20} color="#ff6b93" />
+                <Text style={styles.playButtonText}>Play Recording</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-        
         {/* Images */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Add Images (Optional)</Text>
@@ -647,7 +621,6 @@ const GenerateReportScreen = ({ navigation }) => {
             </View>
           )}
         </View>
-        
         {/* Privacy Notice */}
         <View style={styles.section}>
           <Text style={styles.privacyNotice}>
@@ -655,8 +628,6 @@ const GenerateReportScreen = ({ navigation }) => {
           </Text>
         </View>
       </ScrollView>
-      
-      {/* Generate Report Button */}
       <TouchableOpacity 
         style={styles.generateButton}
         onPress={generateAIReport}
@@ -671,8 +642,6 @@ const GenerateReportScreen = ({ navigation }) => {
           </>
         )}
       </TouchableOpacity>
-
-      {/* Report Modal */}
       <Modal
         visible={reportModalVisible}
         animationType="slide"
@@ -760,10 +729,12 @@ const styles = StyleSheet.create({
   characterCount: { alignSelf: 'flex-end', fontSize: 12, color: '#999', marginTop: 4 },
   voiceButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ff6b93',
-    borderRadius: 50, paddingVertical: 12, marginTop: 16,
+    borderRadius: 50, paddingVertical: 12, marginTop: 16, position: 'relative'
   },
   recordingActive: { backgroundColor: '#ff4757' },
-  voiceButtonText: { color: 'white', fontWeight: '500', marginLeft: 8 },
+  voiceButtonText: { color: 'white', fontWeight: '600', marginLeft: 8 },
+  blinkingDot: { width: 10, height: 10, backgroundColor: 'red', borderRadius: 5, marginLeft: 8 },
+  recordingTimer: { textAlign: 'center', marginTop: 8, fontSize: 14, color: '#333' },
   playButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   playButtonText: { color: '#ff6b93', marginLeft: 4, fontWeight: '500' },
   imageOptionsContainer: { flexDirection: 'row', justifyContent: 'space-between' },
@@ -795,12 +766,7 @@ const styles = StyleSheet.create({
   reportText: { fontSize: 14, color: '#444', lineHeight: 20 },
   photoScroll: { marginVertical: 8 },
   reportPhoto: { width: 120, height: 120, borderRadius: 8, marginRight: 8 },
-  aiAnalysisContainer: {
-    marginTop: 8,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    padding: 10,
-  },
+  aiAnalysisContainer: { marginTop: 8, backgroundColor: '#f0f0f0', borderRadius: 8, padding: 10 },
   aiAnalysisText: { fontSize: 14, color: '#333', lineHeight: 20 },
   modalFooter: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   modalActionButton: {
@@ -809,13 +775,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#ff6b93',
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginHorizontal: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginHorizontal: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  modalActionButtonText: { color: 'white', fontWeight: '600', fontSize: 14, marginLeft: 4 },
-  closeModalButton: { backgroundColor: '#ff6b93', paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
-  closeModalButtonText: { color: 'white', fontWeight: '600', fontSize: 16 },
+  modalActionButtonText: { color: 'white', fontWeight: '700', fontSize: 16, marginLeft: 8 },
+  closeModalButton: {
+    backgroundColor: '#ff6b93',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  closeModalButtonText: { color: 'white', fontWeight: '700', fontSize: 16 },
 });
 
 export default GenerateReportScreen;
