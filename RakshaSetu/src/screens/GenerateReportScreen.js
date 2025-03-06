@@ -1,374 +1,618 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, 
   View, 
   Text, 
   TextInput, 
   TouchableOpacity, 
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
+  ScrollView, 
   Image,
-  ActivityIndicator
+  Alert,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
-import { Audio } from 'expo-av';
+import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import * as FileSystem from 'expo-file-system';
+import { Audio } from 'expo-av';
+import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Constants for Gemini API
-const GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY'; // Replace with your actual API key
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+const GEMINI_API_KEY = 'AIzaSyCUF0kBZIejCA-MqXx59nYyAj3CN-VNQmY'; // Replace with your actual API key or use environment variable
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 const GenerateReportScreen = ({ navigation }) => {
-  const [incidentType, setIncidentType] = useState(null);
+  // State variables
+  const [incidentType, setIncidentType] = useState('');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
-  const [images, setImages] = useState([]);
-  const [recording, setRecording] = useState();
-  const [recordingUri, setRecordingUri] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const [generatedReport, setGeneratedReport] = useState(null);
+  const [recording, setRecording] = useState(null);
+  const [recordingUri, setRecordingUri] = useState(null);
+  const [images, setImages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [locationCoords, setLocationCoords] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
+  
+  // Incident type options
+  const incidentTypes = [
+    { id: 1, name: 'Harassment' },
+    { id: 2, name: 'Stalking' },
+    { id: 3, name: 'Assault' },
+    { id: 4, name: 'Theft' },
+    { id: 5, name: 'Vandalism' },
+    { id: 6, name: 'Trespassing' }
+  ];
 
-  // Request location when component mounts
-  React.useEffect(() => {
+  // Check for permissions on component mount
+  useEffect(() => {
     (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        try {
-          let location = await Location.getCurrentPositionAsync({});
-          let address = await Location.reverseGeocodeAsync({
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude
-          });
-          
-          if (address && address.length > 0) {
-            const addr = address[0];
-            const locationString = `${addr.street || 'Unnamed Road'}, ${addr.city || ''}, ${addr.region || ''}, ${addr.postalCode || ''}, ${addr.country || ''}`;
-            setLocation(locationString);
-          }
-        } catch (error) {
-          console.log('Error getting location:', error);
-        }
+      const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
+      const mediaLibraryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const locationPermission = await Location.requestForegroundPermissionsAsync();
+      const audioPermission = await Audio.requestPermissionsAsync();
+      
+      if (!cameraPermission.granted || !mediaLibraryPermission.granted || 
+          !locationPermission.granted || !audioPermission.granted) {
+        Alert.alert(
+          'Permissions Required',
+          'This app requires camera, media library, location, and microphone permissions to function properly.',
+          [{ text: 'OK' }]
+        );
       }
     })();
   }, []);
 
-  // Function to handle incident type selection
-  const handleIncidentTypeSelection = (type) => {
-    setIncidentType(type);
+  // Get current location
+  const getCurrentLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission to access location was denied');
+        setFormErrors({ ...formErrors, location: 'Location permission denied' });
+        return;
+      }
+      
+      setLocation('Getting your location...');
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High
+      });
+      
+      setLocationCoords({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude
+      });
+      
+      const address = await Location.reverseGeocodeAsync({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude
+      });
+      
+      if (address && address.length > 0) {
+        const { street, name, city, region, postalCode, country } = address[0];
+        const streetName = street || name || 'Unnamed Road';
+        const formattedAddress = `${streetName}, ${city || ''}, ${region || ''}, ${postalCode || ''}, ${country || ''}`;
+        setLocation(formattedAddress);
+        // Clear location error if it exists
+        if (formErrors.location) {
+          const { location, ...rest } = formErrors;
+          setFormErrors(rest);
+        }
+      }
+    } catch (error) {
+      Alert.alert('Error getting location', error.message);
+      setFormErrors({ ...formErrors, location: 'Failed to get location' });
+    }
   };
 
-  // Function to start recording
+  // Voice recording functions
   const startRecording = async () => {
     try {
       const { status } = await Audio.requestPermissionsAsync();
       if (status !== 'granted') {
-        alert('Sorry, we need microphone permissions to record audio.');
+        Alert.alert('Permission to access microphone was denied');
         return;
       }
-
+      
+      // Prepare the recording
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
+        staysActiveInBackground: true,
+        interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_DO_NOT_MIX,
+        interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DO_NOT_MIX,
       });
       
-      const recording = new Audio.Recording();
-      await recording.prepareToRecordAsync(Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY);
-      await recording.startAsync();
-      setRecording(recording);
+      const newRecording = new Audio.Recording();
+      await newRecording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      await newRecording.startAsync();
+      
+      setRecording(newRecording);
       setIsRecording(true);
-    } catch (err) {
-      console.error('Failed to start recording', err);
+    } catch (error) {
+      Alert.alert('Error starting recording', error.message);
     }
   };
 
-  // Function to stop recording
   const stopRecording = async () => {
+    if (!recording) return;
+    
     try {
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
       setRecordingUri(uri);
       setIsRecording(false);
-    } catch (err) {
-      console.error('Failed to stop recording', err);
+      Alert.alert('Voice statement recorded', 'Your voice statement has been saved and will be attached to your report.');
+    } catch (error) {
+      Alert.alert('Error stopping recording', error.message);
     }
   };
 
-  // Function to pick an image from the camera
+  // Play back recording to verify
+  const playRecording = async () => {
+    if (!recordingUri) return;
+    
+    try {
+      const { sound } = await Audio.Sound.createAsync({ uri: recordingUri });
+      await sound.playAsync();
+    } catch (error) {
+      Alert.alert('Error playing recording', error.message);
+    }
+  };
+
+  // Image functions
   const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      alert('Sorry, we need camera permissions to take a photo.');
-      return;
-    }
-
-    let result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      setImages([...images, result.assets[0].uri]);
-    }
-  };
-
-  // Function to pick an image from the gallery
-  const uploadImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      alert('Sorry, we need camera roll permissions to upload an image.');
-      return;
-    }
-
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      setImages([...images, result.assets[0].uri]);
-    }
-  };
-
-  // Function to encode image as base64
-  const getBase64ForImage = async (uri) => {
     try {
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      return base64;
-    } catch (error) {
-      console.error('Error encoding image:', error);
-      return null;
-    }
-  };
-
-  // Function to analyze incident with Gemini AI
-  const analyzeIncidentWithGemini = async () => {
-    try {
-      // Prepare input content for Gemini
-      const contentParts = [
-        {
-          text: `Please analyze the following incident report and generate a comprehensive analysis:
-                 
-                 Incident Type: ${incidentType}
-                 Location: ${location}
-                 Description: ${description}
-                 
-                 Based on this information, please:
-                 1. Summarize the key details
-                 2. Identify potential severity level
-                 3. Suggest immediate actions to be taken
-                 4. Recommend follow-up procedures
-                 5. Note any legal considerations`
-        }
-      ];
-
-      // Add image data if available
-      if (images.length > 0) {
-        for (let i = 0; i < Math.min(images.length, 2); i++) { // Limiting to 2 images for simplicity
-          const base64Data = await getBase64ForImage(images[i]);
-          if (base64Data) {
-            contentParts.push({
-              inlineData: {
-                data: base64Data,
-                mimeType: "image/jpeg"
-              }
-            });
-          }
-        }
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Camera permission is required');
+        return;
       }
-
-      // Prepare request to Gemini API
-      const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{ parts: contentParts }],
-          generationConfig: {
-            temperature: 0.4,
-            topK: 32,
-            topP: 1,
-            maxOutputTokens: 4096,
-          }
-        }),
-      });
-
-      const responseData = await response.json();
       
-      if (responseData.candidates && responseData.candidates.length > 0) {
-        const generatedContent = responseData.candidates[0].content.parts[0].text;
-        return generatedContent;
-      } else {
-        throw new Error('No response from Gemini API');
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+      
+      if (!result.canceled) {
+        setImages([...images, result.assets[0].uri]);
+        // Clear image error if it exists
+        if (formErrors.images) {
+          const { images, ...rest } = formErrors;
+          setFormErrors(rest);
+        }
       }
     } catch (error) {
-      console.error('Error with Gemini API:', error);
-      throw error;
+      Alert.alert('Error taking photo', error.message);
     }
   };
 
-  // Function to generate AI report
-  const generateAIReport = async () => {
-    // Check if required fields are filled
+  const pickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Media library permission is required');
+        return;
+      }
+      
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        allowsEditing: false,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+      
+      if (!result.canceled) {
+        const newImages = result.assets.map(asset => asset.uri);
+        setImages([...images, ...newImages]);
+        // Clear image error if it exists
+        if (formErrors.images) {
+          const { images, ...rest } = formErrors;
+          setFormErrors(rest);
+        }
+      }
+    } catch (error) {
+      Alert.alert('Error selecting image', error.message);
+    }
+  };
+
+  // Validate form before submission
+  const validateForm = () => {
+    const errors = {};
+    
     if (!incidentType) {
-      alert('Please select an incident type');
-      return;
+      errors.incidentType = 'Please select an incident type';
     }
-    if (!description) {
-      alert('Please provide a description of the incident');
-      return;
+    
+    if (!description || description.trim() === '') {
+      errors.description = 'Please provide a description of the incident';
+    } else if (description.trim().length < 20) {
+      errors.description = 'Description is too short. Please provide more details.';
     }
+    
+    if (!location) {
+      errors.location = 'Please add a location';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
+  // Convert images to base64 for Gemini API
+  const prepareImagesForGemini = async () => {
+    const imagePromises = images.map(async (uri) => {
+      try {
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } catch (error) {
+        console.error('Error processing image:', error);
+        return null;
+      }
+    });
+    
+    return (await Promise.all(imagePromises)).filter(img => img !== null);
+  };
+
+  // Generate AI Report with Gemini
+  const generateAIReport = async () => {
+    if (!validateForm()) {
+      Alert.alert('Form Error', 'Please correct the highlighted fields before submitting.');
+      return;
+    }
+    
     try {
-      setIsGeneratingReport(true);
+      setLoading(true);
       
-      // Call Gemini API for analysis
-      const report = await analyzeIncidentWithGemini();
-      setGeneratedReport(report);
+      // Prepare data for Gemini API
+      let processedImages = [];
+      if (images.length > 0) {
+        processedImages = await prepareImagesForGemini();
+      }
       
-      // In a real app, you'd probably save this report to your database
-      // and possibly navigate to a detailed view
+      // Create a structured prompt for Gemini
+      const prompt = `
+        Generate a detailed incident report based on the following information:
+        
+        Incident Type: ${incidentType}
+        Location: ${location}
+        
+        Description provided by the reporter:
+        "${description}"
+        
+        ${images.length > 0 ? `The reporter has attached ${images.length} images to this report.` : ''}
+        ${recordingUri ? 'The reporter has provided a voice statement.' : ''}
+        
+        Please analyze this information and create a formal incident report that includes:
+        1. Summary of the incident
+        2. Assessment of severity and potential legal implications
+        3. Recommended next steps for law enforcement
+        4. Any patterns or similarities to other reported incidents (if applicable)
+        5. Safety recommendations for the reporter
+      `;
       
-      // Example data structure you might save
+      // Initialize Gemini model with updated model identifier
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+      
+      // If we have images, use multimodal capabilities with updated vision model identifier
+      let result;
+      if (processedImages.length > 0) {
+        const visionModel = genAI.getGenerativeModel({ model: "gemini-1.5-vision" });
+        const imagePrompt = [
+          prompt,
+          ...processedImages.map(img => ({ inlineData: { data: img, mimeType: "image/jpeg" }}))
+        ];
+        result = await visionModel.generateContent({ contents: [{ role: "user", parts: imagePrompt }] });
+      } else {
+        result = await model.generateContent(prompt);
+      }
+      
+      const aiResponse = await result.response;
+      const aiReport = aiResponse.text();
+      
+      // Save report to AsyncStorage
+      const timestamp = new Date().toISOString();
       const reportData = {
+        id: timestamp,
+        timestamp,
         incidentType,
         location,
+        locationCoords,
         description,
-        recordingUri,
-        images,
-        aiAnalysis: report,
-        timestamp: new Date().toISOString()
+        aiReport,
+        hasRecording: !!recordingUri,
+        imageCount: images.length
       };
       
-      console.log('Report Data:', reportData);
+      await saveReport(reportData);
       
-      // Navigate to report view
-      navigation.navigate('ReportView', { reportData });
-      
+      setLoading(false);
+      Alert.alert(
+        'AI Report Generated',
+        'Your incident has been analyzed and a report has been generated. You can view it in your reports list.',
+        [{ 
+          text: 'View Report', 
+          onPress: () => navigation.navigate('ViewReport', { reportId: timestamp }) 
+        },
+        { 
+          text: 'Back to Home', 
+          onPress: () => navigation.navigate('Home') 
+        }]
+      );
     } catch (error) {
-      alert('Error generating AI report: ' + error.message);
-    } finally {
-      setIsGeneratingReport(false);
+      setLoading(false);
+      console.error('Gemini API error:', error);
+      Alert.alert(
+        'Error generating report', 
+        'There was a problem connecting to our AI service. Please try again later.'
+      );
+    }
+  };
+
+  // Save report to AsyncStorage
+  const saveReport = async (reportData) => {
+    try {
+      // Get existing reports
+      const reportsJson = await AsyncStorage.getItem('incident_reports');
+      const reports = reportsJson ? JSON.parse(reportsJson) : [];
+      
+      // Add new report
+      reports.unshift(reportData);
+      
+      // Save updated reports
+      await AsyncStorage.setItem('incident_reports', JSON.stringify(reports));
+    } catch (error) {
+      console.error('Error saving report:', error);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <KeyboardAvoidingView 
       style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView style={styles.scrollContainer}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="black" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>File Incident Report</Text>
-        </View>
-
-        <View style={styles.formContainer}>
-          <Text style={styles.sectionTitle}>Type of Incident*</Text>
-          <View style={styles.incidentTypeContainer}>
-            {['Harassment', 'Stalking', 'Assault', 'Theft'].map((type) => (
+      <StatusBar style="dark" />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color="#555" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>File Incident Report</Text>
+      </View>
+      
+      <ScrollView style={styles.scrollView}>
+        {/* Incident Type */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Type of Incident<Text style={styles.required}>*</Text></Text>
+          {formErrors.incidentType && (
+            <Text style={styles.errorText}>{formErrors.incidentType}</Text>
+          )}
+          <View style={styles.incidentTypesContainer}>
+            {incidentTypes.map((type) => (
               <TouchableOpacity
-                key={type}
+                key={type.id}
                 style={[
                   styles.incidentTypeButton,
-                  incidentType === type && styles.selectedIncidentType
+                  incidentType === type.name && styles.selectedIncidentType,
+                  formErrors.incidentType && !incidentType && styles.errorBorder
                 ]}
-                onPress={() => handleIncidentTypeSelection(type)}
+                onPress={() => {
+                  setIncidentType(type.name);
+                  if (formErrors.incidentType) {
+                    const { incidentType, ...rest } = formErrors;
+                    setFormErrors(rest);
+                  }
+                }}
               >
                 <Text 
                   style={[
                     styles.incidentTypeText,
-                    incidentType === type && styles.selectedIncidentTypeText
+                    incidentType === type.name && styles.selectedIncidentTypeText
                   ]}
                 >
-                  {type}
+                  {type.name}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
-
-          <Text style={styles.sectionTitle}>Location</Text>
-          <View style={styles.locationContainer}>
-            <MaterialIcons name="location-on" size={24} color="#ff80ab" style={styles.locationIcon} />
-            <TextInput
-              style={styles.locationInput}
-              value={location}
-              onChangeText={setLocation}
-              placeholder="Enter location"
-            />
-          </View>
-
-          <Text style={styles.sectionTitle}>Describe what happened*</Text>
+        </View>
+        
+        {/* Location */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Location<Text style={styles.required}>*</Text></Text>
+          {formErrors.location && (
+            <Text style={styles.errorText}>{formErrors.location}</Text>
+          )}
+          <TouchableOpacity 
+            style={[
+              styles.locationContainer,
+              formErrors.location && styles.errorBorder
+            ]}
+            onPress={getCurrentLocation}
+          >
+            <View style={styles.locationIconContainer}>
+              <Ionicons name="location" size={24} color="#ff6b93" />
+            </View>
+            <Text style={styles.locationText}>
+              {location || 'Tap to get your current location'}
+            </Text>
+            {!location && (
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            )}
+          </TouchableOpacity>
+          {location && (
+            <TouchableOpacity 
+              style={styles.editLocationButton}
+              onPress={() => {
+                Alert.prompt(
+                  'Edit Location',
+                  'Please enter the location manually:',
+                  [
+                    {
+                      text: 'Cancel',
+                      style: 'cancel',
+                    },
+                    {
+                      text: 'Save',
+                      onPress: (text) => {
+                        if (text && text.trim()) {
+                          setLocation(text.trim());
+                          if (formErrors.location) {
+                            const { location, ...rest } = formErrors;
+                            setFormErrors(rest);
+                          }
+                        }
+                      },
+                    },
+                  ],
+                  'plain-text',
+                  location
+                );
+              }}
+            >
+              <Text style={styles.editLocationText}>Edit manually</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        
+        {/* Description */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Describe what happened<Text style={styles.required}>*</Text></Text>
+          {formErrors.description && (
+            <Text style={styles.errorText}>{formErrors.description}</Text>
+          )}
           <TextInput
-            style={styles.descriptionInput}
-            value={description}
-            onChangeText={setDescription}
+            style={[
+              styles.descriptionInput,
+              formErrors.description && styles.errorBorder
+            ]}
             placeholder="Please provide details of the incident..."
             multiline
             textAlignVertical="top"
+            value={description}
+            onChangeText={(text) => {
+              setDescription(text);
+              if (formErrors.description && text.trim().length >= 20) {
+                const { description, ...rest } = formErrors;
+                setFormErrors(rest);
+              }
+            }}
           />
-
-          <TouchableOpacity 
-            style={styles.voiceButton}
+          
+          {/* Character count */}
+          <Text style={styles.characterCount}>
+            {description.length} characters {description.length < 20 ? '(minimum 20)' : ''}
+          </Text>
+          
+          {/* Voice Recording Button */}
+          <TouchableOpacity
+            style={[
+              styles.voiceButton,
+              isRecording && styles.recordingActive
+            ]}
             onPress={isRecording ? stopRecording : startRecording}
           >
-            <Ionicons name="mic" size={24} color="white" />
+            <Ionicons 
+              name={isRecording ? "stop" : "mic"} 
+              size={24} 
+              color="white" 
+            />
             <Text style={styles.voiceButtonText}>
               {isRecording ? 'Stop Recording' : 'Record Voice Statement'}
             </Text>
           </TouchableOpacity>
-
+          
+          {/* Play recording button if available */}
+          {recordingUri && (
+            <TouchableOpacity
+              style={styles.playButton}
+              onPress={playRecording}
+            >
+              <Ionicons name="play" size={20} color="#ff6b93" />
+              <Text style={styles.playButtonText}>Play Recording</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        
+        {/* Images */}
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Add Images (Optional)</Text>
+          
           <View style={styles.imageOptionsContainer}>
             <TouchableOpacity style={styles.imageOption} onPress={takePhoto}>
-              <Ionicons name="camera" size={24} color="#ff80ab" />
+              <View style={styles.imageOptionIconContainer}>
+                <Ionicons name="camera" size={24} color="#ff6b93" />
+              </View>
               <Text style={styles.imageOptionText}>Take Photo</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.imageOption} onPress={uploadImage}>
-              <Ionicons name="images" size={24} color="#ff80ab" />
+            
+            <TouchableOpacity style={styles.imageOption} onPress={pickImage}>
+              <View style={styles.imageOptionIconContainer}>
+                <Ionicons name="image" size={24} color="#ff6b93" />
+              </View>
               <Text style={styles.imageOptionText}>Upload Image</Text>
             </TouchableOpacity>
           </View>
-
+          
+          {/* Display selected images */}
           {images.length > 0 && (
-            <View style={styles.imagesContainer}>
+            <View style={styles.selectedImagesContainer}>
               {images.map((uri, index) => (
-                <Image key={index} source={{ uri }} style={styles.imagePreview} />
+                <View key={index} style={styles.imageContainer}>
+                  <Image source={{ uri }} style={styles.selectedImage} />
+                  <TouchableOpacity 
+                    style={styles.removeImageButton}
+                    onPress={() => {
+                      const newImages = [...images];
+                      newImages.splice(index, 1);
+                      setImages(newImages);
+                    }}
+                  >
+                    <Ionicons name="close-circle" size={24} color="#ff6b93" />
+                  </TouchableOpacity>
+                </View>
               ))}
             </View>
           )}
-
-          <TouchableOpacity 
-            style={[styles.generateButton, isGeneratingReport && styles.disabledButton]}
-            onPress={generateAIReport}
-            disabled={isGeneratingReport}
-          >
-            {isGeneratingReport ? (
-              <>
-                <ActivityIndicator size="small" color="white" />
-                <Text style={styles.generateButtonText}>Generating Report...</Text>
-              </>
-            ) : (
-              <>
-                <MaterialIcons name="auto-awesome" size={24} color="white" />
-                <Text style={styles.generateButtonText}>Generate AI Report</Text>
-              </>
-            )}
-          </TouchableOpacity>
+        </View>
+        
+        {/* Privacy notice */}
+        <View style={styles.section}>
+          <Text style={styles.privacyNotice}>
+            Your report will be processed using AI technology to assist law enforcement. All data is encrypted and handled according to our privacy policy.
+          </Text>
         </View>
       </ScrollView>
+      
+      {/* Submit Button */}
+      <TouchableOpacity 
+        style={styles.generateButton}
+        onPress={generateAIReport}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="white" size="small" />
+        ) : (
+          <>
+            <MaterialIcons name="generating-tokens" size={24} color="white" />
+            <Text style={styles.generateButtonText}>Generate AI Report</Text>
+          </>
+        )}
+      </TouchableOpacity>
     </KeyboardAvoidingView>
   );
 };
@@ -376,142 +620,216 @@ const GenerateReportScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  scrollContainer: {
-    flex: 1,
+    backgroundColor: '#f8f8f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    paddingHorizontal: 16,
+    paddingTop: 50,
+    paddingBottom: 16,
+    backgroundColor: 'white',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   backButton: {
-    marginRight: 15,
+    padding: 8,
   },
   headerTitle: {
+    marginLeft: 16,
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    color: '#333',
   },
-  formContainer: {
-    padding: 16,
+  scrollView: {
+    flex: 1,
+  },
+  section: {
+    marginVertical: 12,
+    paddingHorizontal: 16,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  incidentTypeContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  incidentTypeButton: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    minWidth: '22%',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  selectedIncidentType: {
-    backgroundColor: '#ff80ab',
-  },
-  incidentTypeText: {
+    fontWeight: '600',
+    marginBottom: 12,
     color: '#333',
   },
+  required: {
+    color: '#ff4757',
+  },
+  errorText: {
+    color: '#ff4757',
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  errorBorder: {
+    borderColor: '#ff4757',
+  },
+  incidentTypesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -4,
+  },
+  incidentTypeButton: {
+    backgroundColor: '#f1f1f1',
+    borderRadius: 50,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    margin: 4,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  incidentTypeText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  selectedIncidentType: {
+    backgroundColor: '#ffebf1',
+    borderColor: '#ff6b93',
+  },
   selectedIncidentTypeText: {
-    color: 'white',
+    color: '#ff6b93',
+    fontWeight: '500',
   },
   locationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'white',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
-  locationIcon: {
-    marginRight: 8,
+  locationIconContainer: {
+    marginRight: 12,
   },
-  locationInput: {
+  locationText: {
     flex: 1,
-    fontSize: 16,
+    color: '#666',
+    fontSize: 14,
+  },
+  editLocationButton: {
+    alignSelf: 'flex-end',
+    marginTop: 8,
+  },
+  editLocationText: {
+    color: '#ff6b93',
+    fontSize: 12,
   },
   descriptionInput: {
     backgroundColor: 'white',
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
     padding: 12,
     height: 120,
-    fontSize: 16,
-    marginBottom: 16,
+    fontSize: 14,
+    color: '#333',
+  },
+  characterCount: {
+    alignSelf: 'flex-end',
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
   },
   voiceButton: {
-    backgroundColor: '#ff80ab',
-    borderRadius: 30,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#ff6b93',
+    borderRadius: 50,
     paddingVertical: 12,
-    marginVertical: 16,
+    marginTop: 16,
+  },
+  recordingActive: {
+    backgroundColor: '#ff4757',
   },
   voiceButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontWeight: '500',
     marginLeft: 8,
+  },
+  playButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  playButtonText: {
+    color: '#ff6b93',
+    marginLeft: 4,
     fontWeight: '500',
   },
   imageOptionsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
   },
   imageOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'white',
     borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    width: '48%',
+    padding: 12,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  imageOptionIconContainer: {
+    marginRight: 12,
   },
   imageOptionText: {
-    color: '#333',
-    marginTop: 8,
+    color: '#666',
+    fontSize: 14,
   },
-  imagesContainer: {
+  selectedImagesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 16,
+    marginTop: 16,
   },
-  imagePreview: {
-    width: 100,
-    height: 100,
-    margin: 4,
+  imageContainer: {
+    width: '30%',
+    aspectRatio: 1,
+    margin: '1.5%',
+    position: 'relative',
+  },
+  selectedImage: {
+    width: '100%',
+    height: '100%',
     borderRadius: 8,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    elevation: 2,
+  },
+  privacyNotice: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 16,
   },
   generateButton: {
-    backgroundColor: '#ff80ab',
-    borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#ff6b93',
+    borderRadius: 8,
     paddingVertical: 16,
-    marginTop: 16,
-    marginBottom: 30,
-  },
-  disabledButton: {
-    backgroundColor: '#ffb0c9',
+    margin: 16,
+    elevation: 2,
   },
   generateButtonText: {
     color: 'white',
-    fontSize: 18,
+    fontWeight: '600',
+    fontSize: 16,
     marginLeft: 8,
-    fontWeight: 'bold',
   },
 });
 
