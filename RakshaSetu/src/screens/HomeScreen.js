@@ -188,23 +188,6 @@ const HomeScreen = ({ navigation }) => {
           </View>
         </TouchableOpacity>
 
-        {/* Journey Section */}
-        <TouchableOpacity style={styles.journeySection}>
-          <View style={styles.journeyContent}>
-            <Image
-              source={require('../../assets/journey.png')}
-              style={styles.journeyIcon}
-            />
-            <View>
-              <Text style={styles.journeyTitle}>Start a journey</Text>
-              <Text style={styles.journeySubtitle}>
-                Enter your destination, and the app{'\n'}will track your route in real-time.
-              </Text>
-            </View>
-          </View>
-          <Ionicons name="chevron-forward" size={24} color="black" />
-        </TouchableOpacity>
-
         {/* AI Report Generator Section */}
         <TouchableOpacity style={styles.journeySection} onPress={() => navigation.navigate('GenerateReport')}> 
           <View style={styles.journeyContent}>
@@ -214,6 +197,23 @@ const HomeScreen = ({ navigation }) => {
             />
             <View>
               <Text style={styles.journeyTitle}>Generate a Report</Text>
+              <Text style={styles.journeySubtitle}>
+                Generate File Incident Report using AI
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="black" />
+        </TouchableOpacity>
+
+        {/* Journey Section */}
+        <TouchableOpacity style={styles.journeySection}>
+          <View style={styles.journeyContent}>
+            <Image
+              source={require('../../assets/journey.png')}
+              style={styles.journeyIcon}
+            />
+            <View>
+              <Text style={styles.journeyTitle}>Start a journey</Text>
               <Text style={styles.journeySubtitle}>
                 Enter your destination, and the app{'\n'}will track your route in real-time.
               </Text>
