@@ -8,9 +8,11 @@ import {
   Image,
   StatusBar,
   ScrollView,
+  Linking,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Location from 'expo-location';
 
 // 1) Import Firestore + Auth (example)
 import { doc, getDoc } from 'firebase/firestore';
@@ -43,6 +45,60 @@ const HomeScreen = ({ navigation }) => {
       }
     })();
   }, []);
+
+  const openNearbyPoliceStations = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Permission to access location was denied');
+        return;
+      }
+  
+      const currentLocation = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = currentLocation.coords;
+  
+      const googleMapsURL = `https://www.google.com/maps/search/police+station/@${latitude},${longitude},15z`;
+      await Linking.openURL(googleMapsURL);
+    } catch (error) {
+      console.error('Error fetching location:', error);
+    }
+  };
+
+  const openNearbyHospitals = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Permission to access location was denied');
+        return;
+      }
+  
+      const currentLocation = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = currentLocation.coords;
+  
+      const googleMapsURL = `https://www.google.com/maps/search/hospital/@${latitude},${longitude},15z`;
+      await Linking.openURL(googleMapsURL);
+    } catch (error) {
+      console.error('Error fetching location:', error);
+    }
+  };
+
+  const openNearbyPharmacies = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Permission to access location was denied');
+        return;
+      }
+  
+      const currentLocation = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = currentLocation.coords;
+  
+      const googleMapsURL = `https://www.google.com/maps/search/pharmacy/@${latitude},${longitude},15z`;
+      await Linking.openURL(googleMapsURL);
+    } catch (error) {
+      console.error('Error fetching location:', error);
+    }
+  };  
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
@@ -167,19 +223,19 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         {/* Emergency Buttons */}
-        <TouchableOpacity style={styles.emergencyButton}>
+        <TouchableOpacity style={styles.emergencyButton} onPress={openNearbyPoliceStations}>
           <FontAwesome5 name="shield-alt" size={20} color="black" />
           <Text style={styles.emergencyText}>Police station near me</Text>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.emergencyButton}>
+        <TouchableOpacity style={styles.emergencyButton} onPress={openNearbyHospitals}>
           <FontAwesome5 name="hospital" size={20} color="black" />
           <Text style={styles.emergencyText}>Hospital near me </Text>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.emergencyButton}>
+        <TouchableOpacity style={styles.emergencyButton} onPress={openNearbyPharmacies}>
           <FontAwesome5 name="clinic-medical" size={20} color="black" />
           <Text style={styles.emergencyText}>Pharmacy near me </Text>
           <Ionicons name="chevron-forward" size={24} color="black" />
