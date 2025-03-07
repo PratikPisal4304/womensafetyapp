@@ -654,7 +654,7 @@ const BudgetToolScreen = () => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
         {activeTab === 'budget' && (
           <>
             {/* Month Filter Section */}
