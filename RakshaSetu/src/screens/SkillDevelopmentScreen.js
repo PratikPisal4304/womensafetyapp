@@ -114,21 +114,6 @@ const Header = ({
             <Text style={styles.welcomeText}>Hello, {userName}</Text>
             <Text style={styles.headerTitle}>Financial Skills Hub</Text>
           </View>
-          <View style={styles.headerIcons}>
-            <TouchableOpacity style={styles.iconButton} onPress={onNotificationPress}>
-              <Ionicons name="notifications" size={24} color="white" />
-              {notifications.some(n => !n.read) && (
-                <View style={styles.notificationBadge}>
-                  <Text style={styles.badgeText}>
-                    {notifications.filter(n => !n.read).length}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.profileButton} onPress={onProfilePress}>
-              <Image source={require('../../assets/icon.png')} style={styles.profileImage} />
-            </TouchableOpacity>
-          </View>
         </View>
         <SearchBar
           searchQuery={searchQuery}
