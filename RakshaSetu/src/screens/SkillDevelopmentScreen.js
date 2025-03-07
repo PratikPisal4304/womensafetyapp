@@ -15,12 +15,14 @@ import {
   Alert,
   RefreshControl,
   ActivityIndicator,
-  Modal
+  Modal,
+  Share
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Feather, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import { Video } from 'expo-av';
 import {
   getFirestore,
   doc,
@@ -30,7 +32,8 @@ import {
   query,
   where,
   getDocs,
-  onSnapshot
+  onSnapshot,
+  arrayUnion
 } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { app } from '../../config/firebaseConfig';
@@ -42,7 +45,7 @@ const HEADER_HEIGHT = 160;
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// Custom hook for debouncing search input
+// Custom hook for debouncing search input.
 function useDebounce(value, delay) {
   const [debouncedValue, setDebouncedValue] = useState(value);
   useEffect(() => {
@@ -52,13 +55,27 @@ function useDebounce(value, delay) {
   return debouncedValue;
 }
 
-// Sample data – in a real app, this would come from Firestore
+// Sample module data with videos.
 const SAMPLE_MODULES = [
   {
     id: 1,
     title: 'Negotiating Your Worth: Salary Talks',
     author: 'Dr. Maria Rodriguez',
     image: require('../../assets/icon.png'),
+    videos: [
+      {
+        id: 'v1',
+        title: 'Introduction to Negotiation',
+        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
+        duration: '5 min'
+      },
+      {
+        id: 'v2',
+        title: 'Key Strategies for Salary Talks',
+        videoUrl: 'https://www.w3schools.com/html/movie.mp4',
+        duration: '10 min'
+      }
+    ],
     tags: ['Career', 'Negotiation'],
     duration: '15 min',
     rating: 4.7,
@@ -83,20 +100,40 @@ const SAMPLE_MODULES = [
     title: 'Investment Basics: Start Your Portfolio',
     author: 'Rachel Chen, MBA',
     image: require('../../assets/icon.png'),
+    videos: [
+      {
+        id: 'v1',
+        title: 'Investment Fundamentals',
+        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
+        duration: '6 min'
+      },
+      {
+        id: 'v2',
+        title: 'Building Your Portfolio',
+        videoUrl: 'https://www.w3schools.com/html/movie.mp4',
+        duration: '8 min'
+      },
+      {
+        id: 'v3',
+        title: 'Risk Management',
+        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
+        duration: '5 min'
+      }
+    ],
     tags: ['Investing', 'Basics'],
     duration: '12 min',
     rating: 4.6,
     students: 1580,
     completion: '0/5 modules',
     completionPercent: 0
-  },
+  }
 ];
 
 // -----------------------
 // Reusable UI Components
 // -----------------------
 
-const Header = ({
+const HeaderComponent = ({
   userName,
   notifications,
   onNotificationPress,
@@ -105,26 +142,24 @@ const Header = ({
   setSearchQuery,
   onFocusSearch,
   onClearSearch
-}) => {
-  return (
-    <SafeAreaView style={styles.fixedHeader}>
-      <View style={styles.headerContent}>
-        <View style={styles.headerTop}>
-          <View>
-            <Text style={styles.welcomeText}>Hello, {userName}</Text>
-            <Text style={styles.headerTitle}>Financial Skills Hub</Text>
-          </View>
+}) => (
+  <SafeAreaView style={styles.fixedHeader}>
+    <View style={styles.headerContent}>
+      <View style={styles.headerTop}>
+        <View>
+          <Text style={styles.welcomeText}>Hello, {userName}</Text>
+          <Text style={styles.headerTitle}>Financial Skills Hub</Text>
         </View>
-        <SearchBar
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          onFocus={onFocusSearch}
-          onClear={onClearSearch}
-        />
       </View>
-    </SafeAreaView>
-  );
-};
+      <SearchBar
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        onFocus={onFocusSearch}
+        onClear={onClearSearch}
+      />
+    </View>
+  </SafeAreaView>
+);
 
 const SearchBar = ({ searchQuery, setSearchQuery, onFocus, onClear }) => (
   <View style={styles.searchBarContainer}>
@@ -188,14 +223,15 @@ const QuickActions = ({ categories, onCategoryPress }) => (
   </View>
 );
 
-const ModuleCard = ({ module, onPress }) => (
-  <TouchableOpacity
-    style={styles.microLearningCard}
-    onPress={() => onPress(module)}
-    activeOpacity={0.8}
-  >
+const ModuleCard = ({ module, onModulePress }) => (
+  <TouchableOpacity style={styles.microLearningCard} onPress={() => onModulePress(module)} activeOpacity={0.8}>
     <View style={styles.moduleImageContainer}>
       <Image source={module.image} style={styles.moduleImage} />
+      {module.videos && module.videos.length > 0 && (
+        <View style={styles.videoOverlay}>
+          <Ionicons name="play-circle" size={48} color="white" />
+        </View>
+      )}
       <View style={styles.moduleDurationTag}>
         <Ionicons name="time-outline" size={12} color="white" />
         <Text style={styles.moduleDurationText}>{module.duration}</Text>
@@ -222,11 +258,7 @@ const ModuleCard = ({ module, onPress }) => (
 );
 
 const RecommendedCard = ({ course, onPress, onToggleFavorite, isFavorite }) => (
-  <TouchableOpacity
-    style={styles.recommendedCard}
-    onPress={() => onPress(course)}
-    activeOpacity={0.8}
-  >
+  <TouchableOpacity style={styles.recommendedCard} onPress={() => onPress(course)} activeOpacity={0.8}>
     <View style={styles.recommendedContent}>
       <View style={styles.recommendedInfo}>
         <View style={styles.recommendedTopLabels}>
@@ -253,12 +285,7 @@ const RecommendedCard = ({ course, onPress, onToggleFavorite, isFavorite }) => (
           </View>
         </View>
         <View style={styles.aiMatchContainer}>
-          <LinearGradient
-            colors={['#9B59B6', '#ff5f96']}
-            start={[0, 0]}
-            end={[1, 0]}
-            style={styles.aiMatchGradient}
-          >
+          <LinearGradient colors={['#9B59B6', '#ff5f96']} start={[0, 0]} end={[1, 0]} style={styles.aiMatchGradient}>
             <Text style={styles.aiMatchText}>{course.matchScore}</Text>
           </LinearGradient>
         </View>
@@ -273,11 +300,7 @@ const RecommendedCard = ({ course, onPress, onToggleFavorite, isFavorite }) => (
       </View>
       <View style={styles.recommendedActions}>
         <TouchableOpacity style={styles.favoriteButton} onPress={() => onToggleFavorite(course.id)}>
-          <Ionicons
-            name={isFavorite ? 'heart' : 'heart-outline'}
-            size={20}
-            color={isFavorite ? '#ff5f96' : '#666'}
-          />
+          <Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={20} color={isFavorite ? '#ff5f96' : '#666'} />
         </TouchableOpacity>
       </View>
     </View>
@@ -289,7 +312,7 @@ const RecommendedCard = ({ course, onPress, onToggleFavorite, isFavorite }) => (
 // -----------------------
 
 function SkillDevelopmentScreen({ navigation }) {
-  // State variables
+  // Core state variables.
   const [activeTab, setActiveTab] = useState('All');
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -355,20 +378,32 @@ function SkillDevelopmentScreen({ navigation }) {
     }
   ]);
 
-  // Tabs and quick access categories (Mentorship Hub removed)
+  // Additional state for modals and video progress.
+  const [selectedModule, setSelectedModule] = useState(null);
+  const [courseDetailModalVisible, setCourseDetailModalVisible] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState(null);
+  const [videoModalVisible, setVideoModalVisible] = useState(false);
+  const [videoProgress, setVideoProgress] = useState({});
+  const [completedVideoIds, setCompletedVideoIds] = useState([]);
+  // New state to track completed courses.
+  const [completedCourses, setCompletedCourses] = useState([]);
+  // New state to track bookmarked videos.
+  const [bookmarkedVideos, setBookmarkedVideos] = useState([]);
+
+  // Tabs and quick access categories.
   const tabs = ['All', 'Financial Basics', 'Investing', 'Entrepreneurship', 'Career Growth', 'Budgeting'];
   const categories = [
     { id: 1, name: 'My Learning Path', icon: 'route', gradient: ['#66BB6A', '#43A047'] },
     { id: 2, name: 'Budget Tools', icon: 'calculator', gradient: ['#FF8A65', '#FF5722'] }
   ];
 
-  // Debounced search query for smoother filtering
+  // Debounced search query.
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  // Scroll value (for pull-to-refresh)
+  // Scroll value for pull-to-refresh.
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  // Fetch user data from Firestore
+  // Fetch user data.
   const fetchUserData = async (userId) => {
     try {
       setIsLoading(true);
@@ -402,6 +437,12 @@ function SkillDevelopmentScreen({ navigation }) {
           });
           setMicroLearningModules(updatedModules);
         }
+        if (userDocSnap.data().completedCourses) {
+          setCompletedCourses(userDocSnap.data().completedCourses);
+        }
+        if (userDocSnap.data().bookmarkedVideos) {
+          setBookmarkedVideos(userDocSnap.data().bookmarkedVideos);
+        }
         const userNotificationsRef = collection(db, 'notifications');
         const q = query(userNotificationsRef, where('userId', '==', userId));
         const notificationsSnapshot = await getDocs(q);
@@ -430,7 +471,7 @@ function SkillDevelopmentScreen({ navigation }) {
     }
   };
 
-  // Set up real-time listener for user document
+  // Set up Firestore real-time listener.
   const setupUserListener = (userId) => {
     const userDocRef = doc(db, 'users', userId);
     return onSnapshot(
@@ -450,6 +491,12 @@ function SkillDevelopmentScreen({ navigation }) {
               }))
             );
           }
+          if (userData.completedCourses) {
+            setCompletedCourses(userData.completedCourses);
+          }
+          if (userData.bookmarkedVideos) {
+            setBookmarkedVideos(userData.bookmarkedVideos);
+          }
         }
       },
       (error) => {
@@ -458,7 +505,7 @@ function SkillDevelopmentScreen({ navigation }) {
     );
   };
 
-  // Authentication listener
+  // Authentication listener.
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -477,7 +524,7 @@ function SkillDevelopmentScreen({ navigation }) {
     return () => unsubscribe();
   }, []);
 
-  // Pull-to-refresh logic
+  // Pull-to-refresh logic.
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     if (currentUser) {
@@ -487,7 +534,7 @@ function SkillDevelopmentScreen({ navigation }) {
     }
   }, [currentUser]);
 
-  // Filter courses based on search query and active tab
+  // Filter courses.
   const getFilteredCourses = () => {
     let filtered = [...microLearningModules];
     if (debouncedSearchQuery) {
@@ -506,7 +553,7 @@ function SkillDevelopmentScreen({ navigation }) {
     return filtered;
   };
 
-  // Toggle favorite status for a course
+  // Toggle favorite status.
   const toggleFavorite = async (courseId) => {
     try {
       if (!currentUser) {
@@ -539,7 +586,7 @@ function SkillDevelopmentScreen({ navigation }) {
     }
   };
 
-  // Mark notifications as read and update Firestore
+  // Mark notifications as read.
   const markNotificationsAsRead = async () => {
     try {
       if (!currentUser) return;
@@ -559,7 +606,32 @@ function SkillDevelopmentScreen({ navigation }) {
     }
   };
 
-  // Navigation to course detail screen
+  // Handle module press.
+  const handleModulePress = (module) => {
+    if (module.videos && module.videos.length > 0) {
+      setSelectedModule(module);
+      setCourseDetailModalVisible(true);
+    } else {
+      navigateToCourseDetail(module);
+    }
+  };
+
+  // Handle video press.
+  const handleVideoPress = (video) => {
+    setCourseDetailModalVisible(false);
+    setTimeout(() => {
+      setSelectedVideo(video);
+      setVideoModalVisible(true);
+    }, 300);
+  };
+
+  // Close video modal.
+  const closeVideoModal = () => {
+    setVideoModalVisible(false);
+    setSelectedVideo(null);
+  };
+
+  // Navigate to course detail screen.
   const navigateToCourseDetail = (course) => {
     navigation.navigate('CourseDetail', {
       courseId: course.id,
@@ -567,26 +639,107 @@ function SkillDevelopmentScreen({ navigation }) {
     });
   };
 
-  // Update user's budget goal in Firestore
-  const updateBudgetGoal = async () => {
-    try {
-      if (!currentUser) {
-        Alert.alert('Sign In Required', 'Please sign in to update your budget goal.');
-        return;
-      }
-      const newBudgetGoal = parseFloat(updatedBudget);
-      if (isNaN(newBudgetGoal) || newBudgetGoal <= 0) {
-        Alert.alert('Invalid Amount', 'Please enter a valid budget amount.');
-        return;
-      }
-      setBudgetGoal(newBudgetGoal);
+  // Update Firestore when a video is completed.
+  const updateFirestoreVideoCompletion = async (videoId) => {
+    if (currentUser) {
       const userDocRef = doc(db, 'users', currentUser.uid);
-      await updateDoc(userDocRef, { budgetGoal: newBudgetGoal });
-      setBudgetModalVisible(false);
-      setUpdatedBudget('');
+      try {
+        await updateDoc(userDocRef, {
+          completedVideos: completedVideoIds.includes(videoId)
+            ? completedVideoIds
+            : [...completedVideoIds, videoId]
+        });
+      } catch (error) {
+        console.error('Error updating video completion in Firestore:', error);
+      }
+    }
+  };
+
+  // Handle course completion.
+  const handleCourseCompletion = async () => {
+    if (currentUser && selectedModule) {
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      try {
+        await updateDoc(userDocRef, {
+          completedCourses: arrayUnion(selectedModule.id)
+        });
+        setCompletedCourses(prev => [...prev, selectedModule.id]);
+        Alert.alert("Course Completed", "Congratulations! You have completed this course.");
+      } catch (error) {
+        console.error("Error marking course complete:", error);
+      }
+    }
+  };
+
+  // Handle bookmark toggle for a video.
+  const toggleBookmark = async (videoId) => {
+    let updatedBookmarks = [];
+    if (bookmarkedVideos.includes(videoId)) {
+      updatedBookmarks = bookmarkedVideos.filter(id => id !== videoId);
+    } else {
+      updatedBookmarks = [...bookmarkedVideos, videoId];
+    }
+    setBookmarkedVideos(updatedBookmarks);
+    if (currentUser) {
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      try {
+        await updateDoc(userDocRef, {
+          bookmarkedVideos: updatedBookmarks
+        });
+      } catch (error) {
+        console.error("Error updating bookmarks in Firestore:", error);
+      }
+    }
+  };
+
+  // Playback status update handler.
+  const handlePlaybackStatusUpdate = (status) => {
+    if (!selectedVideo) return;
+    if (status.positionMillis) {
+      setVideoProgress(prev => ({
+        ...prev,
+        [selectedVideo.id]: status.positionMillis / 1000
+      }));
+    }
+    if (status.didJustFinish) {
+      if (!completedVideoIds.includes(selectedVideo.id)) {
+        setCompletedVideoIds(prev => [...prev, selectedVideo.id]);
+        updateFirestoreVideoCompletion(selectedVideo.id);
+        Alert.alert('Video Completed', 'You have finished this lecture.');
+      }
+      setTimeout(() => {
+        closeVideoModal();
+        setCourseDetailModalVisible(true);
+      }, 1000);
+    }
+  };
+
+  // Determine initial video status.
+  const getInitialVideoStatus = () => {
+    if (selectedVideo && videoProgress[selectedVideo.id]) {
+      return { positionMillis: videoProgress[selectedVideo.id] * 1000 };
+    }
+    return {};
+  };
+
+  // Compute overall course progress.
+  const computeCourseProgress = () => {
+    if (selectedModule && selectedModule.videos) {
+      const total = selectedModule.videos.length;
+      const completed = selectedModule.videos.filter(video => completedVideoIds.includes(video.id)).length;
+      return Math.round((completed / total) * 100);
+    }
+    return 0;
+  };
+
+  // Share course details.
+  const shareCourse = async () => {
+    try {
+      await Share.share({
+        message: `Check out this course: ${selectedModule.title} by ${selectedModule.author}`,
+      });
     } catch (error) {
-      console.error('Error updating budget goal:', error);
-      Alert.alert('Error', 'Failed to update budget goal. Please try again.');
+      console.error(error.message);
     }
   };
 
@@ -594,16 +747,14 @@ function SkillDevelopmentScreen({ navigation }) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#ff5f96" />
-        <Text style={{ marginTop: 20, color: '#666' }}>
-          Loading your personalized content...
-        </Text>
+        <Text style={{ marginTop: 20, color: '#666' }}>Loading your personalized content...</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Header
+      <HeaderComponent
         userName={userName}
         notifications={notifications}
         onNotificationPress={() => {
@@ -614,15 +765,12 @@ function SkillDevelopmentScreen({ navigation }) {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         onFocusSearch={() => setShowSearch(true)}
-        onClearSearch={() => setSearchQuery('')}
+        onClear={() => setSearchQuery('')}
       />
       <Animated.ScrollView
         style={[styles.scrollContainer, { marginTop: HEADER_HEIGHT }]}
         showsVerticalScrollIndicator={false}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
-        )}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
         scrollEventThrottle={16}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#ff5f96']} tintColor="#ff5f96" />
@@ -631,7 +779,7 @@ function SkillDevelopmentScreen({ navigation }) {
         {/* Tabs Section */}
         <View style={styles.tabsContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsScrollContent}>
-            {tabs.map(tab => (
+            {tabs.map((tab) => (
               <TouchableOpacity
                 key={tab}
                 style={[styles.tabItem, activeTab === tab && styles.activeTabItem]}
@@ -672,8 +820,8 @@ function SkillDevelopmentScreen({ navigation }) {
             </TouchableOpacity>
           </View>
           <View style={styles.microLearningContainer}>
-            {getFilteredCourses().map(module => (
-              <ModuleCard key={module.id} module={module} onPress={navigateToCourseDetail} />
+            {getFilteredCourses().map((module) => (
+              <ModuleCard key={module.id} module={module} onModulePress={handleModulePress} />
             ))}
           </View>
         </View>
@@ -689,7 +837,7 @@ function SkillDevelopmentScreen({ navigation }) {
               <Feather name="chevron-right" size={16} color="#ff5f96" />
             </TouchableOpacity>
           </View>
-          {recommendedCourses.map(course => (
+          {recommendedCourses.map((course) => (
             <RecommendedCard
               key={course.id}
               course={course}
@@ -702,6 +850,112 @@ function SkillDevelopmentScreen({ navigation }) {
         <View style={{ height: 80 }} />
       </Animated.ScrollView>
 
+      {/* Enhanced Course Detail Modal */}
+      {selectedModule && (
+        <Modal
+          animationType="slide"
+          transparent={false}
+          visible={courseDetailModalVisible}
+          onRequestClose={() => setCourseDetailModalVisible(false)}
+        >
+          <View style={styles.courseDetailModalContainer}>
+            {/* Gradient Header with Share Icon */}
+            <LinearGradient colors={['#ff7eb3', '#ff5f96']} style={styles.courseDetailModalHeader}>
+              <Text style={styles.courseDetailModalTitle}>Course Details</Text>
+              <View style={styles.headerActions}>
+                <TouchableOpacity onPress={shareCourse}>
+                  <Ionicons name="share-social" size={28} color="white" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setCourseDetailModalVisible(false)}>
+                  <Ionicons name="close" size={28} color="white" />
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+            <View style={styles.courseDetailHeader}>
+              <Image source={selectedModule.image} style={styles.courseDetailImage} />
+              <View style={styles.courseDetailTextContainer}>
+                <Text style={styles.courseDetailTitle}>{selectedModule.title}</Text>
+                <Text style={styles.courseDetailAuthor}>{selectedModule.author}</Text>
+              </View>
+            </View>
+            <Text style={styles.courseDetailDescription}>
+              This course includes multiple video lectures to enhance your learning experience.
+            </Text>
+            {/* Overall Progress Bar */}
+            <View style={styles.progressBarContainer}>
+              <Text style={styles.progressLabel}>Course Progress: {computeCourseProgress()}%</Text>
+              <View style={styles.overallProgressBar}>
+                <View style={[styles.overallProgressFill, { width: `${computeCourseProgress()}%` }]} />
+              </View>
+            </View>
+            <ScrollView style={styles.videoList}>
+              {selectedModule.videos.map((video) => (
+                <TouchableOpacity key={video.id} style={styles.videoItem} onPress={() => handleVideoPress(video)}>
+                  <Ionicons name="play-circle" size={32} color="#ff5f96" />
+                  <View style={styles.videoItemTextContainer}>
+                    <Text style={styles.videoTitle}>{video.title}</Text>
+                    <Text style={styles.videoDuration}>{video.duration}</Text>
+                  </View>
+                  <View style={styles.videoActions}>
+                    <TouchableOpacity onPress={() => toggleBookmark(video.id)}>
+                      <Ionicons name={bookmarkedVideos.includes(video.id) ? "bookmark" : "bookmark-outline"} size={24} color="#ff5f96" />
+                    </TouchableOpacity>
+                    {completedVideoIds.includes(video.id) && (
+                      <Ionicons name="checkmark-circle" size={24} color="green" style={{ marginLeft: 10 }} />
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            {/* If course progress is 100% and not already marked complete, show "Mark as Completed" button */}
+            {computeCourseProgress() === 100 && !completedCourses.includes(selectedModule.id) && (
+              <TouchableOpacity style={styles.resumeCourseButton} onPress={handleCourseCompletion}>
+                <Text style={styles.resumeCourseButtonText}>Mark as Completed</Text>
+              </TouchableOpacity>
+            )}
+            {/* Otherwise, if not complete, show Resume Course button */}
+            {computeCourseProgress() < 100 && (
+              <TouchableOpacity style={styles.resumeCourseButton} onPress={() => setCourseDetailModalVisible(false)}>
+                <Text style={styles.resumeCourseButtonText}>Resume Course</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={styles.closeCourseDetailButton} onPress={() => setCourseDetailModalVisible(false)}>
+              <Text style={styles.closeCourseDetailButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </Modal>
+      )}
+
+      {/* Video Player Modal */}
+      {selectedVideo && (
+        <Modal
+          animationType="slide"
+          transparent={true}
+          presentationStyle="overFullScreen"
+          visible={videoModalVisible}
+          onRequestClose={closeVideoModal}
+        >
+          <View style={styles.videoModalContainer}>
+            <View style={styles.videoModalHeader}>
+              <TouchableOpacity onPress={closeVideoModal}>
+                <Ionicons name="arrow-back" size={28} color="white" />
+              </TouchableOpacity>
+              <Text style={styles.videoModalTitle}>{selectedVideo.title}</Text>
+              <View style={{ width: 28 }} />
+            </View>
+            <Video
+              source={{ uri: selectedVideo.videoUrl }}
+              style={styles.video}
+              useNativeControls
+              resizeMode="contain"
+              shouldPlay
+              initialStatus={getInitialVideoStatus()}
+              onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+            />
+          </View>
+        </Modal>
+      )}
+
       {/* Notification Modal */}
       <Modal
         animationType="slide"
@@ -713,16 +967,13 @@ function SkillDevelopmentScreen({ navigation }) {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Notifications</Text>
             <ScrollView style={styles.modalScrollView}>
-              {notifications.map(notification => (
+              {notifications.map((notification) => (
                 <View key={notification.id} style={styles.notificationItem}>
                   <Text style={styles.notificationText}>{notification.title}</Text>
                 </View>
               ))}
             </ScrollView>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => setNotificationModalVisible(false)}
-            >
+            <TouchableOpacity style={styles.modalCloseButton} onPress={() => setNotificationModalVisible(false)}>
               <Text style={styles.modalCloseButtonText}>Close</Text>
             </TouchableOpacity>
           </View>
@@ -780,6 +1031,16 @@ const styles = StyleSheet.create({
   microLearningCard: { backgroundColor: 'white', borderRadius: 16, overflow: 'hidden', marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
   moduleImageContainer: { width: '100%', height: 120, position: 'relative' },
   moduleImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  videoOverlay: { 
+    position: 'absolute', 
+    top: 0, 
+    left: 0, 
+    right: 0, 
+    bottom: 0, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: 'rgba(0,0,0,0.3)' 
+  },
   moduleDurationTag: { position: 'absolute', bottom: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.6)', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
   moduleDurationText: { color: 'white', fontSize: 12, marginLeft: 4 },
   moduleContent: { padding: 12 },
@@ -811,14 +1072,51 @@ const styles = StyleSheet.create({
   progressContainer: { marginTop: 8 },
   recommendedActions: { justifyContent: 'center', alignItems: 'center' },
   favoriteButton: { padding: 8 },
-  modalContainer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  modalContent: { width: '80%', backgroundColor: 'white', borderRadius: 16, padding: 20, alignItems: 'center' },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 12 },
-  modalScrollView: { maxHeight: 200, width: '100%', marginVertical: 10 },
-  modalCloseButton: { marginTop: 10 },
-  modalCloseButtonText: { color: '#ff5f96', fontSize: 16 },
-  notificationItem: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#eee', width: '100%' },
-  notificationText: { fontSize: 16, color: '#333' },
+  // Course Detail Modal Styles
+  courseDetailModalContainer: { flex: 1, backgroundColor: 'white', marginBottom: 50 },
+  courseDetailModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 50,
+  },
+  courseDetailModalTitle: { fontSize: 22, fontWeight: 'bold', color: 'white', top: 20 },
+  headerActions: { flexDirection: 'row', alignItems: 'center' },
+  courseDetailHeader: { flexDirection: 'row', alignItems: 'center', margin: 16 },
+  courseDetailImage: { width: 80, height: 80, borderRadius: 8, marginRight: 16 },
+  courseDetailTextContainer: { flex: 1 },
+  courseDetailTitle: { fontSize: 20, fontWeight: 'bold', color: '#333' },
+  courseDetailAuthor: { fontSize: 16, color: '#666', marginTop: 4 },
+  courseDetailDescription: { fontSize: 14, color: '#666', marginHorizontal: 16, marginBottom: 16 },
+  progressBarContainer: { marginHorizontal: 16, marginBottom: 16 },
+  progressLabel: { fontSize: 14, marginBottom: 4, color: '#333' },
+  overallProgressBar: { height: 8, backgroundColor: '#eee', borderRadius: 4 },
+  overallProgressFill: { height: 8, backgroundColor: '#ff5f96', borderRadius: 4 },
+  videoList: { flex: 1, marginHorizontal: 16 },
+  videoItem: { flexDirection: 'row', alignItems: 'center', padding: 12, marginVertical: 6, backgroundColor: '#f0f0f0', borderRadius: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
+  videoItemTextContainer: { marginLeft: 12 },
+  videoTitle: { fontSize: 16, fontWeight: 'bold', color: '#333' },
+  videoDuration: { fontSize: 14, color: '#666', marginTop: 4 },
+  videoActions: { flexDirection: 'row', alignItems: 'center', marginLeft: 'auto' },
+  resumeCourseButton: {
+    backgroundColor: '#43A047',
+    padding: 12,
+    borderRadius: 8,
+    marginHorizontal: 16,
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  resumeCourseButtonText: { color: 'white', fontSize: 16, fontWeight: '600' },
+  closeCourseDetailButton: { marginTop: 12, alignSelf: 'center', padding: 12, backgroundColor: '#ff5f96', borderRadius: 8 },
+  closeCourseDetailButtonText: { color: 'white', fontSize: 16 },
+  // Video Modal Styles
+  videoModalContainer: { flex: 1, backgroundColor: 'black', justifyContent: 'center', alignItems: 'center' },
+  videoModalHeader: { flexDirection: 'row', alignItems: 'center', width: '100%', padding: 10, backgroundColor: 'rgba(0,0,0,0.8)' },
+  videoModalTitle: { flex: 1, textAlign: 'center', fontSize: 18, color: 'white' },
+  video: { width: '100%', height: 300 },
+  closeButton: { marginTop: 20, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#ff5f96', borderRadius: 10 },
+  closeButtonText: { color: 'white', fontSize: 16 },
+  // Note Modal Styles removed.
 });
 
 export default SkillDevelopmentScreen;
