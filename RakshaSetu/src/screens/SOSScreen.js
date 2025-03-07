@@ -147,15 +147,21 @@ export default function SOSScreen() {
       setLocation(loc.coords);
       const { latitude, longitude } = loc.coords;
 
-      // Create Street View URL using the Google Street View API
-      const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=235&pitch=10&key=${GOOGLE_API_KEY}`;
+      // Create multiple Street View URLs with different headings
+      const streetViewUrl1 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=0&pitch=10&key=${GOOGLE_API_KEY}`;
+      const streetViewUrl2 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=120&pitch=10&key=${GOOGLE_API_KEY}`;
+      const streetViewUrl3 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=240&pitch=10&key=${GOOGLE_API_KEY}`;
 
-      // Compose the SOS message including the Google Maps link and the Street View link
+      // Compose the SOS message including Google Maps link and multiple Street View links
       const message = `Emergency! I need help immediately.
 
-My location: https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}
+  My location: https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}
 
-Street View: ${streetViewUrl}`;
+  Street View 1: ${streetViewUrl1}
+
+  Street View 2: ${streetViewUrl2}
+
+  Street View 3: ${streetViewUrl3}`;
 
       // Send SMS to emergency contacts (closeFriends if available, fallback otherwise)
       const allContacts = closeFriends.length > 0 ? closeFriends : emergencyContacts;
@@ -186,7 +192,7 @@ Street View: ${streetViewUrl}`;
     <View style={styles.container}>
       <Text style={styles.header}>RakshaSetu SOS</Text>
       <Text style={styles.infoText}>
-        If you feel unsafe, press the button below. An alert with your current location will be sent to your emergency contacts and via in-app chat.
+        If you feel unsafe, press the button below. An alert with your current location and multiple Street View images will be sent to your emergency contacts and via in-app chat.
       </Text>
       
       {!isSOSActive && !isSendingSOS && (
