@@ -156,7 +156,7 @@ const InAppChatScreen = () => {
   }, []);
 
   const currentUserId = user?.uid;
-  const currentUserName = user?.displayName || 'My Name';
+  const currentUserName = user?.uid || 'My Name';
   const currentUserImage = user?.photoURL || 'https://example.com/my-default.png';
 
   // ----------------------------
