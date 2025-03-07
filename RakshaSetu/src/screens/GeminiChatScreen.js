@@ -739,7 +739,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
+    top: 30,
+    bottonpadding: 20,
+    bottom: 20,
     borderBottomWidth: 1,
   },
   historyTitle: {
@@ -748,6 +751,7 @@ const styles = StyleSheet.create({
   },
   historyList: {
     paddingHorizontal: 16,
+    top: 30,
   },
   historyItem: {
     paddingVertical: 12,
