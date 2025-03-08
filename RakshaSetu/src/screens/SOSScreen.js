@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -23,33 +23,27 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { auth, db } from '../../config/firebaseConfig';
+import { useRoute, useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 
-// Replace with your actual valid Google API key
 const GOOGLE_API_KEY = 'AIzaSyBzqSJUt0MVs3xFjFWTvLwiyjXwnzbkXok';
-
-// Fallback emergency contacts if no "closeFriends" are found in Firestore.
-const emergencyContacts = [
-  { id: '1', name: 'Fallback Friend', phone: '+9112345678910' },
-  { id: '2', name: 'Police', phone: '100' },
-];
 
 function SOSScreen() {
   const { t } = useTranslation();
+  const route = useRoute();
+  const navigation = useNavigation();
   const [isSOSActive, setIsSOSActive] = useState(false);
   const [countdown, setCountdown] = useState(10);
   const [isSendingSOS, setIsSendingSOS] = useState(false);
   const [location, setLocation] = useState(null);
-  const [closeFriends, setCloseFriends] = useState([]); // Firestore field "closeFriends"
+  const [closeFriends, setCloseFriends] = useState([]);
 
   // Listen for changes to the user's "closeFriends" field.
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
-
     const userDocRef = doc(db, 'users', user.uid);
     console.log("Listening for 'closeFriends' in user's doc...");
-
     const unsubscribe = onSnapshot(
       userDocRef,
       (snapshot) => {
@@ -72,7 +66,6 @@ function SOSScreen() {
         Alert.alert(t('common.error'), t('sos.failedToSend'));
       }
     );
-
     return () => unsubscribe();
   }, [t]);
 
@@ -102,6 +95,18 @@ function SOSScreen() {
     return () => timer && clearInterval(timer);
   }, [isSOSActive, countdown]);
 
+  // Use focus effect so that every time the screen is focused, we check for autoActivate.
+  useFocusEffect(
+    useCallback(() => {
+      if (route.params?.autoActivate && !isSOSActive) {
+        console.log("Auto-activating SOS due to autoActivate param on focus.");
+        startSOS();
+        // Clear the autoActivate parameter so it doesn't re-trigger
+        navigation.setParams({ autoActivate: false });
+      }
+    }, [route.params, isSOSActive, navigation])
+  );
+
   const startSOS = () => {
     setIsSOSActive(true);
     setCountdown(10);
@@ -112,12 +117,10 @@ function SOSScreen() {
     setCountdown(10);
   };
 
-  // Function to send SOS message via in-app chat.
   const sendSOSInAppChat = async (message) => {
     const user = auth.currentUser;
     if (!user) return;
     try {
-      // Query all threads where the current user is a participant.
       const threadsQuery = query(
         collection(db, "threads"),
         where("participants", "array-contains", user.uid)
@@ -125,7 +128,6 @@ function SOSScreen() {
       const querySnapshot = await getDocs(threadsQuery);
       querySnapshot.forEach(async (docSnap) => {
         const threadId = docSnap.id;
-        // Add the SOS message to each thread's messages subcollection.
         await addDoc(collection(db, "threads", threadId, "messages"), {
           senderId: user.uid,
           text: message,
@@ -133,7 +135,6 @@ function SOSScreen() {
           createdAt: serverTimestamp(),
           read: false,
         });
-        // Optionally, update the thread's lastMessage.
         await updateDoc(doc(db, "threads", threadId), {
           lastMessage: message,
           lastTimestamp: serverTimestamp(),
@@ -148,34 +149,28 @@ function SOSScreen() {
   const triggerSOS = async () => {
     setIsSendingSOS(true);
     try {
-      // Get current location.
       const loc = await Location.getCurrentPositionAsync({});
       setLocation(loc.coords);
       const { latitude, longitude } = loc.coords;
-  
-      // Create multiple Street View URLs with different headings.
       const streetViewUrl1 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=0&pitch=10&key=${GOOGLE_API_KEY}`;
       const streetViewUrl2 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=120&pitch=10&key=${GOOGLE_API_KEY}`;
       const streetViewUrl3 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=240&pitch=10&key=${GOOGLE_API_KEY}`;
-  
-      // Compose the SOS message:
-      // Keep the header separate and add an emergency message.
       const message = `${t('sos.header')}
   
-  ${t('sos.emergencyMessage')}
+${t('sos.emergencyMessage')}
   
-  My location: https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}
+My location: https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}
   
-  Street View 1: ${streetViewUrl1}
+Street View 1: ${streetViewUrl1}
   
-  Street View 2: ${streetViewUrl2}
+Street View 2: ${streetViewUrl2}
   
-  Street View 3: ${streetViewUrl3}`;
-  
-      // Send SMS to emergency contacts (closeFriends if available, fallback otherwise).
-      const allContacts = closeFriends.length > 0 ? closeFriends : emergencyContacts;
+Street View 3: ${streetViewUrl3}`;
+      const allContacts = closeFriends.length > 0 ? closeFriends : [
+        { id: '1', name: 'Fallback Friend', phone: '+9112345678910' },
+        { id: '2', name: 'Police', phone: '100' },
+      ];
       console.log("Sending SMS to:", allContacts);
-  
       const isAvailable = await SMS.isAvailableAsync();
       if (isAvailable) {
         await SMS.sendSMSAsync(
@@ -186,8 +181,6 @@ function SOSScreen() {
       } else {
         Alert.alert(t('sos.smsNotAvailable'), t('sos.smsNotAvailableMessage'));
       }
-  
-      // Also send the SOS message via in-app chat to all chats.
       await sendSOSInAppChat(message);
     } catch (error) {
       console.error('Error triggering SOS:', error);
@@ -196,19 +189,16 @@ function SOSScreen() {
     setIsSendingSOS(false);
     setIsSOSActive(false);
   };
-  
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>{t('sos.header')}</Text>
       <Text style={styles.infoText}>{t('sos.infoText')}</Text>
-      
       {!isSOSActive && !isSendingSOS && (
         <TouchableOpacity style={styles.sosButton} onPress={startSOS}>
           <Text style={styles.sosButtonText}>{t('sos.sosButton')}</Text>
         </TouchableOpacity>
       )}
-
       {isSOSActive && (
         <View style={styles.countdownContainer}>
           <Text style={styles.countdownText}>
@@ -219,14 +209,12 @@ function SOSScreen() {
           </TouchableOpacity>
         </View>
       )}
-
       {isSendingSOS && (
         <View style={styles.sendingContainer}>
           <ActivityIndicator size="large" color="#fff" />
           <Text style={styles.sendingText}>{t('sos.sendingText')}</Text>
         </View>
       )}
-
       {location && (
         <View style={styles.mapContainer}>
           <MapView
