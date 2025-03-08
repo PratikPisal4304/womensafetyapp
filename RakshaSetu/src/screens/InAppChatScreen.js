@@ -127,7 +127,6 @@ const InAppChatScreen = () => {
   const [typingDots, setTypingDots] = useState('');
   const [previewImage, setPreviewImage] = useState(null);
   const [deleteMessage, setDeleteMessage] = useState(null);
-  // New state for chat delete confirmation modal
   const [deleteChatModalVisible, setDeleteChatModalVisible] = useState(false);
 
   // ----------------------------
@@ -597,13 +596,20 @@ const InAppChatScreen = () => {
       {error && <Animated.Text style={[styles.errorText, { opacity: errorAnim }]}>{error}</Animated.Text>}
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search users by name..."
-          placeholderTextColor="#aaa"
-          value={searchTerm}
-          onChangeText={setSearchTerm}
-        />
+        <View style={styles.searchInputContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search users by name..."
+            placeholderTextColor="#aaa"
+            value={searchTerm}
+            onChangeText={setSearchTerm}
+          />
+          {searchTerm.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchTerm('')} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={20} color="#FF69B4" />
+            </TouchableOpacity>
+          )}
+        </View>
         <TouchableOpacity style={styles.searchButton} onPress={debouncedSearch} activeOpacity={0.8}>
           <Ionicons name="search" size={20} color="#FF69B4" />
           <Text style={styles.searchButtonText}>Search</Text>
@@ -857,15 +863,23 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 20, fontWeight: '600', marginBottom: 10, color: '#333' },
   noMessagesText: { color: '#555', fontStyle: 'italic', marginBottom: 10 },
   searchContainer: { flexDirection: 'row', marginBottom: 15 },
-  searchInput: {
+  searchInputContainer: {
     flex: 1,
+    position: 'relative',
+  },
+  searchInput: {
     backgroundColor: '#fff',
     borderRadius: 12,
     paddingHorizontal: 15,
     paddingVertical: 8,
-    marginRight: 8,
     color: '#333',
     elevation: 2,
+  },
+  clearButton: {
+    position: 'absolute',
+    right: 10,
+    top: '50%',
+    transform: [{ translateY: -10 }],
   },
   searchButton: {
     backgroundColor: '#fff',
@@ -875,6 +889,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 2,
+    marginLeft: 8,
   },
   searchButtonText: { color: '#FF69B4', fontWeight: '600', fontSize: 16, marginLeft: 5 },
   requestCard: {
