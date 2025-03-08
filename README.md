@@ -32,7 +32,7 @@
 
 1. **Clone the repository**
    ```sh
-   git clone https://github.com/yourusername/RakshaSetu.git
+   git clone https://github.com/PratikPisal4304/RakshaSetu.git
    cd RakshaSetu
    ```
 
