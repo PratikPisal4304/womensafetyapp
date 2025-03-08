@@ -30,6 +30,7 @@ import {
   updateDoc,
   addDoc,
   getDocs,
+  getDoc,
   serverTimestamp,
   orderBy,
   limit,
@@ -40,7 +41,6 @@ import { getAuth } from 'firebase/auth';
 import { Ionicons } from '@expo/vector-icons';
 import { db } from '../../config/firebaseConfig';
 
-// Initialize Firebase Storage and Auth
 const storage = getStorage();
 const auth = getAuth();
 
@@ -110,13 +110,13 @@ const InAppChatScreen = () => {
   // ----------------------------
   // STATES
   // ----------------------------
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null); // Will hold { uid, name, image } from Firestore
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [requests, setRequests] = useState([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
-  const [messagesList, setMessagesList] = useState([]);
+  const [messagesList, setMessagesList] = useState([]); // The chat list on the home screen
   const [loadingMessages, setLoadingMessages] = useState(true);
   const [chatData, setChatData] = useState({});
   const [selectedChat, setSelectedChat] = useState(null);
@@ -138,26 +138,44 @@ const InAppChatScreen = () => {
   const errorAnim = useRef(new Animated.Value(0)).current;
 
   // ----------------------------
-  // GET CURRENT USER FROM AUTH
+  // GET CURRENT USER FROM AUTH & FETCH USER DETAILS FROM FIRESTORE
   // ----------------------------
   useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged((currentUser) => {
+    const unsubscribeAuth = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
-        setUser(currentUser);
+        try {
+          const userRef = doc(db, 'users', currentUser.uid);
+          const docSnap = await getDoc(userRef);
+          if (docSnap.exists()) {
+            setUser({ uid: currentUser.uid, ...docSnap.data() });
+          } else {
+            setUser({
+              uid: currentUser.uid,
+              name: 'My Name',
+              image: 'https://example.com/my-default.png',
+            });
+          }
+        } catch (err) {
+          console.log('Error fetching user doc:', err);
+          setError('Failed to fetch user details.');
+          Animated.timing(errorAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+        }
       } else {
         setError('User not authenticated');
         Animated.timing(errorAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
       }
     });
+
     return () => unsubscribeAuth();
   }, []);
 
+  // Grab user fields for convenience
   const currentUserId = user?.uid;
-  const currentUserName = user?.uid || 'My Name';
-  const currentUserImage = user?.photoURL || 'https://example.com/my-default.png';
+  const currentUserName = user?.name || 'My Name';
+  const currentUserImage = user?.image || 'https://example.com/my-default.png';
 
   // ----------------------------
-  // FETCH REQUESTS & MESSAGES
+  // FETCH REQUESTS
   // ----------------------------
   useEffect(() => {
     if (!currentUserId) return;
@@ -176,30 +194,63 @@ const InAppChatScreen = () => {
     return () => unsubscribe();
   }, [currentUserId]);
 
+  // ----------------------------
+  // FETCH THREADS (CHAT LIST) & UPDATE WITH LATEST NAMES
+  // ----------------------------
   useEffect(() => {
     if (!currentUserId) return;
+
     const messagesRef = collection(db, 'threads');
     const q = query(messagesRef, where('participants', 'array-contains', currentUserId));
+
+    // Subscribe to all threads
     const unsubscribe = onSnapshot(
       q,
-      (snapshot) => {
-        const msgs = [];
-        snapshot.forEach((docSnap) => {
+      async (snapshot) => {
+        const tempThreads = [];
+        // We can fetch each doc's other user for the latest name/image
+        for (const docSnap of snapshot.docs) {
           const data = docSnap.data();
           const otherUser = data?.userData?.find((u) => u.id !== currentUserId);
-          msgs.push({
+
+          if (!otherUser) continue; // Safety check
+
+          let updatedName = otherUser.name || 'Unknown User';
+          let updatedImage = otherUser.image || 'https://example.com/default.png';
+
+          // If the other user is not me, fetch from Firestore for the latest name
+          if (otherUser.id && otherUser.id !== currentUserId) {
+            try {
+              const otherDocRef = doc(db, 'users', otherUser.id);
+              const otherDocSnap = await getDoc(otherDocRef);
+              if (otherDocSnap.exists()) {
+                const otherData = otherDocSnap.data();
+                updatedName = otherData.name || 'Unknown User';
+                updatedImage = otherData.image || 'https://example.com/default.png';
+              }
+            } catch (err) {
+              console.log('Error fetching other user doc for chat list:', err);
+            }
+          }
+
+          tempThreads.push({
             threadId: docSnap.id,
-            ...otherUser,
+            id: otherUser.id,
+            name: updatedName,
+            image: updatedImage,
             lastMessage: data.lastMessage || '',
             lastTimestamp: data.lastTimestamp || null,
           });
-        });
-        msgs.sort((a, b) => (b.lastTimestamp?.seconds || 0) - (a.lastTimestamp?.seconds || 0));
-        setMessagesList(msgs);
+        }
+
+        // Sort by lastTimestamp desc
+        tempThreads.sort((a, b) => (b.lastTimestamp?.seconds || 0) - (a.lastTimestamp?.seconds || 0));
+        setMessagesList(tempThreads);
         setLoadingMessages(false);
       },
       (err) => setError('Error fetching messages')
     );
+
     return () => unsubscribe();
   }, [currentUserId]);
 
@@ -274,41 +325,83 @@ const InAppChatScreen = () => {
   };
 
   // ----------------------------
-  // CHAT DETAIL & MESSAGES
+  // SELECT A CHAT + FETCH MESSAGES
   // ----------------------------
   const handleSelectChat = async (chatItem) => {
+    // 1) If this chat is with someone else, fetch their doc to update the chat header name
+    if (chatItem.id !== currentUserId) {
+      try {
+        const otherDocRef = doc(db, 'users', chatItem.id);
+        const otherDocSnap = await getDoc(otherDocRef);
+        if (otherDocSnap.exists()) {
+          const otherData = otherDocSnap.data();
+          const updatedName = otherData.name || 'Unknown User';
+          const updatedImage = otherData.image || 'https://example.com/default.png';
+          // Overwrite chatItem's name/image with fresh data
+          chatItem = { ...chatItem, name: updatedName, image: updatedImage };
+        }
+      } catch (err) {
+        console.log('Error fetching other user doc for header:', err);
+      }
+    }
+
     setSelectedChat(chatItem);
     setInputText('');
     setIsTyping(false);
+
     const messagesRef = collection(db, 'threads', chatItem.threadId, 'messages');
     const q = query(messagesRef, orderBy('createdAt', 'asc'));
+
+    // If there was a previous subscription, unsubscribe
     if (unsubscribeRef.current) unsubscribeRef.current();
+
+    // Subscribe to messages in this thread
     const unsubscribe = onSnapshot(
       q,
-      (snapshot) => {
+      async (snapshot) => {
         const loadedMessages = [];
-        snapshot.forEach((docSnap) => loadedMessages.push({ id: docSnap.id, ...docSnap.data() }));
-        const formatted = loadedMessages.map((msg) => {
-          const senderType = msg.senderId === currentUserId ? 'me' : 'them';
-          let timeString = '';
-          if (msg.createdAt?.toDate) {
-            timeString = msg.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        for (const docSnap of snapshot.docs) {
+          const msgData = docSnap.data();
+          const senderType = msgData.senderId === currentUserId ? 'me' : 'them';
+
+          let senderName = senderType === 'me' ? currentUserName : 'Unknown User';
+          // If it's from the other user, fetch that user doc to get their current name
+          if (senderType === 'them') {
+            try {
+              const senderDocRef = doc(db, 'users', msgData.senderId);
+              const senderDocSnap = await getDoc(senderDocRef);
+              if (senderDocSnap.exists()) {
+                senderName = senderDocSnap.data().name || 'Unknown User';
+              }
+            } catch (fetchErr) {
+              console.log('Error fetching sender doc:', fetchErr);
+            }
           }
-          return {
-            id: msg.id,
+
+          let timeString = '';
+          if (msgData.createdAt?.toDate) {
+            timeString = msgData.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          }
+
+          loadedMessages.push({
+            id: docSnap.id,
             sender: senderType,
-            senderName: senderType === 'them' ? chatItem.name : currentUserName,
-            text: msg.text || '',
-            media: msg.media || null,
+            senderName,
+            text: msgData.text || '',
+            media: msgData.media || null,
             time: timeString,
-            read: msg.read || false,
-          };
-        });
-        setChatData((prev) => ({ ...prev, [chatItem.threadId]: formatted }));
+            read: msgData.read || false,
+          });
+        }
+
+        setChatData((prev) => ({ ...prev, [chatItem.threadId]: loadedMessages }));
         if (chatListRef.current) chatListRef.current.scrollToEnd({ animated: true });
       },
       (err) => setError('Error loading messages')
     );
+
+    // Store unsubscribe so we can detach later
     unsubscribeRef.current = unsubscribe;
   };
 
@@ -336,8 +429,11 @@ const InAppChatScreen = () => {
     if (!inputText.trim() || !selectedChat?.threadId) return;
     const threadId = selectedChat.threadId;
     const textToSend = inputText.trim();
+
     setSendingMessage(true);
     setIsTyping(false);
+
+    // Add message to local state for an instant UI update
     const newMsg = {
       id: Date.now().toString(),
       sender: 'me',
@@ -351,8 +447,11 @@ const InAppChatScreen = () => {
       const existing = prev[threadId] || [];
       return { ...prev, [threadId]: [...existing, newMsg] };
     });
+
     setInputText('');
     Keyboard.dismiss();
+
+    // Firestore
     try {
       await addDoc(collection(db, 'threads', threadId, 'messages'), {
         senderId: currentUserId,
@@ -385,13 +484,18 @@ const InAppChatScreen = () => {
       quality: 0.7,
     });
     if (result.canceled || result.cancelled) return;
+
     const localUri = result.assets ? result.assets[0].uri : result.uri;
     if (!localUri || !selectedChat?.threadId) return;
+
     setSendingMessage(true);
     const threadId = selectedChat.threadId;
+
     try {
       const filePath = `messages/${currentUserId}/${Date.now()}.jpg`;
       const downloadURL = await uploadImageAsync(localUri, filePath);
+
+      // Update local state
       const newMsg = {
         id: Date.now().toString(),
         sender: 'me',
@@ -405,6 +509,8 @@ const InAppChatScreen = () => {
         const existing = prev[threadId] || [];
         return { ...prev, [threadId]: [...existing, newMsg] };
       });
+
+      // Firestore
       await addDoc(collection(db, 'threads', threadId, 'messages'), {
         senderId: currentUserId,
         text: '',
@@ -428,6 +534,7 @@ const InAppChatScreen = () => {
   const handleSendLocation = async () => {
     if (!selectedChat?.threadId) return;
     setSendingMessage(true);
+
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -438,6 +545,8 @@ const InAppChatScreen = () => {
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
       const { latitude, longitude } = loc.coords;
       const message = `My current location: https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+
+      // Firestore
       await addDoc(collection(db, 'threads', selectedChat.threadId, 'messages'), {
         senderId: currentUserId,
         text: message,
@@ -449,6 +558,8 @@ const InAppChatScreen = () => {
         lastMessage: message,
         lastTimestamp: serverTimestamp(),
       });
+
+      // Local state
       const newMsg = {
         id: Date.now().toString(),
         sender: 'me',
@@ -491,6 +602,7 @@ const InAppChatScreen = () => {
   };
 
   const handleDeleteMessagePress = (msg) => {
+    // Only allow deleting messages you sent
     if (msg.sender === 'me') setDeleteMessage(msg);
   };
 
@@ -515,6 +627,7 @@ const InAppChatScreen = () => {
   const handleProfileClick = async (profile) => {
     const profileName = profile.name || 'Anonymous';
     const profileImage = profile.image || 'https://example.com/default-profile.png';
+
     const existingThread = messagesList.find((thread) => thread.id === profile.id);
     if (existingThread) {
       handleSelectChat(existingThread);
@@ -530,6 +643,7 @@ const InAppChatScreen = () => {
           ],
         };
         const threadRef = await addDoc(collection(db, 'threads'), newThread);
+
         const threadObj = {
           threadId: threadRef.id,
           id: profile.id,
@@ -594,6 +708,7 @@ const InAppChatScreen = () => {
     <View style={styles.container}>
       <Text style={styles.screenTitle}>RaskhaSetu Chat</Text>
       {error && <Animated.Text style={[styles.errorText, { opacity: errorAnim }]}>{error}</Animated.Text>}
+
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
@@ -615,6 +730,7 @@ const InAppChatScreen = () => {
           <Text style={styles.searchButtonText}>Search</Text>
         </TouchableOpacity>
       </View>
+
       {/* Search Results */}
       {isSearching && <ActivityIndicator color="#333" style={{ marginBottom: 10 }} />}
       {searchResults.length > 0 && (
@@ -634,6 +750,7 @@ const InAppChatScreen = () => {
           />
         </View>
       )}
+
       {/* Requests */}
       {loadingRequests ? (
         <ActivityIndicator color="#333" style={{ marginBottom: 10 }} />
@@ -665,6 +782,7 @@ const InAppChatScreen = () => {
           />
         </>
       )}
+
       {/* Messages (Active Chats) */}
       <Text style={styles.sectionTitle}>Messages</Text>
       {loadingMessages ? (
@@ -721,6 +839,7 @@ const InAppChatScreen = () => {
   const renderChatDetailScreen = () => {
     const threadId = selectedChat?.threadId;
     const conversation = chatData[threadId] || [];
+
     return (
       <View style={styles.container}>
         <View style={styles.chatHeader}>
@@ -732,6 +851,7 @@ const InAppChatScreen = () => {
             <Ionicons name="trash" size={24} color="#FF3B30" />
           </TouchableOpacity>
         </View>
+
         <FlatList
           ref={chatListRef}
           data={conversation}
@@ -747,11 +867,14 @@ const InAppChatScreen = () => {
             />
           )}
         />
+
         {isTyping && (
           <View style={styles.typingIndicator}>
             <Text style={styles.typingText}>Typing{typingDots}</Text>
           </View>
         )}
+
+        {/* Message Input Row */}
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.textInput}
@@ -795,6 +918,8 @@ const InAppChatScreen = () => {
           </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      {/* Fullscreen Image Preview */}
       <Modal visible={!!previewImage} transparent={true} animationType="fade">
         <View style={styles.modalContainer}>
           <TouchableOpacity style={styles.modalClose} onPress={() => setPreviewImage(null)}>
@@ -803,6 +928,8 @@ const InAppChatScreen = () => {
           <Image source={{ uri: previewImage }} style={styles.fullScreenImage} resizeMode="contain" />
         </View>
       </Modal>
+
+      {/* Delete Single Message Modal */}
       <Modal visible={!!deleteMessage} transparent={true} animationType="fade">
         <View style={styles.modalContainer}>
           <View style={styles.deleteModal}>
@@ -819,6 +946,8 @@ const InAppChatScreen = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Delete Entire Chat Modal */}
       <Modal visible={deleteChatModalVisible} transparent={true} animationType="fade">
         <View style={styles.modalContainer}>
           <View style={styles.deleteModal}>
@@ -904,8 +1033,26 @@ const styles = StyleSheet.create({
   requestAvatar: { width: 70, height: 70, borderRadius: 35, marginBottom: 8, backgroundColor: '#fff' },
   requestName: { fontSize: 15, fontWeight: '600', color: '#333', marginBottom: 8, textAlign: 'center' },
   requestButtons: { flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
-  acceptButton: { flex: 1, backgroundColor: '#C8FACC', paddingVertical: 6, borderRadius: 8, marginRight: 5, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
-  declineButton: { flex: 1, backgroundColor: '#FFC0C0', paddingVertical: 6, borderRadius: 8, marginLeft: 5, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+  acceptButton: {
+    flex: 1,
+    backgroundColor: '#C8FACC',
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginRight: 5,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  declineButton: {
+    flex: 1,
+    backgroundColor: '#FFC0C0',
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginLeft: 5,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
   requestButtonText: { color: '#333', fontWeight: 'bold', marginLeft: 3 },
   // Enhanced Chat List Styles
   chatListItem: {
@@ -915,7 +1062,7 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 15,
     marginBottom: 12,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
@@ -968,7 +1115,16 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   // Chat Detail Screen Styles
-  chatHeader: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.9)', paddingVertical: 18, borderRadius: 15, marginBottom: 12, elevation: 3, justifyContent: 'center' },
+  chatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingVertical: 18,
+    borderRadius: 15,
+    marginBottom: 12,
+    elevation: 3,
+    justifyContent: 'center',
+  },
   backButton: { position: 'absolute', left: 20, padding: 8, zIndex: 1 },
   backButtonText: { color: '#333', fontWeight: '600', fontSize: 17 },
   chatHeaderText: { flex: 1, fontSize: 20, fontWeight: '700', color: '#333', textAlign: 'center' },
@@ -982,11 +1138,28 @@ const styles = StyleSheet.create({
   bubbleFooter: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 5 },
   chatBubbleTime: { fontSize: 11, color: '#666' },
   readReceipt: { fontSize: 11, color: '#FF69B4' },
-  inputContainer: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 30, alignItems: 'center', paddingHorizontal: 15, paddingVertical: 8, marginBottom: 20, elevation: 3 },
+  inputContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 30,
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    marginBottom: 20,
+    elevation: 3,
+  },
   textInput: { flex: 1, paddingVertical: 0, paddingHorizontal: 10, color: '#333', fontSize: 16 },
   locationButton: { backgroundColor: '#007AFF', borderRadius: 20, padding: 8, marginLeft: 5, elevation: 2 },
   mediaButton: { backgroundColor: '#fff', borderRadius: 20, padding: 8, marginLeft: 5, elevation: 2 },
-  sendButton: { backgroundColor: '#fff', borderRadius: 20, padding: 8, marginLeft: 5, elevation: 2, flexDirection: 'row', alignItems: 'center' },
+  sendButton: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 8,
+    marginLeft: 5,
+    elevation: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   sendButtonText: { fontWeight: '600', color: '#FF69B4', fontSize: 16, marginLeft: 5 },
   typingIndicator: { alignItems: 'center', marginVertical: 5 },
   typingText: { fontStyle: 'italic', color: '#666', fontSize: 16 },
