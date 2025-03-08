@@ -983,6 +983,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#333',
     marginBottom: 20,
+    paddingTop: 15,
     textAlign: 'center',
     textShadowColor: '#fff',
     textShadowOffset: { width: 0, height: 1 },
