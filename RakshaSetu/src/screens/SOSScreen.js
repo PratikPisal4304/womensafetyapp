@@ -152,28 +152,30 @@ function SOSScreen() {
       const loc = await Location.getCurrentPositionAsync({});
       setLocation(loc.coords);
       const { latitude, longitude } = loc.coords;
-
+  
       // Create multiple Street View URLs with different headings.
       const streetViewUrl1 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=0&pitch=10&key=${GOOGLE_API_KEY}`;
       const streetViewUrl2 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=120&pitch=10&key=${GOOGLE_API_KEY}`;
       const streetViewUrl3 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=240&pitch=10&key=${GOOGLE_API_KEY}`;
-
-      // Compose the SOS message including Google Maps link and multiple Street View links.
-      const message = `${t('sos.header')}\n
-${t('sos.infoText')}
-
-My location: https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}
-
-Street View 1: ${streetViewUrl1}
-
-Street View 2: ${streetViewUrl2}
-
-Street View 3: ${streetViewUrl3}`;
-
+  
+      // Compose the SOS message:
+      // Keep the header separate and add an emergency message.
+      const message = `${t('sos.header')}
+  
+  ${t('sos.emergencyMessage')}
+  
+  My location: https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}
+  
+  Street View 1: ${streetViewUrl1}
+  
+  Street View 2: ${streetViewUrl2}
+  
+  Street View 3: ${streetViewUrl3}`;
+  
       // Send SMS to emergency contacts (closeFriends if available, fallback otherwise).
       const allContacts = closeFriends.length > 0 ? closeFriends : emergencyContacts;
       console.log("Sending SMS to:", allContacts);
-
+  
       const isAvailable = await SMS.isAvailableAsync();
       if (isAvailable) {
         await SMS.sendSMSAsync(
@@ -184,7 +186,7 @@ Street View 3: ${streetViewUrl3}`;
       } else {
         Alert.alert(t('sos.smsNotAvailable'), t('sos.smsNotAvailableMessage'));
       }
-
+  
       // Also send the SOS message via in-app chat to all chats.
       await sendSOSInAppChat(message);
     } catch (error) {
@@ -194,6 +196,7 @@ Street View 3: ${streetViewUrl3}`;
     setIsSendingSOS(false);
     setIsSOSActive(false);
   };
+  
 
   return (
     <View style={styles.container}>

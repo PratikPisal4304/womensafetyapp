@@ -108,6 +108,7 @@
       },
       "sos": {
         "header": "RakshaSetu SOS",
+        "emergencyMessage": "Emergency, please help me.",
         "infoText": "If you feel unsafe, press the button below. An alert with your current location and multiple Street View images will be sent to your emergency contacts and via in-app chat.",
         "sosButton": "SOS",
         "cancelAlert": "Cancel Alert",
