@@ -114,7 +114,6 @@ const InAppChatScreen = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-  // Removed closeFriends section as requested.
   const [requests, setRequests] = useState([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
   const [messagesList, setMessagesList] = useState([]);
@@ -127,9 +126,7 @@ const InAppChatScreen = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [typingDots, setTypingDots] = useState('');
   const [previewImage, setPreviewImage] = useState(null);
-  // State for message delete confirmation modal
   const [deleteMessage, setDeleteMessage] = useState(null);
-  // New state for chat delete confirmation modal
   const [deleteChatModalVisible, setDeleteChatModalVisible] = useState(false);
 
   // ----------------------------
@@ -219,7 +216,12 @@ const InAppChatScreen = () => {
       setIsSearching(true);
       try {
         const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('name', '>=', searchTerm), where('name', '<=', searchTerm + '\uf8ff'), limit(10));
+        const q = query(
+          usersRef,
+          where('name', '>=', searchTerm),
+          where('name', '<=', searchTerm + '\uf8ff'),
+          limit(10)
+        );
         const snap = await getDocs(q);
         const results = [];
         snap.forEach((docSnap) => results.push({ id: docSnap.id, ...docSnap.data() }));
@@ -423,7 +425,6 @@ const InAppChatScreen = () => {
     }
   };
 
-  // Updated handleSendLocation with proper permission checks and accuracy.
   const handleSendLocation = async () => {
     if (!selectedChat?.threadId) return;
     setSendingMessage(true);
@@ -490,7 +491,6 @@ const InAppChatScreen = () => {
   };
 
   const handleDeleteMessagePress = (msg) => {
-    // Allow deletion only for your own messages.
     if (msg.sender === 'me') setDeleteMessage(msg);
   };
 
@@ -677,13 +677,28 @@ const InAppChatScreen = () => {
               dateStr = item.lastTimestamp.toDate().toLocaleDateString([], { month: 'short', day: 'numeric' });
             }
             return (
-              <TouchableOpacity style={styles.messageItem} onPress={() => handleSelectChat(item)} activeOpacity={0.8}>
-                <Image source={{ uri: item.image }} style={styles.avatar} />
-                <View style={styles.messageContent}>
-                  <Text style={styles.messageName}>{item.name}</Text>
-                  <Text style={styles.messageText}>{item.lastMessage}</Text>
+              <TouchableOpacity
+                style={styles.chatListItem}
+                onPress={() => handleSelectChat(item)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.avatarContainer}>
+                  <Image source={{ uri: item.image }} style={styles.chatAvatar} />
+                  {item.unread && (
+                    <View style={styles.unreadBadge}>
+                      <Text style={styles.unreadBadgeText}>{item.unreadCount || 'New'}</Text>
+                    </View>
+                  )}
                 </View>
-                <Text style={styles.messageTime}>{dateStr}</Text>
+                <View style={styles.chatInfo}>
+                  <View style={styles.chatHeaderRow}>
+                    <Text style={styles.chatName}>{item.name}</Text>
+                    <Text style={styles.chatTime}>{dateStr}</Text>
+                  </View>
+                  <Text style={styles.chatLastMessage} numberOfLines={1}>
+                    {item.lastMessage}
+                  </Text>
+                </View>
               </TouchableOpacity>
             );
           }}
@@ -702,7 +717,6 @@ const InAppChatScreen = () => {
             <Ionicons name="arrow-back" size={24} color="#333" />
           </TouchableOpacity>
           <Text style={styles.chatHeaderText}>{selectedChat?.name}</Text>
-          {/* Delete Chat Button */}
           <TouchableOpacity style={styles.deleteChatButton} onPress={() => setDeleteChatModalVisible(true)} activeOpacity={0.8}>
             <Ionicons name="trash" size={24} color="#FF3B30" />
           </TouchableOpacity>
@@ -770,7 +784,6 @@ const InAppChatScreen = () => {
           </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
       </SafeAreaView>
-      {/* Media Preview Modal */}
       <Modal visible={!!previewImage} transparent={true} animationType="fade">
         <View style={styles.modalContainer}>
           <TouchableOpacity style={styles.modalClose} onPress={() => setPreviewImage(null)}>
@@ -779,7 +792,6 @@ const InAppChatScreen = () => {
           <Image source={{ uri: previewImage }} style={styles.fullScreenImage} resizeMode="contain" />
         </View>
       </Modal>
-      {/* Delete Message Confirmation Modal */}
       <Modal visible={!!deleteMessage} transparent={true} animationType="fade">
         <View style={styles.modalContainer}>
           <View style={styles.deleteModal}>
@@ -796,7 +808,6 @@ const InAppChatScreen = () => {
           </View>
         </View>
       </Modal>
-      {/* Delete Chat Confirmation Modal */}
       <Modal visible={deleteChatModalVisible} transparent={true} animationType="fade">
         <View style={styles.modalContainer}>
           <View style={styles.deleteModal}>
@@ -876,12 +887,67 @@ const styles = StyleSheet.create({
   acceptButton: { flex: 1, backgroundColor: '#C8FACC', paddingVertical: 6, borderRadius: 8, marginRight: 5, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
   declineButton: { flex: 1, backgroundColor: '#FFC0C0', paddingVertical: 6, borderRadius: 8, marginLeft: 5, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
   requestButtonText: { color: '#333', fontWeight: 'bold', marginLeft: 3 },
-  messageItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.95)', padding: 15, borderRadius: 15, marginBottom: 12, elevation: 3 },
-  avatar: { width: 55, height: 55, borderRadius: 28, backgroundColor: '#fff' },
-  messageContent: { marginLeft: 15, flex: 1 },
-  messageName: { fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 3 },
-  messageText: { fontSize: 15, color: '#666' },
-  messageTime: { color: '#666', fontSize: 13, marginLeft: 'auto' },
+  // Enhanced Chat List Styles
+  chatListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 15,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  avatarContainer: {
+    position: 'relative',
+  },
+  chatAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: '#FF69B4',
+  },
+  unreadBadge: {
+    position: 'absolute',
+    right: -5,
+    top: -5,
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  unreadBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  chatInfo: {
+    flex: 1,
+    marginLeft: 15,
+  },
+  chatHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  chatName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+  },
+  chatTime: {
+    fontSize: 14,
+    color: '#666',
+  },
+  chatLastMessage: {
+    fontSize: 16,
+    color: '#555',
+    marginTop: 4,
+  },
+  // Chat Detail Screen Styles
   chatHeader: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.9)', paddingVertical: 18, borderRadius: 15, marginBottom: 12, elevation: 3, justifyContent: 'center' },
   backButton: { position: 'absolute', left: 20, padding: 8, zIndex: 1 },
   backButtonText: { color: '#333', fontWeight: '600', fontSize: 17 },
