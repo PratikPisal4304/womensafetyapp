@@ -3,7 +3,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
 import Routes from "./src/routes";
 import { UserProvider } from "./src/context/UserContext";
-import { ShakeDetectionProvider } from "./src/context/ShakeDetectionContext"; // Ensure this file exists
+import { ShakeDetectionProvider } from "./src/context/ShakeDetectionContext";
+import './src/i18n'; // Ensure this file exists
 
 const App = () => {
   return (

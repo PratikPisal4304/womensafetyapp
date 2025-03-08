@@ -1,4 +1,3 @@
-// SignUpScreen.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -20,16 +19,17 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 // Firebase Auth & Firestore imports
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../../config/firebaseConfig'; // <-- Adjust path as needed
+import { auth, db } from '../../config/firebaseConfig';
 
 // Expo Auth Session & WebBrowser for Google Sign-In
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 
+import { useTranslation } from 'react-i18next';
+
 const { width, height } = Dimensions.get('window');
 const PINK = '#ff5f96';
 
-// Complete any pending auth sessions
 WebBrowser.maybeCompleteAuthSession();
 
 export default function SignUpScreen({ navigation }) {
@@ -39,9 +39,24 @@ export default function SignUpScreen({ navigation }) {
   const [password, setPassword] = useState('');
 
   // Language dropdown state
-  const [selectedLanguage, setSelectedLanguage] = useState('English');
+  const { t, i18n } = useTranslation();
+  const [selectedLanguage, setSelectedLanguage] = useState(i18n.language || 'en');
   const [showLanguageModal, setShowLanguageModal] = useState(false);
-  const languages = ['English', 'Hindi', 'Spanish', 'French'];
+  const languages = [
+    { label: 'English', value: 'en' },
+    { label: 'हिंदी', value: 'hi' },
+    { label: 'मराठी', value: 'mr' },
+    { label: 'ગુજરાતી', value: 'gu' },
+    { label: 'தமிழ்', value: 'ta' },
+    { label: 'తెలుగు', value: 'te' },
+    { label: 'ಕನ್ನಡ', value: 'kn' },
+    { label: 'ਪੰਜਾਬੀ', value: 'pa' }
+  ];
+
+  // Log i18n object for debugging
+  useEffect(() => {
+    console.log('i18n object:', i18n);
+  }, [i18n]);
 
   // Google sign-in hook (Replace placeholder client IDs with your actual ones)
   const [request, response, promptAsync] = Google.useAuthRequest({
@@ -59,7 +74,6 @@ export default function SignUpScreen({ navigation }) {
       signInWithCredential(auth, credential)
         .then(async (userCredential) => {
           const user = userCredential.user;
-          // Optionally, create/update user profile in Firestore
           await setDoc(
             doc(db, 'users', user.uid),
             {
@@ -69,19 +83,20 @@ export default function SignUpScreen({ navigation }) {
             },
             { merge: true }
           );
-          Alert.alert('Success', 'Signed up with Google!');
+          Alert.alert(t('signup.successAlertTitle'), t('signup.successAlertMessage'));
           navigation.replace('CreatePinScreen');
         })
         .catch((error) => {
-          Alert.alert('Error', error.message);
+          Alert.alert(t('common.error'), error.message);
         });
     }
-  }, [response]);
+  }, [response, t, navigation]);
 
   // Toggle language modal
   const handleLanguagePress = () => setShowLanguageModal(true);
   const handleSelectLanguage = (lang) => {
-    setSelectedLanguage(lang);
+    setSelectedLanguage(lang.value);
+    i18n.changeLanguage(lang.value);
     setShowLanguageModal(false);
   };
 
@@ -92,61 +107,43 @@ export default function SignUpScreen({ navigation }) {
 
   // Email/Password Sign Up Logic
   const handleSignUp = async () => {
-    // Basic validation
     if (!email.trim() || !phone.trim() || !password.trim()) {
-      Alert.alert('Error', 'All fields are required.');
+      Alert.alert(t('common.error'), t('signup.allFieldsRequired'));
       return;
     }
-    // Must be in +91XXXXXXXXXX format (13 characters total)
     if (!phone.startsWith('+91') || phone.length !== 13) {
-      Alert.alert(
-        'Error',
-        'Please enter a valid phone number in +91XXXXXXXXXX format.'
-      );
+      Alert.alert(t('common.error'), t('signup.invalidPhoneError'));
       return;
     }
-
     try {
-      // Create user in Firebase Authentication with email and password
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-
-      // Save additional user data (e.g., phone number) in Firestore
       await setDoc(doc(db, 'users', user.uid), {
         phone: phone,
         email: email,
         createdAt: new Date(),
       });
-
-      Alert.alert('Sign Up', `User created successfully: ${email}`);
-      navigation.replace('CreatePinScreen'); // Navigate to the next screen
+      Alert.alert(t('signup.userCreated'), `${t('signup.userCreatedMessage')} ${email}`);
+      navigation.replace('CreatePinScreen');
     } catch (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert(t('common.error'), error.message);
     }
   };
 
-  // Navigation for users who already have an account
   const handleGoToLogin = () => {
-    Alert.alert('Login screen.');
     navigation.replace('Login');
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <KeyboardAwareScrollView contentContainerStyle={{ flexGrow: 1 }} bounces={false}>
-        {/* Pink gradient background */}
         <LinearGradient colors={['#ff9dbf', PINK]} style={styles.gradientBackground}>
-          {/* Top Section: Title & Language */}
           <View style={styles.topSection}>
-            <Text style={styles.headerTitle}>Create Account</Text>
-            <Text style={styles.headerSubtitle}>
-              Sign up to access all safety features and more.
-            </Text>
-
-            {/* Language dropdown */}
+            <Text style={styles.headerTitle}>{t('signup.headerTitle')}</Text>
+            <Text style={styles.headerSubtitle}>{t('signup.headerSubtitle')}</Text>
             <TouchableOpacity style={styles.languageContainer} onPress={handleLanguagePress}>
               <Image
-                source={require('../../assets/adaptive-icon.png')} // Replace with your own asset
+                source={require('../../assets/adaptive-icon.png')}
                 style={styles.flagIcon}
               />
               <Text style={styles.languageText}>{selectedLanguage}</Text>
@@ -154,65 +151,55 @@ export default function SignUpScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* White pill container for form */}
           <View style={styles.formCard}>
-            {/* Email field */}
-            <Text style={styles.label}>Email</Text>
+            <Text style={styles.label}>{t('signup.emailLabel')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. name@example.com"
+              placeholder={t('signup.emailPlaceholder')}
               keyboardType="email-address"
               autoCapitalize="none"
               value={email}
               onChangeText={setEmail}
             />
 
-            {/* Phone field */}
-            <Text style={styles.label}>Phone Number</Text>
+            <Text style={styles.label}>{t('signup.phoneLabel')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. +91XXXXXXXXXX"
+              placeholder={t('signup.phonePlaceholder')}
               keyboardType="phone-pad"
               value={phone}
               onChangeText={(text) => {
-                // Only allow digits and '+'
                 const cleaned = text.replace(/[^0-9+]/g, '');
                 setPhone(cleaned);
               }}
             />
 
-            {/* Password field */}
-            <Text style={styles.label}>Password</Text>
+            <Text style={styles.label}>{t('signup.passwordLabel')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter a secure password"
+              placeholder={t('signup.passwordPlaceholder')}
               secureTextEntry
               value={password}
               onChangeText={setPassword}
             />
 
-            {/* Google Sign-In */}
             <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn}>
               <Ionicons name="logo-google" size={20} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={styles.googleButtonText}>Sign up with Google</Text>
+              <Text style={styles.googleButtonText}>{t('signup.googleButtonText')}</Text>
             </TouchableOpacity>
 
-            {/* Sign Up Button */}
             <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp}>
-              <Text style={styles.signUpButtonText}>Sign Up</Text>
+              <Text style={styles.signUpButtonText}>{t('signup.signUpButtonText')}</Text>
             </TouchableOpacity>
 
-            {/* Footer text */}
             <View style={styles.footerContainer}>
               <Text style={styles.footerText}>
-                By continuing, you have read and accepted our{' '}
-                <Text style={styles.linkText}>T&Cs</Text> and{' '}
-                <Text style={styles.linkText}>Privacy Policy</Text>
+                {t('signup.footerText')}
               </Text>
               <View style={styles.signupContainer}>
-                <Text style={styles.footerText}>Already have an account? </Text>
+                <Text style={styles.footerText}>{t('signup.alreadyHaveAccount')}</Text>
                 <TouchableOpacity onPress={handleGoToLogin}>
-                  <Text style={[styles.footerText, styles.linkText]}>Log in</Text>
+                  <Text style={[styles.footerText, styles.linkText]}>{t('signup.logInLink')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -220,7 +207,6 @@ export default function SignUpScreen({ navigation }) {
         </LinearGradient>
       </KeyboardAwareScrollView>
 
-      {/* Language Modal */}
       <Modal
         visible={showLanguageModal}
         transparent
@@ -233,18 +219,15 @@ export default function SignUpScreen({ navigation }) {
           onPress={() => setShowLanguageModal(false)}
         >
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Select Language</Text>
+            <Text style={styles.modalTitle}>{t('signup.selectLanguage')}</Text>
             <ScrollView>
               {languages.map((lang, index) => (
                 <TouchableOpacity
                   key={index}
                   style={styles.languageItem}
-                  onPress={() => {
-                    setSelectedLanguage(lang);
-                    setShowLanguageModal(false);
-                  }}
+                  onPress={() => handleSelectLanguage(lang)}
                 >
-                  <Text style={styles.languageItemText}>{lang}</Text>
+                  <Text style={styles.languageItemText}>{lang.label}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -255,17 +238,11 @@ export default function SignUpScreen({ navigation }) {
   );
 }
 
-// ============== STYLES ==============
 const CARD_HEIGHT = 500; // Adjust height as needed
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  gradientBackground: {
-    flex: 1,
-  },
+  container: { flex: 1, backgroundColor: '#fff' },
+  gradientBackground: { flex: 1 },
   topSection: {
     paddingTop: 40,
     paddingHorizontal: 20,

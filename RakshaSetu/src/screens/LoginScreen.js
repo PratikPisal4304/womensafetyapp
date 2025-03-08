@@ -1,4 +1,3 @@
-// LoginScreen.js
 import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
@@ -16,36 +15,44 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-
-// ============ Firebase + Recaptcha imports ============
 import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
-import { auth, firestore } from '../../config/firebaseConfig';  // Ensure your firebaseConfig exports both auth and firestore
+import { auth, firestore } from '../../config/firebaseConfig';
 import { signInWithPhoneNumber, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-
-// ============ Expo Auth Session Imports ============
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
+import { useTranslation } from 'react-i18next';
+import i18next from '../i18n';
 
 const { width, height } = Dimensions.get('window');
 const PINK = '#ff5f96';
 
-// Complete any pending auth sessions
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen({ navigation }) {
+  const { t, i18n } = useTranslation();
   const [mobileNumber, setMobileNumber] = useState('');
-  const [selectedLanguage, setSelectedLanguage] = useState('English');
+  // selectedLanguage is now managed with i18n.changeLanguage if needed
+  const [selectedLanguage, setSelectedLanguage] = useState(i18n.language || 'en');
   const [showLanguageModal, setShowLanguageModal] = useState(false);
-
-  // Recaptcha ref and state
   const recaptchaVerifier = useRef(null);
   const [verificationId, setVerificationId] = useState(null);
 
-  // Sample languages for the modal
-  const languages = ['English', 'Hindi', 'Spanish', 'French'];
+  // Languages array for modal – you can customize this as needed
+  const languages = [
+    { label: 'English', value: 'en' },
+    { label: 'हिंदी', value: 'hi' },
+    { label: 'मराठी', value: 'mr' },
+    { label: 'ગુજરાતી', value: 'gu' },
+    { label: 'தமிழ்', value: 'ta' },
+    { label: 'తెలుగు', value: 'te' },
+    { label: 'ಕನ್ನಡ', value: 'kn' },
+    { label: 'ਪੰਜਾਬੀ', value: 'pa' }
+  ];
+  useEffect(() => {
+    console.log('i18n object:', i18n);
+  }, []);
 
-  // Google sign-in hook (Replace the client IDs with your own)
   const [request, response, promptAsync] = Google.useAuthRequest({
     expoClientId: 'YOUR_EXPO_CLIENT_ID.apps.googleusercontent.com',
     iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com',
@@ -53,89 +60,66 @@ export default function LoginScreen({ navigation }) {
     webClientId: '704291591905-l12877n9vn4koms6lj9un8fvanb6av0u.apps.googleusercontent.com',
   });
 
-  // Monitor Google sign-in response and integrate Firestore
   useEffect(() => {
     if (response?.type === 'success') {
       const { idToken, accessToken } = response.authentication;
       const credential = GoogleAuthProvider.credential(idToken, accessToken);
       signInWithCredential(auth, credential)
         .then(async (userCredential) => {
-          Alert.alert('Success', 'Signed in with Google!');
+          Alert.alert(t('login.successAlertTitle'), t('login.successAlertMessage'));
           const { uid, email, displayName } = userCredential.user;
-          // Reference to user document in Firestore
           const userDocRef = doc(firestore, 'users', uid);
           const userDoc = await getDoc(userDocRef);
           if (!userDoc.exists()) {
-            // Create a new document if one doesn't exist
             await setDoc(userDocRef, {
               email: email || '',
               displayName: displayName || '',
               createdAt: new Date().toISOString(),
             });
           }
-          // Navigate to HomeScreen after sign-in
           navigation.replace('HomeScreen');
         })
         .catch((error) => {
-          Alert.alert('Error', error.message);
+          Alert.alert(t('common.error'), error.message);
         });
     }
-  }, [response]);
+  }, [response, t, navigation]);
 
-  // Toggle language modal
   const handleLanguagePress = () => setShowLanguageModal(true);
   const handleSelectLanguage = (lang) => {
-    setSelectedLanguage(lang);
+    setSelectedLanguage(lang.value);
+    i18n.changeLanguage(lang.value);
     setShowLanguageModal(false);
   };
 
-  // Google sign-in logic
   const handleGoogleSignIn = async () => {
     promptAsync();
   };
 
-  // Send OTP with reCAPTCHA + phone auth
   const handleSendOTP = async () => {
     if (!mobileNumber.startsWith('+91') || mobileNumber.length !== 13) {
-      Alert.alert(
-        'Error',
-        'Please enter a valid phone number in +91XXXXXXXXXX format.'
-      );
+      Alert.alert(t('common.error'), t('login.invalidMobileError'));
       return;
     }
-
     if (!recaptchaVerifier.current) {
-      Alert.alert('Error', 'Recaptcha not initialized. Try again.');
+      Alert.alert(t('common.error'), t('login.recaptchaError'));
       return;
     }
-
     try {
-      const confirmationResult = await signInWithPhoneNumber(
-        auth,
-        mobileNumber,
-        recaptchaVerifier.current
-      );
-
+      const confirmationResult = await signInWithPhoneNumber(auth, mobileNumber, recaptchaVerifier.current);
       setVerificationId(confirmationResult.verificationId);
-      Alert.alert('Success', `OTP has been sent to ${mobileNumber}`);
-
+      Alert.alert(t('login.otpSuccessTitle'), t('login.otpSuccessMessage', { mobile: mobileNumber }));
       navigation.replace('OTPVerificationScreen', {
         verificationId: confirmationResult.verificationId,
         mobileNumber,
       });
     } catch (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert(t('common.error'), error.message);
     }
-  };
-
-  // Sign up placeholder
-  const handleSignUp = () => {
-    Alert.alert('Sign Up', 'Navigate to your sign-up logic or screen here.');
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      {/* Recaptcha Modal */}
       <FirebaseRecaptchaVerifierModal
         ref={recaptchaVerifier}
         firebaseConfig={{
@@ -153,10 +137,8 @@ export default function LoginScreen({ navigation }) {
       <KeyboardAwareScrollView contentContainerStyle={{ flexGrow: 1 }} bounces={false}>
         <LinearGradient colors={['#ff9dbf', PINK]} style={styles.gradientBackground}>
           <View style={styles.topSection}>
-            <Text style={styles.headerTitle}>Log in / Sign up</Text>
-            <Text style={styles.headerSubtitle}>
-              Sign up to access safety features or log in to continue your journey.
-            </Text>
+            <Text style={styles.headerTitle}>{t('login.headerTitle')}</Text>
+            <Text style={styles.headerSubtitle}>{t('login.headerSubtitle')}</Text>
             <TouchableOpacity style={styles.languageContainer} onPress={handleLanguagePress}>
               <Image
                 source={require('../../assets/adaptive-icon.png')}
@@ -168,38 +150,33 @@ export default function LoginScreen({ navigation }) {
           </View>
 
           <View style={styles.formCard}>
-            <Text style={styles.label}>Mobile Number</Text>
+            <Text style={styles.label}>{t('login.mobileNumberLabel')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. +91XXXXXXXXXX"
+              placeholder={t('login.mobileNumberPlaceholder')}
               keyboardType="phone-pad"
               maxLength={13}
               value={mobileNumber}
-              onChangeText={(text) => {
-                const cleaned = text.replace(/[^0-9+]/g, '');
-                setMobileNumber(cleaned);
-              }}
+              onChangeText={(text) => setMobileNumber(text.replace(/[^0-9+]/g, ''))}
             />
 
             <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn}>
               <Ionicons name="logo-google" size={20} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={styles.googleButtonText}>Continue with Google</Text>
+              <Text style={styles.googleButtonText}>{t('login.googleButtonText')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.sendOtpButton} onPress={handleSendOTP}>
-              <Text style={styles.sendOtpButtonText}>Send OTP</Text>
+              <Text style={styles.sendOtpButtonText}>{t('login.sendOtpButtonText')}</Text>
             </TouchableOpacity>
 
             <View style={styles.footerContainer}>
               <Text style={styles.footerText}>
-                By continuing, you have read and accepted our{' '}
-                <Text style={styles.linkText}>T&Cs</Text> and{' '}
-                <Text style={styles.linkText}>Privacy Policy</Text>
+                {t('login.footerText')}
               </Text>
               <View style={styles.signupContainer}>
-                <Text style={styles.footerText}>Don't have an account? </Text>
+                <Text style={styles.footerText}>{t('login.noAccount')}</Text>
                 <TouchableOpacity onPress={() => navigation.replace('SignUpScreen')}>
-                  <Text style={[styles.footerText, styles.linkText]}>Sign up</Text>
+                  <Text style={[styles.footerText, styles.linkText]}>{t('login.signUpLink')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -207,7 +184,6 @@ export default function LoginScreen({ navigation }) {
         </LinearGradient>
       </KeyboardAwareScrollView>
 
-      {/* Language Modal */}
       <Modal
         visible={showLanguageModal}
         transparent
@@ -220,7 +196,7 @@ export default function LoginScreen({ navigation }) {
           onPress={() => setShowLanguageModal(false)}
         >
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Select Language</Text>
+            <Text style={styles.modalTitle}>{t('login.selectLanguage')}</Text>
             <ScrollView>
               {languages.map((lang, index) => (
                 <TouchableOpacity
@@ -228,7 +204,7 @@ export default function LoginScreen({ navigation }) {
                   style={styles.languageItem}
                   onPress={() => handleSelectLanguage(lang)}
                 >
-                  <Text style={styles.languageItemText}>{lang}</Text>
+                  <Text style={styles.languageItemText}>{lang.label}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -340,5 +316,3 @@ const styles = StyleSheet.create({
   languageItem: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
   languageItemText: { fontSize: 16, color: '#333' },
 });
-
-// export default LoginScreen;

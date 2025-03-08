@@ -14,33 +14,148 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../../config/firebaseConfig'; // Adjust path if needed
 import { ShakeDetectionContext } from '../../src/context/ShakeDetectionContext'; // Adjust path if needed
+import { useTranslation } from 'react-i18next';
+
+// Mapping of displayed language names to language codes
+const languageMapping = {
+  "English": "en",
+  "हिंदी": "hi",
+  "मराठी": "mr",
+  "ગુજરાતી": "gu",
+  "தமிழ்": "ta",
+  "తెలుగు": "te",
+  "ಕನ್ನಡ": "kn",
+  "ਪੰਜਾਬੀ": "pa",
+};
+
+// Updated DropdownItem that accepts an optional onOptionSelect prop
+const DropdownItem = ({ title, icon, options, onOptionSelect }) => {
+  const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
+
+  const handleOptionPress = (option) => {
+    if (onOptionSelect) {
+      onOptionSelect(option);
+    } else {
+      Alert.alert(title, `${t('profile.selectedOption')} ${option}`);
+    }
+    setExpanded(false);
+  };
+
+  return (
+    <View style={styles.dropdownContainer}>
+      <TouchableOpacity
+        style={styles.listItem}
+        onPress={() => setExpanded(!expanded)}
+      >
+        <MaterialCommunityIcons name={icon} size={24} color="#555" />
+        <Text style={styles.itemText}>{title}</Text>
+        <MaterialCommunityIcons
+          name={expanded ? 'chevron-up' : 'chevron-down'}
+          size={24}
+          color="#999"
+        />
+      </TouchableOpacity>
+      {expanded && (
+        <View style={styles.dropdownContent}>
+          {options.map((option, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.dropdownOption}
+              onPress={() => handleOptionPress(option)}
+            >
+              <Text style={styles.dropdownText}>{option}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+};
+
+// ToggleSetting component remains unchanged
+const ToggleSetting = ({ title, icon, value, onValueChange }) => {
+  return (
+    <View style={styles.toggleSettingContainer}>
+      <View style={styles.listItem}>
+        <MaterialCommunityIcons name={icon} size={24} color="#555" />
+        <Text style={styles.itemText}>{title}</Text>
+        <Switch
+          value={value}
+          onValueChange={onValueChange}
+          thumbColor={value ? "#ff5f96" : "#ccc"}
+          trackColor={{ false: "#eee", true: "#ffd1e1" }}
+        />
+      </View>
+    </View>
+  );
+};
 
 const ProfileScreen = ({ navigation }) => {
-  // State for user profile data
+  const { t, i18n } = useTranslation();
   const [name, setName] = useState('Lucy');
   const [phone, setPhone] = useState('+91 12345 678910');
   const [isLoading, setIsLoading] = useState(true);
-
-  // Get shake detection setting from context
   const { isShakeEnabled, setIsShakeEnabled } = useContext(ShakeDetectionContext);
 
-  // Preferences and More arrays remain unchanged
+  // Preferences excluding settings items
   const preferences = [
-    { title: 'My Posts', icon: 'account', screen: 'MyPosts' },
-    { title: 'My Reports', icon: 'file-document', screen: 'MyReports' },
-    { title: 'Manage Friends', icon: 'account-group', screen: 'ManageFriends' },
-    { title: 'Change Language', icon: 'translate', screen: 'ChangeLanguage' },
-    { title: 'Notification Settings', icon: 'bell', screen: 'NotificationSettings' },
-    { title: 'Customize / Themes', icon: 'palette', screen: 'CustomiseThemes' },
+    { title: t('profile.myPosts'), icon: 'account', screen: 'MyPosts' },
+    { title: t('profile.myReports'), icon: 'file-document', screen: 'MyReports' },
+    { title: t('profile.manageFriends'), icon: 'account-group', screen: 'ManageFriends' },
+  ];
+
+  // Dropdown settings items with updated language options and a custom onOptionSelect for language change
+  const dropdownSettings = [
+    {
+      title: t('profile.changeLanguage'),
+      icon: 'translate',
+      options: [
+        'English',
+        'हिंदी',
+        'मराठी',
+        'ગુજરાતી',
+        'தமிழ்',
+        'తెలుగు',
+        'ಕನ್ನಡ',
+        'ਪੰਜਾਬੀ'
+      ],
+      onOptionSelect: (option) => {
+        const langCode = languageMapping[option];
+        if (langCode) {
+          i18n.changeLanguage(langCode);
+        } else {
+          Alert.alert(t('common.error'), `Language code not found for ${option}`);
+        }
+      },
+    },
+    {
+      title: t('profile.notificationSettings'),
+      icon: 'bell',
+      options: [
+        t('profile.allNotifications'),
+        t('profile.mentionsOnly'),
+        t('profile.muteAll'),
+      ],
+    },
+    {
+      title: t('profile.customizeThemes'),
+      icon: 'palette',
+      options: [
+        t('profile.lightMode'),
+        t('profile.darkMode'),
+        t('profile.systemDefault'),
+      ],
+    },
   ];
 
   const moreItems = [
-    { title: 'Help Line Numbers', icon: 'phone', screen: 'EmergencyHelpline' },
-    { title: 'Help & Support', icon: 'lifebuoy', screen: 'HelpSupport' },
-    { title: 'About Us', icon: 'information', screen: 'AboutUs' },
+    { title: t('profile.helpLineNumbers'), icon: 'phone', screen: 'EmergencyHelpline' },
+    { title: t('profile.helpSupport'), icon: 'lifebuoy', screen: 'HelpSupport' },
+    { title: t('profile.aboutUs'), icon: 'information', screen: 'AboutUs' },
   ];
 
-  // Use onSnapshot to listen to realtime updates on the user document
+  // Listen to realtime updates on the user document
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) {
@@ -56,22 +171,22 @@ const ProfileScreen = ({ navigation }) => {
           if (data.name) setName(data.name);
           if (data.phone) setPhone(data.phone);
         } else {
-          Alert.alert('No Data', 'No profile data found for this user.');
+          Alert.alert(t('profile.noDataTitle'), t('profile.noDataMessage'));
         }
         setIsLoading(false);
       },
       (error) => {
-        Alert.alert('Error', error.message);
+        Alert.alert(t('common.error'), error.message);
         setIsLoading(false);
       }
     );
     return () => unsubscribe();
-  }, []);
+  }, [t]);
 
   const handleLogout = () => {
     Alert.alert(
-      'Logout',
-      'You have been logged out successfully.',
+      t('profile.logoutTitle'),
+      t('profile.logoutMessage'),
       [
         {
           text: 'OK',
@@ -89,7 +204,7 @@ const ProfileScreen = ({ navigation }) => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#ff5f96" />
-        <Text style={styles.loadingText}>Loading Profile...</Text>
+        <Text style={styles.loadingText}>{t('profile.loadingProfile')}</Text>
       </View>
     );
   }
@@ -113,7 +228,7 @@ const ProfileScreen = ({ navigation }) => {
       {/* Main Content */}
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {/* Preferences Section */}
-        <Text style={styles.sectionTitle}>Preferences</Text>
+        <Text style={styles.sectionTitle}>{t('profile.preferencesTitle')}</Text>
         <View style={styles.sectionContainer}>
           {preferences.map((item, index) => (
             <TouchableOpacity
@@ -128,22 +243,28 @@ const ProfileScreen = ({ navigation }) => {
           ))}
         </View>
 
-        {/* Shake Detection Toggle Section */}
-        <Text style={styles.sectionTitle}>Shake Detection</Text>
-        <View style={[styles.sectionContainer, { paddingHorizontal: 20, paddingVertical: 15 }]}>
-          <View style={styles.toggleRow}>
-            <Text style={styles.itemText}>Enable Shake to Activate SOS</Text>
-            <Switch
-              value={isShakeEnabled}
-              onValueChange={(value) => setIsShakeEnabled(value)}
-              thumbColor={isShakeEnabled ? "#ff5f96" : "#ccc"}
-              trackColor={{ false: "#eee", true: "#ffd1e1" }}
+        {/* Settings Section */}
+        <Text style={styles.sectionTitle}>{t('profile.settingsTitle')}</Text>
+        <View style={styles.sectionContainer}>
+          {dropdownSettings.map((item, index) => (
+            <DropdownItem
+              key={index}
+              title={item.title}
+              icon={item.icon}
+              options={item.options}
+              onOptionSelect={item.onOptionSelect}
             />
-          </View>
+          ))}
+          <ToggleSetting
+            title={t('profile.enableShake')}
+            icon="gesture-swipe"
+            value={isShakeEnabled}
+            onValueChange={(value) => setIsShakeEnabled(value)}
+          />
         </View>
 
         {/* More Section */}
-        <Text style={styles.sectionTitle}>More</Text>
+        <Text style={styles.sectionTitle}>{t('profile.moreTitle')}</Text>
         <View style={styles.sectionContainer}>
           {moreItems.map((item, index) => (
             <TouchableOpacity
@@ -160,16 +281,15 @@ const ProfileScreen = ({ navigation }) => {
 
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Logout</Text>
+          <Text style={styles.logoutText}>{t('profile.logout')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
   );
 };
 
-/* =========================
-          STYLES
-========================= */
+export default ProfileScreen;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -258,9 +378,25 @@ const styles = StyleSheet.create({
     marginLeft: 15,
     color: '#333',
   },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  dropdownContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  dropdownContent: {
+    backgroundColor: '#f2f2f2',
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+  },
+  dropdownOption: {
+    paddingVertical: 10,
+  },
+  dropdownText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  toggleSettingContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
   logoutButton: {
     backgroundColor: '#FF4B8C',
@@ -283,5 +419,3 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 });
-
-export default ProfileScreen;

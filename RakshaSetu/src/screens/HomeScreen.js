@@ -1,4 +1,3 @@
-// HomeScreen.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -13,23 +12,21 @@ import {
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
-
-// 1) Import Firestore + Auth (example)
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../../config/firebaseConfig'; // adjust path if needed
+import { useTranslation } from 'react-i18next';
 
 const PINK = '#ff5f96';
 
 const HomeScreen = ({ navigation }) => {
-  // 2) State for user info
+  const { t } = useTranslation();
   const [username, setUsername] = useState('Lucy Patil'); // fallback
   const [avatarUrl, setAvatarUrl] = useState(null);
 
-  // 3) useEffect to fetch from Firestore on mount
+  // Fetch user data from Firestore on mount
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
-
     (async () => {
       try {
         const docRef = doc(db, 'users', user.uid);
@@ -38,7 +35,6 @@ const HomeScreen = ({ navigation }) => {
           const data = docSnap.data();
           if (data.name) setUsername(data.name);
           if (data.avatarUrl) setAvatarUrl(data.avatarUrl);
-          // add other fields as needed
         }
       } catch (error) {
         console.log('Error fetching user data:', error.message);
@@ -50,13 +46,11 @@ const HomeScreen = ({ navigation }) => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        alert('Permission to access location was denied');
+        alert(t('home.permissionDenied'));
         return;
       }
-  
       const currentLocation = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = currentLocation.coords;
-  
       const googleMapsURL = `https://www.google.com/maps/search/police+station/@${latitude},${longitude},15z`;
       await Linking.openURL(googleMapsURL);
     } catch (error) {
@@ -68,13 +62,11 @@ const HomeScreen = ({ navigation }) => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        alert('Permission to access location was denied');
+        alert(t('home.permissionDenied'));
         return;
       }
-  
       const currentLocation = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = currentLocation.coords;
-  
       const googleMapsURL = `https://www.google.com/maps/search/hospital/@${latitude},${longitude},15z`;
       await Linking.openURL(googleMapsURL);
     } catch (error) {
@@ -86,35 +78,30 @@ const HomeScreen = ({ navigation }) => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        alert('Permission to access location was denied');
+        alert(t('home.permissionDenied'));
         return;
       }
-  
       const currentLocation = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = currentLocation.coords;
-  
       const googleMapsURL = `https://www.google.com/maps/search/pharmacy/@${latitude},${longitude},15z`;
       await Linking.openURL(googleMapsURL);
     } catch (error) {
       console.error('Error fetching location:', error);
     }
-  };  
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-
       <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}>
         {/* Pink Header with Curve */}
         <View style={styles.header}>
           <View style={styles.userInfo}>
-            {/* 4) If we have an avatarUrl, display that. Otherwise use local icon. */}
             <Image
               source={avatarUrl ? { uri: avatarUrl } : require('../../assets/icon.png')}
               style={styles.avatar}
             />
-            <Text style={styles.greeting}>Hey there👋,</Text>
-            {/* Display from state */}
+            <Text style={styles.greeting}>{t('home.greeting')}</Text>
             <Text style={styles.username}>{username}</Text>
           </View>
           <View style={styles.headerIcons}>
@@ -134,31 +121,30 @@ const HomeScreen = ({ navigation }) => {
               source={require('../../assets/fake-call.png')}
               style={styles.actionIcon}
             />
-            <Text style={styles.actionText}>Fake call</Text>
+            <Text style={styles.actionText}>{t('home.fakeCall')}</Text>
           </TouchableOpacity>
-
           <TouchableOpacity style={styles.actionButton}>
             <Image
               source={require('../../assets/livelocation.png')}
               style={styles.actionIcon}
             />
-            <Text style={styles.actionText}>Share live{'\n'}location</Text>
+            <Text style={styles.actionText}>{t('home.shareLiveLocation')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Add Close People Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Add Close people</Text>
-            <Text style={styles.sectionSubtitle}>Add close people and friends for sos</Text>
+            <Text style={styles.sectionTitle}>{t('home.addClosePeopleTitle')}</Text>
+            <Text style={styles.sectionSubtitle}>{t('home.addClosePeopleSubtitle')}</Text>
           </View>
           <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AddFriends')}>
-            <Text style={styles.addButtonText}>Add friends</Text>
+            <Text style={styles.addButtonText}>{t('home.addFriendsButton')}</Text>
             <Ionicons name="person-add" size={20} color="white" />
           </TouchableOpacity>
         </View>
 
-        {/* Skill Development */}        
+        {/* Skill Development Section */}
         <TouchableOpacity 
           style={styles.skillSection} 
           onPress={() => navigation.navigate('SkillDevelopment')}
@@ -171,15 +157,13 @@ const HomeScreen = ({ navigation }) => {
               />
             </View>
             <View style={styles.skillTextContainer}>
-              <Text style={styles.skillTitle}>Financial Skill Hub</Text>
-              <Text style={styles.skillSubtitle}>
-              Empower Yourself: Develop Essential Financial Skills for a Brighter Future
-              </Text>
+              <Text style={styles.skillTitle}>{t('home.skillTitle')}</Text>
+              <Text style={styles.skillSubtitle}>{t('home.skillSubtitle')}</Text>
               <View style={styles.skillProgress}>
                 <View style={styles.progressBar}>
                   <View style={styles.progressFill} />
                 </View>
-                <Text style={styles.progressText}>2/5 skills completed</Text>
+                <Text style={styles.progressText}>{t('home.skillProgressText')}</Text>
               </View>
             </View>
           </View>
@@ -196,27 +180,23 @@ const HomeScreen = ({ navigation }) => {
               style={styles.journeyIcon}
             />
             <View>
-              <Text style={styles.journeyTitle}>Generate a Report</Text>
-              <Text style={styles.journeySubtitle}>
-                Generate File Incident Report using AI
-              </Text>
+              <Text style={styles.journeyTitle}>{t('home.generateReportTitle')}</Text>
+              <Text style={styles.journeySubtitle}>{t('home.generateReportSubtitle')}</Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
 
         {/* Journey Section */}
-        <TouchableOpacity style={styles.journeySection}>
+        <TouchableOpacity style={styles.journeySection} onPress={() => navigation.navigate('Journey')}>
           <View style={styles.journeyContent}>
             <Image
               source={require('../../assets/journey.png')}
               style={styles.journeyIcon}
             />
             <View>
-              <Text style={styles.journeyTitle}>Start a journey</Text>
-              <Text style={styles.journeySubtitle}>
-                Enter your destination, and the app{'\n'}will track your route in real-time.
-              </Text>
+              <Text style={styles.journeyTitle}>{t('home.journeyTitle')}</Text>
+              <Text style={styles.journeySubtitle}>{t('home.journeySubtitle')}</Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={24} color="black" />
@@ -225,19 +205,17 @@ const HomeScreen = ({ navigation }) => {
         {/* Emergency Buttons */}
         <TouchableOpacity style={styles.emergencyButton} onPress={openNearbyPoliceStations}>
           <FontAwesome5 name="shield-alt" size={20} color="black" />
-          <Text style={styles.emergencyText}>Police station near me</Text>
+          <Text style={styles.emergencyText}>{t('home.policeNearMe')}</Text>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
-
         <TouchableOpacity style={styles.emergencyButton} onPress={openNearbyHospitals}>
           <FontAwesome5 name="hospital" size={20} color="black" />
-          <Text style={styles.emergencyText}>Hospital near me </Text>
+          <Text style={styles.emergencyText}>{t('home.hospitalNearMe')}</Text>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
-
         <TouchableOpacity style={styles.emergencyButton} onPress={openNearbyPharmacies}>
           <FontAwesome5 name="clinic-medical" size={20} color="black" />
-          <Text style={styles.emergencyText}>Pharmacy near me </Text>
+          <Text style={styles.emergencyText}>{t('home.pharmacyNearMe')}</Text>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
       </ScrollView>
@@ -247,7 +225,6 @@ const HomeScreen = ({ navigation }) => {
 
 export default HomeScreen;
 
-/* ============ STYLES (unchanged) ============ */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -298,10 +275,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '45%',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
@@ -322,10 +296,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginVertical: 10,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
@@ -366,10 +337,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginVertical: 10,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
@@ -382,7 +350,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   skillIconContainer: {
-    backgroundColor: PINK + '15', // 15% opacity of PINK
+    backgroundColor: PINK + '15',
     padding: 10,
     borderRadius: 12,
     marginRight: 15,
@@ -419,7 +387,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    width: '40%', // This would be dynamic based on progress
+    width: '40%',
     backgroundColor: PINK,
     borderRadius: 3,
   },
@@ -428,7 +396,7 @@ const styles = StyleSheet.create({
     color: '#888',
   },
   skillArrowContainer: {
-    backgroundColor: PINK + '10', // 10% opacity of PINK
+    backgroundColor: PINK + '10',
     padding: 8,
     borderRadius: 20,
   },
@@ -442,10 +410,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginVertical: 10,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
@@ -479,10 +444,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginVertical: 5,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,

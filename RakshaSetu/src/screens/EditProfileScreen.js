@@ -18,8 +18,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, db } from '../../config/firebaseConfig'; // Ensure these are correctly exported
+import { useTranslation } from 'react-i18next';
 
 const EditProfileScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -51,16 +53,16 @@ const EditProfileScreen = ({ navigation }) => {
               setDate(new Date(data.birthday));
             }
           } else {
-            Alert.alert('No Data', 'No profile data found for this user.');
+            Alert.alert(t('editProfile.noData'), t('editProfile.noData'));
           }
         }
       } catch (error) {
-        Alert.alert('Error', 'Failed to load profile data');
+        Alert.alert(t('common.error'), t('editProfile.uploadError'));
       }
     };
 
     fetchUserData();
-  }, []);
+  }, [t]);
 
   const validateEmail = (email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -75,15 +77,15 @@ const EditProfileScreen = ({ navigation }) => {
   // Handle saving changes to the profile
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Error', 'Please enter your name');
+      Alert.alert(t('common.error'), t('editProfile.nameLabel') + ' ' + t('editProfile.namePlaceholder'));
       return;
     }
     if (!validateEmail(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      Alert.alert(t('common.error'), t('editProfile.emailPlaceholder'));
       return;
     }
     if (phone && !validatePhone(phone)) {
-      Alert.alert('Error', 'Please enter a valid phone number');
+      Alert.alert(t('common.error'), t('editProfile.phonePlaceholder'));
       return;
     }
     try {
@@ -102,10 +104,10 @@ const EditProfileScreen = ({ navigation }) => {
       };
 
       await updateDoc(doc(db, 'users', user.uid), userData);
-      Alert.alert('Success', 'Profile updated successfully!');
+      Alert.alert(t('editProfile.saveButtonText'), t('editProfile.saveButtonText'));
       navigation.goBack();
     } catch (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert(t('common.error'), error.message);
     } finally {
       setIsLoading(false);
     }
@@ -133,7 +135,7 @@ const EditProfileScreen = ({ navigation }) => {
         const downloadURL = await getDownloadURL(storageRef);
         setAvatarUri(downloadURL);
       } catch (error) {
-        Alert.alert('Error', 'Failed to upload image');
+        Alert.alert(t('common.error'), t('editProfile.uploadError'));
       }
     }
   };
@@ -150,7 +152,7 @@ const EditProfileScreen = ({ navigation }) => {
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <MaterialCommunityIcons name="arrow-left" size={28} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Edit Profile</Text>
+          <Text style={styles.headerTitle}>{t('editProfile.headerTitle')}</Text>
           <TouchableOpacity onPress={pickImage}>
             <Image
               source={{ uri: avatarUri || 'https://via.placeholder.com/80' }}
@@ -164,48 +166,48 @@ const EditProfileScreen = ({ navigation }) => {
 
         {/* Form Section */}
         <View style={styles.content}>
-          <Text style={styles.label}>Name</Text>
+          <Text style={styles.label}>{t('editProfile.nameLabel')}</Text>
           <TextInput
             style={styles.input}
             value={name}
             onChangeText={setName}
-            placeholder="Your Name"
+            placeholder={t('editProfile.namePlaceholder')}
             placeholderTextColor="#999"
           />
 
-          <Text style={styles.label}>Phone</Text>
+          <Text style={styles.label}>{t('editProfile.phoneLabel')}</Text>
           <TextInput
             style={styles.input}
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"
-            placeholder="+1 234 567 8901"
+            placeholder={t('editProfile.phonePlaceholder')}
             placeholderTextColor="#999"
           />
 
-          <Text style={styles.label}>Email</Text>
+          <Text style={styles.label}>{t('editProfile.emailLabel')}</Text>
           <TextInput
             style={styles.input}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
-            placeholder="your@email.com"
+            placeholder={t('editProfile.emailPlaceholder')}
             placeholderTextColor="#999"
             autoCapitalize="none"
           />
 
-          <Text style={styles.label}>Address</Text>
+          <Text style={styles.label}>{t('editProfile.addressLabel')}</Text>
           <TextInput
             style={styles.input}
             value={address}
             onChangeText={setAddress}
-            placeholder="123 Main St"
+            placeholder={t('editProfile.addressPlaceholder')}
             placeholderTextColor="#999"
           />
 
-          <Text style={styles.label}>Gender</Text>
+          <Text style={styles.label}>{t('editProfile.genderLabel')}</Text>
           <View style={styles.genderContainer}>
-            {['Male', 'Female', 'Other'].map((option) => (
+            {t('editProfile.genderOptions', { returnObjects: true }).map((option) => (
               <TouchableOpacity
                 key={option}
                 style={[
@@ -221,13 +223,13 @@ const EditProfileScreen = ({ navigation }) => {
             ))}
           </View>
 
-          <Text style={styles.label}>Birthday</Text>
+          <Text style={styles.label}>{t('editProfile.birthdayLabel')}</Text>
           <TouchableOpacity
             style={styles.dateInputContainer}
             onPress={() => setShowDatePicker(true)}
           >
             <Text style={[styles.dateText, { color: birthday ? '#333' : '#999' }]}>
-              {birthday ? birthday : 'Select your birthday'}
+              {birthday ? birthday : t('editProfile.birthdayPlaceholder')}
             </Text>
           </TouchableOpacity>
           {showDatePicker && (
@@ -254,7 +256,7 @@ const EditProfileScreen = ({ navigation }) => {
             {isLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.saveButtonText}>Save Changes</Text>
+              <Text style={styles.saveButtonText}>{t('editProfile.saveButtonText')}</Text>
             )}
           </TouchableOpacity>
         </View>

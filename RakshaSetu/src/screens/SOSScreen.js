@@ -1,25 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  ActivityIndicator, 
-  Alert, 
-  Vibration 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  Vibration
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as SMS from 'expo-sms';
 import MapView, { Marker } from 'react-native-maps';
-import { doc, onSnapshot, collection, query, where, getDocs, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { 
+  doc, 
+  onSnapshot, 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  addDoc, 
+  updateDoc, 
+  serverTimestamp 
+} from 'firebase/firestore';
 import { auth, db } from '../../config/firebaseConfig';
-import { useRoute } from '@react-navigation/native';
 
 // Replace with your actual valid Google API key
 const GOOGLE_API_KEY = 'AIzaSyBzqSJUt0MVs3xFjFWTvLwiyjXwnzbkXok';
 
-export default function SOSScreen() {
-  const route = useRoute();
+import { useTranslation } from 'react-i18next';
+
+function SOSScreen() {
+  const { t } = useTranslation();
   const [isSOSActive, setIsSOSActive] = useState(false);
   const [countdown, setCountdown] = useState(10);
   const [isSendingSOS, setIsSendingSOS] = useState(false);
@@ -59,22 +70,22 @@ export default function SOSScreen() {
       },
       (error) => {
         console.error("Error fetching user doc:", error);
-        Alert.alert("Firestore Error", "Failed to fetch closeFriends data.");
+        Alert.alert(t('common.error'), t('sos.failedToSend'));
       }
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [t]);
 
   // Request location permission on mount
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Location permission is required for SOS functionality.');
+        Alert.alert(t('common.error'), t('sos.permissionDenied'));
       }
     })();
-  }, []);
+  }, [t]);
 
   // Countdown logic with vibration
   useEffect(() => {
@@ -92,12 +103,8 @@ export default function SOSScreen() {
     return () => timer && clearInterval(timer);
   }, [isSOSActive, countdown]);
 
-  // Automatically start SOS if autoActivate param is passed
-  useEffect(() => {
-    if (route.params && route.params.autoActivate && !isSOSActive) {
-      startSOS();
-    }
-  }, [route.params]);
+  // Automatically start SOS if autoActivate param is passed (if using navigation route params)
+  // (Add useRoute hook and logic if required)
 
   const startSOS = () => {
     setIsSOSActive(true);
@@ -153,15 +160,14 @@ export default function SOSScreen() {
       const streetViewUrl3 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=240&pitch=10&key=${GOOGLE_API_KEY}`;
 
       // Compose the SOS message including Google Maps link and multiple Street View links
-      const message = `Emergency! I need help immediately.
+      const message = `${t('sos.header')}\n
+${t('sos.infoText')}
 
-  My location: https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}
+My location: https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}
 
-  Street View 1: ${streetViewUrl1}
-
-  Street View 2: ${streetViewUrl2}
-
-  Street View 3: ${streetViewUrl3}`;
+Street View 1: ${streetViewUrl1}
+Street View 2: ${streetViewUrl2}
+Street View 3: ${streetViewUrl3}`;
 
       // Send SMS to emergency contacts (closeFriends if available, fallback otherwise)
       const allContacts = closeFriends.length > 0 ? closeFriends : emergencyContacts;
@@ -173,16 +179,16 @@ export default function SOSScreen() {
           allContacts.map(contact => contact.phone),
           message
         );
-        Alert.alert('SOS Sent', 'Emergency SMS sent to your contacts.');
+        Alert.alert(t('sos.sosSent'), t('sos.sosSentMessage'));
       } else {
-        Alert.alert('SMS Not Available', 'Your device does not support SMS.');
+        Alert.alert(t('sos.smsNotAvailable'), t('sos.smsNotAvailableMessage'));
       }
 
       // Also send the SOS message via in-app chat to all chats
       await sendSOSInAppChat(message);
     } catch (error) {
       console.error('Error triggering SOS:', error);
-      Alert.alert('Error', 'Failed to send SOS alert.');
+      Alert.alert(t('common.error'), t('sos.failedToSend'));
     }
     setIsSendingSOS(false);
     setIsSOSActive(false);
@@ -190,24 +196,22 @@ export default function SOSScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>RakshaSetu SOS</Text>
-      <Text style={styles.infoText}>
-        If you feel unsafe, press the button below. An alert with your current location and multiple Street View images will be sent to your emergency contacts and via in-app chat.
-      </Text>
+      <Text style={styles.header}>{t('sos.header')}</Text>
+      <Text style={styles.infoText}>{t('sos.infoText')}</Text>
       
       {!isSOSActive && !isSendingSOS && (
         <TouchableOpacity style={styles.sosButton} onPress={startSOS}>
-          <Text style={styles.sosButtonText}>SOS</Text>
+          <Text style={styles.sosButtonText}>{t('sos.sosButton')}</Text>
         </TouchableOpacity>
       )}
 
       {isSOSActive && (
         <View style={styles.countdownContainer}>
           <Text style={styles.countdownText}>
-            Sending alert in {countdown} second{countdown !== 1 ? 's' : ''}
+            {t('sos.countdown', { count: countdown })}
           </Text>
           <TouchableOpacity style={styles.cancelButton} onPress={cancelSOS}>
-            <Text style={styles.cancelButtonText}>Cancel Alert</Text>
+            <Text style={styles.cancelButtonText}>{t('sos.cancelAlert')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -215,7 +219,7 @@ export default function SOSScreen() {
       {isSendingSOS && (
         <View style={styles.sendingContainer}>
           <ActivityIndicator size="large" color="#fff" />
-          <Text style={styles.sendingText}>Alerting emergency contacts...</Text>
+          <Text style={styles.sendingText}>{t('sos.sendingText')}</Text>
         </View>
       )}
 
@@ -230,7 +234,7 @@ export default function SOSScreen() {
               longitudeDelta: 0.005,
             }}
           >
-            <Marker coordinate={location} title="My Location" />
+            <Marker coordinate={location} title={t('sos.header')} />
           </MapView>
         </View>
       )}
@@ -321,3 +325,5 @@ const styles = StyleSheet.create({
     height: '100%',
   },
 });
+
+export default SOSScreen;
