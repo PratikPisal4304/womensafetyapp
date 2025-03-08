@@ -120,6 +120,15 @@
         "sosSentMessage": "அவசர SMS உங்கள் தொடர்புகளுக்கு அனுப்பப்பட்டது.",
         "failedToSend": "SOS அறிவிப்பு அனுப்புவதில் தோல்வி",
         "permissionDenied": "இருப்பிட அனுமதி மறுக்கப்பட்டது"
+      },
+      "emergencyHelpline": {
+        "header": "அவசர ஹெல்ப்லைன்",
+        "subHeader": "உதவி எண்கள்",
+        "localPolice": "உள்ளூர் போலீஸ்",
+        "womenHelpline": "பெண் ஹெல்ப்லைன்",
+        "localAmbulance": "உள்ளூர் ஆம்புலன்ஸ்",
+        "fireRescue": "தீ மற்றும் மீட்பு சேவைகள்",
+        "cyberCrime": "சைபர் குற்றம்"
       }
   }
 

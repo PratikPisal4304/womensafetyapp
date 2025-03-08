@@ -120,6 +120,15 @@
         "sosSentMessage": "આપાતકાલીન SMS તમારા સંપર્કોને મોકલવામાં આવ્યો છે.",
         "failedToSend": "SOS અલર્ટ મોકલવામાં નિષ્ફળ",
         "permissionDenied": "લોકેશન એક્સેસ માટેની પરવાનગી નકારી દેવાઈ છે"
+      },
+      "emergencyHelpline": {
+        "header": "આપાતકાલીન હેલ્પલાઇન",
+        "subHeader": "હેલ્પ લાઇન નંબર",
+        "localPolice": "સ્થાનિક પોલીસ",
+        "womenHelpline": "સ્ત્રી હેલ્પલાઇન",
+        "localAmbulance": "સ્થાનિક એમ્બ્યુલન્સ",
+        "fireRescue": "આગ અને બચાવ સેવા",
+        "cyberCrime": "સાયબર ક્રાઇમ"
       }
   }
   

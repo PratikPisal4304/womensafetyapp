@@ -120,6 +120,15 @@
         "sosSentMessage": "అత్యవసర SMS మీ పరిచయాలకు పంపబడింది.",
         "failedToSend": "SOS అలర్ట్ పంపడంలో విఫలమయ్యింది",
         "permissionDenied": "స్థానం యాక్సెస్ కోసం అనుమతి నిరాకరించబడింది"
+      },
+      "emergencyHelpline": {
+        "header": "అవసర హెల్ప్లైన్",
+        "subHeader": "హెల్ప్ లైన్ నంబర్లు",
+        "localPolice": "స్థానిక పోలీసులు",
+        "womenHelpline": "మహిళా హెల్ప్లైన్",
+        "localAmbulance": "స్థానిక అంబ్యులెన్స్",
+        "fireRescue": "అగ్ని & రక్షణ సేవలు",
+        "cyberCrime": "సైబర్ క్రైమ్"
       }
   }
   

@@ -120,6 +120,15 @@
         "sosSentMessage": "Emergency SMS sent to your contacts.",
         "failedToSend": "Failed to send SOS alert",
         "permissionDenied": "Permission to access location was denied"
+      },
+      "emergencyHelpline": {
+        "header": "Emergency Helpline",
+        "subHeader": "Help line numbers",
+        "localPolice": "Local Police",
+        "womenHelpline": "Women Helpline",
+        "localAmbulance": "Local Ambulance",
+        "fireRescue": "Fire & Rescue Services",
+        "cyberCrime": "Cyber Crime"
       }
   }
   

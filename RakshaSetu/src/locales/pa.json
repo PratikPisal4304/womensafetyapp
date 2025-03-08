@@ -120,6 +120,15 @@
         "sosSentMessage": "ਐਮਰਜੈਂਸੀ SMS ਤੁਹਾਡੇ ਸੰਪਰਕਾਂ ਨੂੰ ਭੇਜ ਦਿੱਤਾ ਗਿਆ ਹੈ।",
         "failedToSend": "SOS ਅਲਰਟ ਭੇਜਣ ਵਿੱਚ ਅਸਫਲ",
         "permissionDenied": "ਸਥਾਨ ਦੀ ਪ੍ਰਾਪਤੀ ਲਈ ਅਨੁਮਤੀ ਇਨਕਾਰ ਕਰ ਦਿੱਤੀ ਗਈ ਹੈ"
-      }
+      },
+        "emergencyHelpline": {
+          "header": "ਐਮਰਜੈਂਸੀ ਹੈਲਪਲਾਈਨ",
+          "subHeader": "ਹੈਲਪ ਲਾਈਨ ਨੰਬਰ",
+          "localPolice": "ਸਥਾਨਕ ਪੁਲਿਸ",
+          "womenHelpline": "ਮਹਿਲਾ ਹੈਲਪਲਾਈਨ",
+          "localAmbulance": "ਸਥਾਨਕ ਐਮਬੁਲੇਂਸ",
+          "fireRescue": "ਅੱਗ ਅਤੇ ਬਚਾਅ ਸੇਵਾਵਾਂ",
+          "cyberCrime": "ਸਾਈਬਰ ਅਪਰਾਧ"
+        }
   }
   

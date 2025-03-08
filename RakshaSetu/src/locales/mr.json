@@ -120,6 +120,15 @@
         "sosSentMessage": "आपत्कालीन SMS तुमच्या संपर्कांना पाठवला गेला.",
         "failedToSend": "SOS अलर्ट पाठवण्यात अयशस्वी",
         "permissionDenied": "स्थान परवानगी नाकारली गेली आहे"
+      },
+      "emergencyHelpline": {
+        "header": "आपत्कालीन हेल्पलाइन",
+        "subHeader": "हेल्प लाइन नंबर",
+        "localPolice": "स्थानिक पोलीस",
+        "womenHelpline": "महिला हेल्पलाइन",
+        "localAmbulance": "स्थानिक ऍम्बुलेंस",
+        "fireRescue": "आग व बचाव सेवा",
+        "cyberCrime": "सायबर गुन्हे"
       }
   }
   

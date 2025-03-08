@@ -120,6 +120,15 @@
         "sosSentMessage": "ತುರ್ತು SMS ನಿಮ್ಮ ಸಂಪರ್ಕಗಳಿಗೆ ಕಳುಹಿಸಲಾಗಿದೆ.",
         "failedToSend": "SOS ಅಲರ್ಟ್ ಕಳುಹಿಸಲು ವಿಫಲವಾಗಿದೆ",
         "permissionDenied": "ಸ್ಥಳ ಪ್ರವೇಶಕ್ಕೆ ಅನುಮತಿ ನಿರಾಕರಿಸಲಾಗಿದೆ"
+      },
+      "emergencyHelpline": {
+        "header": "ತುರ್ತು ಸಹಾಯ热线",
+        "subHeader": "ಸಹಾಯ ಲೈನ್ ಸಂಖ್ಯೆಗಳು",
+        "localPolice": "ಸ್ಥಳೀಯ ಪೊಲೀಸ್",
+        "womenHelpline": "ಮಹಿಳಾ ಸಹಾಯ热线",
+        "localAmbulance": "ಸ್ಥಳೀಯ ಅಂಬ್ಯುಲೆನ್ಸ್",
+        "fireRescue": "ಅಗ್ನಿ ಮತ್ತು ರಕ್ಷಣೆ ಸೇವೆಗಳು",
+        "cyberCrime": "ಸೈಬರ್ ಅಪರಾಧ"
       }
   }
   

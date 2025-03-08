@@ -8,16 +8,20 @@ import {
   Linking,
   StatusBar,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
+// Define HELPLINES with translation keys for labels.
 const HELPLINES = [
-  { id: '1', number: '112', label: 'Local Police', icon: require('../../assets/localpolice.png') },
-  { id: '2', number: '181', label: 'Women Helpline', icon: require('../../assets/womenhelp.png') },
-  { id: '3', number: '108', label: 'Local Ambulance', icon: require('../../assets/ambulance.png') },
-  { id: '4', number: '101', label: 'Fire & Rescue Services', icon: require('../../assets/firerescue.png') },
-  { id: '5', number: '1930', label: 'Cyber Crime', icon: require('../../assets/cybercrime.png') },
+  { id: '1', number: '112', label: 'emergencyHelpline.localPolice', icon: require('../../assets/localpolice.png') },
+  { id: '2', number: '181', label: 'emergencyHelpline.womenHelpline', icon: require('../../assets/womenhelp.png') },
+  { id: '3', number: '108', label: 'emergencyHelpline.localAmbulance', icon: require('../../assets/ambulance.png') },
+  { id: '4', number: '101', label: 'emergencyHelpline.fireRescue', icon: require('../../assets/firerescue.png') },
+  { id: '5', number: '1930', label: 'emergencyHelpline.cyberCrime', icon: require('../../assets/cybercrime.png') },
 ];
 
 const EmergencyHelplineScreen = () => {
+  const { t } = useTranslation();
+
   const handleCall = (phoneNumber) => {
     Linking.openURL(`tel:${phoneNumber}`);
   };
@@ -28,8 +32,8 @@ const EmergencyHelplineScreen = () => {
       
       {/* Header with bottom curves */}
       <View style={styles.headerContainer}>
-        <Text style={styles.headerTitle}>Emergency Helpline</Text>
-        <Text style={styles.subHeader}>Help line numbers</Text>
+        <Text style={styles.headerTitle}>{t('emergencyHelpline.header')}</Text>
+        <Text style={styles.subHeader}>{t('emergencyHelpline.subHeader')}</Text>
       </View>
       
       {/* Main content */}
@@ -39,7 +43,7 @@ const EmergencyHelplineScreen = () => {
             <Image source={item.icon} style={styles.cardImage} />
             <View style={styles.cardTextContainer}>
               <Text style={styles.cardNumber}>{item.number}</Text>
-              <Text style={styles.cardLabel}>{item.label}</Text>
+              <Text style={styles.cardLabel}>{t(item.label)}</Text>
             </View>
             <TouchableOpacity
               style={styles.callButton}
