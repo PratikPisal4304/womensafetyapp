@@ -127,6 +127,7 @@ const InAppChatScreen = () => {
   const [typingDots, setTypingDots] = useState('');
   const [previewImage, setPreviewImage] = useState(null);
   const [deleteMessage, setDeleteMessage] = useState(null);
+  // New state for chat delete confirmation modal
   const [deleteChatModalVisible, setDeleteChatModalVisible] = useState(false);
 
   // ----------------------------
@@ -680,6 +681,10 @@ const InAppChatScreen = () => {
               <TouchableOpacity
                 style={styles.chatListItem}
                 onPress={() => handleSelectChat(item)}
+                onLongPress={() => {
+                  setSelectedChat(item);
+                  setDeleteChatModalVisible(true);
+                }}
                 activeOpacity={0.8}
               >
                 <View style={styles.avatarContainer}>
