@@ -658,7 +658,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 26,
     borderBottomWidth: 1,
-    paddingTop: 50,
+    paddingTop: 30,
     backgroundColor: "#fff",
   },
   headerIcon: {
