@@ -16,7 +16,7 @@ import { auth, db } from '../../config/firebaseConfig'; // Adjust path if needed
 import { ShakeDetectionContext } from '../../src/context/ShakeDetectionContext'; // Adjust path if needed
 import { useTranslation } from 'react-i18next';
 
-// Mapping of displayed language names to language codes
+// Mapping of displayed language names to language codes.
 const languageMapping = {
   "English": "en",
   "हिंदी": "hi",
@@ -28,9 +28,11 @@ const languageMapping = {
   "ਪੰਜਾਬੀ": "pa",
 };
 
-// Updated DropdownItem that accepts an optional onOptionSelect prop
+const PINK = '#ff5f96';
+
+// Updated DropdownItem component that displays a tick icon for the current language.
 const DropdownItem = ({ title, icon, options, onOptionSelect }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
   const handleOptionPress = (option) => {
@@ -58,22 +60,34 @@ const DropdownItem = ({ title, icon, options, onOptionSelect }) => {
       </TouchableOpacity>
       {expanded && (
         <View style={styles.dropdownContent}>
-          {options.map((option, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.dropdownOption}
-              onPress={() => handleOptionPress(option)}
-            >
-              <Text style={styles.dropdownText}>{option}</Text>
-            </TouchableOpacity>
-          ))}
+          {options.map((option, index) => {
+            const isCurrent = onOptionSelect && languageMapping[option] === i18n.language;
+            return (
+              <TouchableOpacity
+                key={index}
+                style={styles.dropdownOption}
+                onPress={() => handleOptionPress(option)}
+              >
+                <Text style={styles.dropdownText}>
+                  {option}
+                </Text>
+                {isCurrent && (
+                  <MaterialCommunityIcons
+                    name="check"
+                    size={20}
+                    color={PINK}
+                    style={{ marginLeft: 10 }}
+                  />
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
       )}
     </View>
   );
 };
 
-// ToggleSetting component remains unchanged
 const ToggleSetting = ({ title, icon, value, onValueChange }) => {
   return (
     <View style={styles.toggleSettingContainer}>
@@ -105,7 +119,7 @@ const ProfileScreen = ({ navigation }) => {
     { title: t('profile.manageFriends'), icon: 'account-group', screen: 'ManageFriends' },
   ];
 
-  // Dropdown settings items with updated language options and a custom onOptionSelect for language change
+  // Dropdown settings items.
   const dropdownSettings = [
     {
       title: t('profile.changeLanguage'),
@@ -191,7 +205,7 @@ const ProfileScreen = ({ navigation }) => {
         {
           text: 'OK',
           onPress: () => {
-            // Place your logout logic here (e.g., auth.signOut())
+            // Add your logout logic here (e.g., auth.signOut())
             navigation.replace('Login');
           },
         },
@@ -291,10 +305,7 @@ const ProfileScreen = ({ navigation }) => {
 export default ProfileScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
+  container: { flex: 1, backgroundColor: '#f8f9fa' },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -388,6 +399,8 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   dropdownOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 10,
   },
   dropdownText: {
