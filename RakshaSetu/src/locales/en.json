@@ -111,13 +111,13 @@
         "infoText": "If you feel unsafe, press the button below. An alert with your current location and multiple Street View images will be sent to your emergency contacts and via in-app chat.",
         "sosButton": "SOS",
         "cancelAlert": "Cancel Alert",
-        "countdown": "Sending alert in {{count}} second{{plural, select, one{} other{s}}}",
+        "countdown": "Sending alert in {{count}} second(s)",
         "sendingText": "Alerting emergency contacts...",
         "smsNotAvailable": "SMS Not Available",
         "smsNotAvailableMessage": "Your device does not support SMS.",
         "sosSent": "SOS Sent",
         "sosSentMessage": "Emergency SMS sent to your contacts.",
-        "failedToSend": "Failed to send SOS alert.",
+        "failedToSend": "Failed to send SOS alert",
         "permissionDenied": "Permission to access location was denied"
       }
   }
