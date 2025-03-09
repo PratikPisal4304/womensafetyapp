@@ -75,6 +75,7 @@ const SafetyRatingIndicator = ({ score }) => {
 export default function TrackMeScreen() {
   const mapRef = useRef(null);
   const debounceTimerRef = useRef(null);
+  const journeyStartTimeRef = useRef(null); // New ref to track journey start time
 
   // Basic state variables
   const [location, setLocation] = useState(null);
@@ -106,6 +107,10 @@ export default function TrackMeScreen() {
   // Safety Assessment state
   const [safetyData, setSafetyData] = useState(null);
   const [safetyModalVisible, setSafetyModalVisible] = useState(false);
+
+  // Safety Review Modal state and journey stats state
+  const [safetyReviewModalVisible, setSafetyReviewModalVisible] = useState(false);
+  const [journeyStats, setJourneyStats] = useState(null);
 
   // Suggestions UI state
   const [suggestionsVisible, setSuggestionsVisible] = useState(false);
@@ -431,6 +436,55 @@ export default function TrackMeScreen() {
     </Modal>
   );
 
+  // Safety Review Modal – asks if the user felt safe while travelling
+  const renderSafetyReviewModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={safetyReviewModalVisible}
+      onRequestClose={() => setSafetyReviewModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Safety Review</Text>
+            <TouchableOpacity style={styles.closeButton} onPress={() => setSafetyReviewModalVisible(false)}>
+              <Ionicons name="close" size={24} color="#333" />
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.modalBody}>
+            {journeyStats && (
+              <Text style={{ fontSize: 16, marginBottom: 10 }}>
+                Journey Stats: Distance: {journeyStats.distance} km, Duration: {journeyStats.duration} sec, Avg Speed: {journeyStats.avgSpeed} km/h
+              </Text>
+            )}
+            <Text style={{ fontSize: 18, marginBottom: 20 }}>Did you feel safe while travelling?</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+              <TouchableOpacity
+                style={styles.safetyButton}
+                onPress={() => {
+                  Alert.alert('Feedback', 'Thank you for your feedback!');
+                  setSafetyReviewModalVisible(false);
+                }}
+              >
+                <Text style={styles.safetyButtonText}>Yes</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.safetyButton}
+                onPress={() => {
+                  Alert.alert('Feedback', 'Thank you for your feedback!');
+                  setSafetyReviewModalVisible(false);
+                }}
+              >
+                <Text style={styles.safetyButtonText}>No</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+
   // Recenter map to current location
   const handleRecenter = () => {
     if (mapRef.current && location) {
@@ -446,9 +500,13 @@ export default function TrackMeScreen() {
     }
   };
 
-  // Journey tracking functions
+  // Journey tracking functions with additional logic
   const startJourney = async () => {
     try {
+      // Reset distance and set the journey start time
+      setDistanceTraveled(0);
+      journeyStartTimeRef.current = new Date();
+      // Start watching location updates
       const locWatcher = await Location.watchPositionAsync(
         { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 5 },
         (loc) => {
@@ -464,6 +522,7 @@ export default function TrackMeScreen() {
       );
       setWatcher(locWatcher);
       setJourneyStarted(true);
+      Alert.alert('Journey Started', 'Your journey has begun.');
     } catch (error) {
       Alert.alert('Error', 'Failed to start journey');
     }
@@ -475,7 +534,20 @@ export default function TrackMeScreen() {
       setWatcher(null);
     }
     setJourneyStarted(false);
-    Alert.alert('Journey Ended', `Total distance: ${(distanceTraveled / 1000).toFixed(2)} km`);
+    const journeyEndTime = new Date();
+    const journeyDuration = journeyStartTimeRef.current
+      ? (journeyEndTime - journeyStartTimeRef.current) / 1000
+      : 0; // duration in seconds
+    const avgSpeedKmH =
+      journeyDuration > 0 ? ((distanceTraveled / journeyDuration) * 3.6).toFixed(2) : '0';
+    // Save journey stats and open safety review modal
+    setJourneyStats({
+      distance: (distanceTraveled / 1000).toFixed(2),
+      duration: journeyDuration.toFixed(2),
+      avgSpeed: avgSpeedKmH,
+    });
+    journeyStartTimeRef.current = null;
+    setSafetyReviewModalVisible(true);
   };
 
   const toggleJourney = () => {
@@ -488,7 +560,8 @@ export default function TrackMeScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Track Me</Text>
         <Text style={styles.headerSubtitle}>
-          Distance: {(distanceTraveled / 1000).toFixed(2)} km | Heading: {heading ? `${Math.round(heading)}°` : 'N/A'} | ETA: {ETA ? ETA : 'N/A'}
+          Distance: {(distanceTraveled / 1000).toFixed(2)} km | Heading:{' '}
+          {heading ? `${Math.round(heading)}°` : 'N/A'} | ETA: {ETA ? ETA : 'N/A'}
         </Text>
       </View>
 
@@ -681,7 +754,9 @@ export default function TrackMeScreen() {
                         </View>
                         <View style={styles.crimeContent}>
                           <Text style={styles.crimeType}>{crime.type}</Text>
-                          <Text style={styles.crimeDate}>{crime.date} at {crime.time}</Text>
+                          <Text style={styles.crimeDate}>
+                            {crime.date} at {crime.time}
+                          </Text>
                         </View>
                       </View>
                     ))
@@ -708,6 +783,8 @@ export default function TrackMeScreen() {
       {renderInstructionsModal()}
       {/* Customization Options Modal */}
       {renderCustomizationModal()}
+      {/* Safety Review Modal */}
+      {renderSafetyReviewModal()}
     </View>
   );
 }
