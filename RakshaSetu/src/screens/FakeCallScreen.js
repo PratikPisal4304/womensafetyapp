@@ -14,13 +14,19 @@ import {
   Vibration,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, MaterialIcons, FontAwesome5, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import {
+  Ionicons,
+  MaterialIcons,
+  FontAwesome5,
+  Feather,
+  MaterialCommunityIcons,
+} from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const PINK_BG = '#ffd1e1';  // Soft pink background
-const PINK = '#ff5f96';     // Vibrant pink for icons/floating button
-const GREEN = '#4CAF50';    // "Call now" button color
+const PINK_BG = '#ffd1e1'; // Soft pink background
+const PINK = '#ff5f96'; // Vibrant pink for icons/floating button
+const GREEN = '#4CAF50'; // "Call now" button color
 const { width, height } = Dimensions.get('window');
 
 // Enhanced Active Call Screen Component (looks more like a real call)
@@ -71,16 +77,15 @@ function ActiveCallScreen({ contact, onEndCall }) {
           <Image source={{ uri: contact.avatar }} style={styles.activeCallAvatar} />
           <Text style={styles.activeCallName}>{contact.name}</Text>
           <Text style={styles.activeCallSubText}>
-            {isVideoCall ? "Video call connected" : "Call connected"}
+            {isVideoCall ? 'Video call connected' : 'Call connected'}
           </Text>
-          
           {/* Connection quality indicator */}
           <View style={styles.connectionQualityContainer}>
             <View style={[styles.connectionBar, styles.connectionBarActive]} />
             <View style={[styles.connectionBar, styles.connectionBarActive]} />
             <View style={[styles.connectionBar, styles.connectionBarActive]} />
             <View style={[styles.connectionBar, styles.connectionBarActive]} />
-            <View style={[styles.connectionBar]} />
+            <View style={styles.connectionBar} />
           </View>
         </View>
 
@@ -88,7 +93,9 @@ function ActiveCallScreen({ contact, onEndCall }) {
         {keypadVisible ? (
           <View style={styles.keypadContainer}>
             <View style={styles.keypadRow}>
-              <TouchableOpacity style={styles.keypadButton}><Text style={styles.keypadDigit}>1</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.keypadButton}>
+                <Text style={styles.keypadDigit}>1</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={styles.keypadButton}>
                 <Text style={styles.keypadDigit}>2</Text>
                 <Text style={styles.keypadLetters}>ABC</Text>
@@ -127,12 +134,16 @@ function ActiveCallScreen({ contact, onEndCall }) {
               </TouchableOpacity>
             </View>
             <View style={styles.keypadRow}>
-              <TouchableOpacity style={styles.keypadButton}><Text style={styles.keypadDigit}>*</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.keypadButton}>
+                <Text style={styles.keypadDigit}>*</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={styles.keypadButton}>
                 <Text style={styles.keypadDigit}>0</Text>
                 <Text style={styles.keypadLetters}>+</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.keypadButton}><Text style={styles.keypadDigit}>#</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.keypadButton}>
+                <Text style={styles.keypadDigit}>#</Text>
+              </TouchableOpacity>
             </View>
             <TouchableOpacity style={styles.keypadCloseButton} onPress={toggleKeypad}>
               <Text style={styles.keypadCloseText}>Close</Text>
@@ -141,25 +152,29 @@ function ActiveCallScreen({ contact, onEndCall }) {
         ) : (
           <View style={styles.callControlsRow}>
             <TouchableOpacity style={styles.callControlButton} onPress={toggleMute}>
-              <Ionicons name={isMuted ? "mic-off" : "mic"} size={24} color="#fff" />
-              <Text style={styles.callControlText}>{isMuted ? "Unmute" : "Mute"}</Text>
+              <Ionicons name={isMuted ? 'mic-off' : 'mic'} size={24} color="#fff" />
+              <Text style={styles.callControlText}>{isMuted ? 'Unmute' : 'Mute'}</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.callControlButton} onPress={toggleKeypad}>
               <Feather name="hash" size={24} color="#fff" />
               <Text style={styles.callControlText}>Keypad</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.callControlButton} onPress={toggleSpeaker}>
-              <MaterialCommunityIcons name={isSpeaker ? "volume-high" : "volume-medium"} size={24} color={isSpeaker ? "#4CAF50" : "#fff"} />
-              <Text style={[styles.callControlText, isSpeaker && {color: "#4CAF50"}]}>Speaker</Text>
+              <MaterialCommunityIcons
+                name={isSpeaker ? 'volume-high' : 'volume-medium'}
+                size={24}
+                color={isSpeaker ? '#4CAF50' : '#fff'}
+              />
+              <Text style={[styles.callControlText, isSpeaker && { color: '#4CAF50' }]}>Speaker</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.callControlButton} onPress={toggleVideo}>
-              <FontAwesome5 name="video" size={22} color={isVideoCall ? "#4CAF50" : "#fff"} />
-              <Text style={[styles.callControlText, isVideoCall && {color: "#4CAF50"}]}>Video</Text>
+              <FontAwesome5 name="video" size={22} color={isVideoCall ? '#4CAF50' : '#fff'} />
+              <Text style={[styles.callControlText, isVideoCall && { color: '#4CAF50' }]}>Video</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.callControlButton}>
               <Ionicons name="add" size={24} color="#fff" />
               <Text style={styles.callControlText}>Add</Text>
@@ -185,14 +200,14 @@ function ActiveCallScreen({ contact, onEndCall }) {
 // Upgraded Incoming Call UI
 function IncomingCallModal({ activeCall, countdown, handleAnswerCall, handleDeclineCall }) {
   const [pulseAnimation, setPulseAnimation] = useState(false);
-  
+
   // Create pulsing effect
   useEffect(() => {
     const interval = setInterval(() => {
       setPulseAnimation(prev => !prev);
       Vibration.vibrate(500);
     }, 2000);
-    
+
     return () => {
       clearInterval(interval);
       Vibration.cancel();
@@ -202,7 +217,7 @@ function IncomingCallModal({ activeCall, countdown, handleAnswerCall, handleDecl
   // Call actions
   const callActions = [
     { icon: 'chatbubble-ellipses', text: 'Message' },
-    { icon: 'alarm', text: 'Remind me' }
+    { icon: 'alarm', text: 'Remind me' },
   ];
 
   return (
@@ -213,29 +228,26 @@ function IncomingCallModal({ activeCall, countdown, handleAnswerCall, handleDecl
       >
         <View style={styles.incomingStatusBar}>
           <Text style={styles.incomingCallTime}>
-            {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+            {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </Text>
         </View>
-        
+
         <View style={styles.incomingCallHeader}>
           <View style={styles.incomingCallDot} />
           <Text style={styles.incomingCallTitle}>Incoming call</Text>
           <Text style={styles.incomingCallCountdown}>{countdown}s</Text>
         </View>
-        
+
         <View style={styles.incomingContactInfo}>
-          <Image 
-            source={{ uri: activeCall.avatar }} 
-            style={[
-              styles.incomingCallAvatar,
-              pulseAnimation && styles.pulsingAvatar
-            ]} 
+          <Image
+            source={{ uri: activeCall.avatar }}
+            style={[styles.incomingCallAvatar, pulseAnimation && styles.pulsingAvatar]}
           />
           <Text style={styles.incomingCallName}>{activeCall.name}</Text>
           <Text style={styles.incomingCallNumber}>{activeCall.phone}</Text>
           <Text style={styles.incomingCallSubtitle}>Mobile • United States</Text>
         </View>
-        
+
         {/* Call actions */}
         <View style={styles.incomingCallActions}>
           {callActions.map((action, index) => (
@@ -247,7 +259,7 @@ function IncomingCallModal({ activeCall, countdown, handleAnswerCall, handleDecl
             </TouchableOpacity>
           ))}
         </View>
-        
+
         {/* Accept/Decline buttons */}
         <View style={styles.incomingCallButtonsContainer}>
           <View style={styles.callButtonColumn}>
@@ -256,7 +268,7 @@ function IncomingCallModal({ activeCall, countdown, handleAnswerCall, handleDecl
             </TouchableOpacity>
             <Text style={styles.callButtonLabel}>Decline</Text>
           </View>
-          
+
           <View style={styles.callButtonColumn}>
             <TouchableOpacity style={styles.answerButton} onPress={handleAnswerCall}>
               <Ionicons name="call" size={28} color="#fff" />
@@ -264,7 +276,7 @@ function IncomingCallModal({ activeCall, countdown, handleAnswerCall, handleDecl
             <Text style={styles.callButtonLabel}>Accept</Text>
           </View>
         </View>
-        
+
         {/* Swipe to answer UI hint */}
         <View style={styles.swipeContainer}>
           <View style={styles.swipeIndicator}>
@@ -277,7 +289,7 @@ function IncomingCallModal({ activeCall, countdown, handleAnswerCall, handleDecl
   );
 }
 
-export default function FakeCallScreen({ navigation }) {
+function FakeCallScreen({ navigation }) {
   // Contacts state with improved avatar URLs
   const [contacts, setContacts] = useState([
     {
@@ -304,6 +316,9 @@ export default function FakeCallScreen({ navigation }) {
   const [contactModalVisible, setContactModalVisible] = useState(false);
   const [currentContact, setCurrentContact] = useState({ name: '', phone: '', avatar: '' });
   const [isEditing, setIsEditing] = useState(false);
+
+  // New state: timer option (in seconds)
+  const [selectedTimer, setSelectedTimer] = useState(0);
 
   // Navigation and basic actions
   const handleBack = () => navigation.goBack();
@@ -339,12 +354,12 @@ export default function FakeCallScreen({ navigation }) {
     } else {
       // Generate a more realistic avatar with a better placeholder service
       const initial = currentContact.name.charAt(0).toUpperCase();
-      const randomColor = Math.floor(Math.random()*16777215).toString(16);
-      
+      const randomColor = Math.floor(Math.random() * 16777215).toString(16);
       const newContact = {
         ...currentContact,
         id: Date.now().toString(),
-        avatar: currentContact.avatar || 
+        avatar:
+          currentContact.avatar ||
           `https://via.placeholder.com/200/${randomColor}/FFFFFF?text=${initial}`,
       };
       setContacts((prev) => [...prev, newContact]);
@@ -476,8 +491,66 @@ export default function FakeCallScreen({ navigation }) {
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
 
+      {/* Timer Options */}
+      <View style={styles.timerOptionsContainer}>
+        <Text style={styles.timerOptionsLabel}>Set Timer:</Text>
+        <View style={styles.timerOptionsRow}>
+          <TouchableOpacity
+            style={[
+              styles.timerOptionButton,
+              selectedTimer === 0 && styles.timerOptionButtonSelected,
+            ]}
+            onPress={() => setSelectedTimer(0)}
+          >
+            <Text style={styles.timerOptionText}>Immediate</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.timerOptionButton,
+              selectedTimer === 5 && styles.timerOptionButtonSelected,
+            ]}
+            onPress={() => setSelectedTimer(5)}
+          >
+            <Text style={styles.timerOptionText}>5 sec</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.timerOptionButton,
+              selectedTimer === 10 && styles.timerOptionButtonSelected,
+            ]}
+            onPress={() => setSelectedTimer(10)}
+          >
+            <Text style={styles.timerOptionText}>10 sec</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.timerOptionButton,
+              selectedTimer === 15 && styles.timerOptionButtonSelected,
+            ]}
+            onPress={() => setSelectedTimer(15)}
+          >
+            <Text style={styles.timerOptionText}>15 sec</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       {/* "Call now" Button */}
-      <TouchableOpacity style={styles.callButton} onPress={handleCallNow}>
+      <TouchableOpacity
+        style={styles.callButton}
+        onPress={() => {
+          if (selectedTimer === 0) {
+            handleCallNow();
+          } else {
+            Alert.alert(
+              'Fake Call Scheduled',
+              `Fake call will be received in ${selectedTimer} second(s).`
+            );
+            setTimeout(() => {
+              handleCallNow();
+            }, selectedTimer * 1000);
+          }
+        }}
+      >
         <Ionicons name="call-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
         <Text style={styles.callButtonText}>Call now</Text>
       </TouchableOpacity>
@@ -491,7 +564,7 @@ export default function FakeCallScreen({ navigation }) {
       {/* Incoming Call Modal */}
       {activeCall && (
         <Modal animationType="slide" transparent={true} visible={true}>
-          <IncomingCallModal 
+          <IncomingCallModal
             activeCall={activeCall}
             countdown={countdown}
             handleAnswerCall={handleAnswerCall}
@@ -625,9 +698,9 @@ const styles = StyleSheet.create({
   floatingButton: {
     position: 'absolute',
     right: 20,
-    bottom: 140,
-    width: 50,
-    height: 50,
+    bottom: 240,
+    width: 70,
+    height: 70,
     borderRadius: 25,
     backgroundColor: PINK,
     alignItems: 'center',
@@ -670,7 +743,51 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 16,
   },
-
+  // Timer Options Styles (Enhanced UI)
+  timerOptionsContainer: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    bottom: 140,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+  },
+  timerOptionsLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  timerOptionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  timerOptionButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    marginHorizontal: 4,
+  },
+  timerOptionButtonSelected: {
+    backgroundColor: PINK,
+    borderColor: PINK,
+  },
+  timerOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
   // INCOMING CALL STYLES
   incomingCallModalContainer: {
     flex: 1,
@@ -818,7 +935,6 @@ const styles = StyleSheet.create({
   swipeIcon: {
     marginTop: 2,
   },
-
   // ACTIVE CALL STYLES
   activeCallContainer: {
     flex: 1,
@@ -959,7 +1075,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   // CONTACT MODAL STYLES
   contactModalContainer: {
     flex: 1,
@@ -1005,4 +1120,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export { FakeCallScreen };
+export default FakeCallScreen;
