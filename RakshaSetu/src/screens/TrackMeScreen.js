@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,7 @@ import {
   Modal,
   ScrollView,
   FlatList,
-  Image,
   ActivityIndicator,
-  TouchableWithoutFeedback,
 } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -21,10 +19,11 @@ import PolylineDecoder from '@mapbox/polyline';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width, height } = Dimensions.get('window');
-const PINK = '#ff5f96';
+const PINK = '#ff5f96'; // Used in other parts of the app (header, buttons, etc.)
 // Replace with your actual Google Maps API Key
 const GOOGLE_MAPS_API_KEY = 'AIzaSyBzqSJUt0MVs3xFjFWTvLwiyjXwnzbkXok';
 
+// Custom map style
 const customMapStyle = [
   { elementType: 'geometry', stylers: [{ color: '#ebe3cd' }] },
   { elementType: 'labels.text.fill', stylers: [{ color: '#523735' }] },
@@ -71,11 +70,6 @@ const SafetyRatingIndicator = ({ score }) => {
       <Text style={styles.safetyScoreText}>{score}</Text>
     </View>
   );
-};
-
-// Navigation Instructions rendering function (splitting text if needed)
-const renderInstructions = (step) => {
-  return step.html_instructions.replace(/<[^>]*>/g, '');
 };
 
 export default function TrackMeScreen() {
@@ -304,7 +298,7 @@ export default function TrackMeScreen() {
     }
   };
 
-  // Navigation Instructions Modal
+  // Enhanced Navigation Instructions Modal (neutral styling)
   const renderInstructionsModal = () => (
     <Modal
       animationType="slide"
@@ -313,24 +307,28 @@ export default function TrackMeScreen() {
       onRequestClose={() => setInstructionsModalVisible(false)}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Navigation Instructions</Text>
-            <TouchableOpacity style={styles.closeButton} onPress={() => setInstructionsModalVisible(false)}>
+        <View style={styles.modalContentEnhanced}>
+          <View style={styles.modalHeaderEnhanced}>
+            <Text style={styles.modalTitleEnhanced}>Navigation Instructions</Text>
+            <TouchableOpacity
+              style={styles.closeButtonEnhanced}
+              onPress={() => setInstructionsModalVisible(false)}
+            >
               <Ionicons name="close" size={24} color="#333" />
             </TouchableOpacity>
           </View>
-          <ScrollView style={styles.modalBody}>
+          <ScrollView style={styles.modalBodyEnhanced}>
             {directionsSteps && directionsSteps.length > 0 ? (
               directionsSteps.map((step, index) => (
-                <View key={index} style={styles.directionStep}>
-                  <Text style={styles.directionStepText}>
+                <View key={index} style={styles.directionStepEnhanced}>
+                  <Text style={styles.directionStepTextEnhanced}>
                     {index + 1}. {step.html_instructions.replace(/<[^>]*>/g, '')} ({step.distance.text})
                   </Text>
+                  <View style={styles.dividerEnhanced} />
                 </View>
               ))
             ) : (
-              <Text style={styles.directionStepText}>No instructions available.</Text>
+              <Text style={styles.directionStepTextEnhanced}>No instructions available.</Text>
             )}
           </ScrollView>
         </View>
@@ -338,7 +336,7 @@ export default function TrackMeScreen() {
     </Modal>
   );
 
-  // Alternative Routes Modal
+  // Enhanced Alternative Routes Modal (neutral styling)
   const renderAlternativeModal = () => (
     <Modal
       animationType="slide"
@@ -347,18 +345,21 @@ export default function TrackMeScreen() {
       onRequestClose={() => setAlternativeModalVisible(false)}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Alternative Routes</Text>
-            <TouchableOpacity style={styles.closeButton} onPress={() => setAlternativeModalVisible(false)}>
+        <View style={styles.modalContentEnhanced}>
+          <View style={styles.modalHeaderEnhanced}>
+            <Text style={styles.modalTitleEnhanced}>Alternative Routes</Text>
+            <TouchableOpacity
+              style={styles.closeButtonEnhanced}
+              onPress={() => setAlternativeModalVisible(false)}
+            >
               <Ionicons name="close" size={24} color="#333" />
             </TouchableOpacity>
           </View>
-          <ScrollView style={styles.modalBody}>
+          <ScrollView style={styles.modalBodyEnhanced}>
             {alternativeRoutes.map((route, index) => (
               <TouchableOpacity
                 key={index}
-                style={styles.altRouteItem}
+                style={styles.altRouteCard}
                 onPress={() => {
                   const points = PolylineDecoder.decode(route.overview_polyline.points);
                   const coords = points.map((point) => ({
@@ -373,7 +374,8 @@ export default function TrackMeScreen() {
                   setAlternativeModalVisible(false);
                 }}
               >
-                <Text style={styles.altRouteText}>
+                <Ionicons name="navigate" size={20} color="#333" style={styles.altRouteIcon} />
+                <Text style={styles.altRouteTextEnhanced}>
                   Route {index + 1}: {route.legs[0].duration.text} ({route.legs[0].distance.text})
                 </Text>
               </TouchableOpacity>
@@ -700,9 +702,9 @@ export default function TrackMeScreen() {
         </View>
       </Modal>
 
-      {/* Alternative Routes Modal */}
+      {/* Enhanced Alternative Routes Modal */}
       {renderAlternativeModal()}
-      {/* Navigation Instructions Modal */}
+      {/* Enhanced Navigation Instructions Modal */}
       {renderInstructionsModal()}
       {/* Customization Options Modal */}
       {renderCustomizationModal()}
@@ -852,7 +854,71 @@ const styles = StyleSheet.create({
   safetyButton: { backgroundColor: '#FF69B4', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
   safetyButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
   customOption: { paddingVertical: 10 },
-  searchContainer: { flexDirection: 'row', marginBottom: 15 },
-  searchButton: { backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 15, justifyContent: 'center', elevation: 2 },
-  searchButtonText: { color: '#FF69B4', fontWeight: '600', fontSize: 16 },
+  // Enhanced Modal Styles (Neutral styling)
+  modalContentEnhanced: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    paddingVertical: 20,
+    maxHeight: height * 0.7,
+    marginHorizontal: 20,
+    // Shadow for iOS and elevation for Android
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 10,
+  },
+  modalHeaderEnhanced: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    backgroundColor: '#fff',
+  },
+  modalTitleEnhanced: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333',
+  },
+  closeButtonEnhanced: {
+    padding: 5,
+  },
+  modalBodyEnhanced: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+  },
+  directionStepEnhanced: {
+    marginBottom: 15,
+  },
+  directionStepTextEnhanced: {
+    fontSize: 16,
+    color: '#333',
+  },
+  dividerEnhanced: {
+    height: 1,
+    backgroundColor: '#ccc',
+    marginTop: 10,
+  },
+  altRouteCard: {
+    backgroundColor: '#f0f0f0',
+    padding: 15,
+    borderRadius: 15,
+    marginBottom: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  altRouteIcon: {
+    marginRight: 10,
+  },
+  altRouteTextEnhanced: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '600',
+  },
 });
