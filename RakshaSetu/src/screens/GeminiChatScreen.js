@@ -262,7 +262,7 @@ export default function GeminiChatScreen({ navigation }) {
     await new Promise(resolve => setTimeout(resolve, 800));
     setIsTyping(false);
 
-    // If the AI response indicates an error, mark it for retry.
+    // Format Gemini reply into sections
     let aiResponse = {};
     const sections = parseSections(aiResponseText);
     if (sections.length > 1) {
@@ -286,24 +286,30 @@ export default function GeminiChatScreen({ navigation }) {
     scrollViewRef.current?.scrollToEnd({ animated: true });
   };
 
-  // Render collapsible sections.
+  // Render sectioned messages using the Gemini reply format.
   const renderSectionedMessage = (message, messageKey) => {
     return (
       <View style={styles.sectionedContainer}>
-        {message.sections.map(section => {
-          const key = `${messageKey}-${section.id}`;
-          return (
-            <View key={key} style={styles.section}>
-              <TouchableOpacity style={styles.sectionHeader} onPress={() => toggleSection(key)}>
-                <Text style={styles.sectionTitle}>{section.title}</Text>
-                <AntDesign name={expandedSections[key] ? "up" : "down"} size={16} color="#666" />
-              </TouchableOpacity>
-              {expandedSections[key] && (
-                <Text style={styles.sectionContent}>{section.content}</Text>
-              )}
-            </View>
-          );
-        })}
+        {message.sections.map((section) => (
+          <View key={`${messageKey}-${section.id}`} style={styles.section}>
+            <TouchableOpacity 
+              style={styles.sectionHeader}
+              onPress={() => toggleSection(`${messageKey}-${section.id}`)}
+            >
+              <Text style={styles.sectionTitle}>{section.title}</Text>
+              <AntDesign 
+                name={expandedSections[`${messageKey}-${section.id}`] ? "up" : "down"} 
+                size={16} 
+                color="#666" 
+              />
+            </TouchableOpacity>
+            {expandedSections[`${messageKey}-${section.id}`] && (
+              <Text style={styles.sectionContent}>
+                {section.content}
+              </Text>
+            )}
+          </View>
+        ))}
         <View style={styles.messageFooter}>
           <TouchableOpacity
             style={styles.actionButton}
@@ -903,4 +909,3 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
 });
-
