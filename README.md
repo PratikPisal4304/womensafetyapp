@@ -24,8 +24,8 @@
 - **Frontend**: React Native (Expo)
 - **Backend**: Firebase (Firestore, Auth, Storage)
 - **Location & Maps**: Google Maps API 
-- **Chat & Communication**: RakshaSetu Chat (Firestore real-time chat)
-- **AI Integrations**: Legal Assistant AI & AI-based FIR Generation
+- **Chat & Communication**: Firestore real-time chat
+- **AI Integrations**: Gemini AI
 
 
 ## 🔧 Installation & Setup
