@@ -95,13 +95,12 @@ function SOSScreen() {
     return () => timer && clearInterval(timer);
   }, [isSOSActive, countdown]);
 
-  // Use focus effect so that every time the screen is focused, we check for autoActivate.
+  // Auto-activate SOS if route parameter is set.
   useFocusEffect(
     useCallback(() => {
       if (route.params?.autoActivate && !isSOSActive) {
         console.log("Auto-activating SOS due to autoActivate param on focus.");
         startSOS();
-        // Clear the autoActivate parameter so it doesn't re-trigger
         navigation.setParams({ autoActivate: false });
       }
     }, [route.params, isSOSActive, navigation])
@@ -117,6 +116,7 @@ function SOSScreen() {
     setCountdown(10);
   };
 
+  // Send an in-app chat message (already implemented).
   const sendSOSInAppChat = async (message) => {
     const user = auth.currentUser;
     if (!user) return;
@@ -146,31 +146,68 @@ function SOSScreen() {
     }
   };
 
+  // Log the SOS event to Firestore in a new "sosAlerts" collection.
+  const logSOSEvent = async (data) => {
+    try {
+      await addDoc(collection(db, 'sosAlerts'), {
+        ...data,
+        userId: auth.currentUser?.uid,
+        timestamp: serverTimestamp(),
+      });
+      console.log("SOS event logged in Firestore.");
+    } catch (error) {
+      console.error("Error logging SOS event:", error);
+    }
+  };
+
+  // Update the user's document with the last SOS time.
+  const updateUserLastSOS = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, 'users', user.uid), {
+        lastSOS: serverTimestamp()
+      });
+      console.log("User's last SOS time updated.");
+    } catch (error) {
+      console.error("Error updating user's last SOS:", error);
+    }
+  };
+
   const triggerSOS = async () => {
     setIsSendingSOS(true);
     try {
+      // Get current location
       const loc = await Location.getCurrentPositionAsync({});
       setLocation(loc.coords);
       const { latitude, longitude } = loc.coords;
+
+      // Construct Street View URLs for multiple headings
       const streetViewUrl1 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=0&pitch=10&key=${GOOGLE_API_KEY}`;
       const streetViewUrl2 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=120&pitch=10&key=${GOOGLE_API_KEY}`;
       const streetViewUrl3 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=240&pitch=10&key=${GOOGLE_API_KEY}`;
+      
+      // Build message text
       const message = `${t('sos.header')}
-  
+
 ${t('sos.emergencyMessage')}
-  
+
 My location: https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}
-  
+
 Street View 1: ${streetViewUrl1}
-  
+
 Street View 2: ${streetViewUrl2}
-  
+
 Street View 3: ${streetViewUrl3}`;
+
+      // Determine contacts (closeFriends or fallback contacts)
       const allContacts = closeFriends.length > 0 ? closeFriends : [
         { id: '1', name: 'Fallback Friend', phone: '+9112345678910' },
         { id: '2', name: 'Police', phone: '100' },
       ];
       console.log("Sending SMS to:", allContacts);
+
+      // Send SMS if available
       const isAvailable = await SMS.isAvailableAsync();
       if (isAvailable) {
         await SMS.sendSMSAsync(
@@ -181,7 +218,20 @@ Street View 3: ${streetViewUrl3}`;
       } else {
         Alert.alert(t('sos.smsNotAvailable'), t('sos.smsNotAvailableMessage'));
       }
+      
+      // Send in-app chat messages
       await sendSOSInAppChat(message);
+      
+      // Log SOS event to Firestore
+      await logSOSEvent({
+        latitude,
+        longitude,
+        message,
+        streetViewUrls: [streetViewUrl1, streetViewUrl2, streetViewUrl3]
+      });
+      
+      // Update the user's last SOS time in Firestore
+      await updateUserLastSOS();
     } catch (error) {
       console.error('Error triggering SOS:', error);
       Alert.alert(t('common.error'), t('sos.failedToSend'));
