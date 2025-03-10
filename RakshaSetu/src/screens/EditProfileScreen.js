@@ -17,7 +17,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { auth, db } from '../../config/firebaseConfig'; // Ensure these are correctly exported
+import { auth, db } from '../../config/firebaseConfig';
 import { useTranslation } from 'react-i18next';
 
 const EditProfileScreen = ({ navigation }) => {
@@ -27,13 +27,33 @@ const EditProfileScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [gender, setGender] = useState('');
-  const [birthday, setBirthday] = useState('');
+  const [dob, setDob] = useState('');
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [avatarUri, setAvatarUri] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch the user data from Firestore when the component mounts
+  // Format a Date object as dd/mm/yyyy
+  const formatDate = (date) => {
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  // Parse a dd/mm/yyyy string into a Date object
+  const parseDateFromString = (dateString) => {
+    const parts = dateString.split('/');
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parseInt(parts[2], 10);
+      return new Date(year, month, day);
+    }
+    return new Date();
+  };
+
+  // Fetch user data from Firestore only
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -43,14 +63,25 @@ const EditProfileScreen = ({ navigation }) => {
           if (userDoc.exists()) {
             const data = userDoc.data();
             setName(data.name || '');
-            setPhone(data.phone || user.phoneNumber || '');
+            setPhone(data.phone || '');
             setEmail(data.email || '');
             setAddress(data.address || '');
             setGender(data.gender || '');
-            setBirthday(data.birthday || '');
             setAvatarUri(data.avatarUrl || '');
-            if (data.birthday) {
-              setDate(new Date(data.birthday));
+            if (data.dob) {
+              // Check if dob is stored as an object with day, month, year keys
+              if (typeof data.dob === 'object' && data.dob.day) {
+                const day = data.dob.day.toString().padStart(2, '0');
+                const month = data.dob.month.toString().padStart(2, '0');
+                const year = data.dob.year;
+                const formattedDob = `${day}/${month}/${year}`;
+                setDob(formattedDob);
+                setDate(new Date(year, data.dob.month - 1, data.dob.day));
+              } else {
+                // Assume dob is stored as a string
+                setDob(data.dob);
+                setDate(parseDateFromString(data.dob));
+              }
             }
           } else {
             Alert.alert(t('editProfile.noData'), t('editProfile.noData'));
@@ -77,7 +108,10 @@ const EditProfileScreen = ({ navigation }) => {
   // Handle saving changes to the profile
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert(t('common.error'), t('editProfile.nameLabel') + ' ' + t('editProfile.namePlaceholder'));
+      Alert.alert(
+        t('common.error'),
+        t('editProfile.nameLabel') + ' ' + t('editProfile.namePlaceholder')
+      );
       return;
     }
     if (!validateEmail(email)) {
@@ -99,7 +133,7 @@ const EditProfileScreen = ({ navigation }) => {
         email,
         address,
         gender,
-        birthday: date.toISOString(),
+        dob: formatDate(date), // save in dd/mm/yyyy format
         ...(avatarUri && { avatarUrl: avatarUri }),
       };
 
@@ -223,13 +257,13 @@ const EditProfileScreen = ({ navigation }) => {
             ))}
           </View>
 
-          <Text style={styles.label}>{t('editProfile.birthdayLabel')}</Text>
+          <Text style={styles.label}>{t('editProfile.dobLabel')}</Text>
           <TouchableOpacity
             style={styles.dateInputContainer}
             onPress={() => setShowDatePicker(true)}
           >
-            <Text style={[styles.dateText, { color: birthday ? '#333' : '#999' }]}>
-              {birthday ? birthday : t('editProfile.birthdayPlaceholder')}
+            <Text style={[styles.dateText, { color: dob ? '#333' : '#999' }]}>
+              {dob ? dob : t('editProfile.dobPlaceholder')}
             </Text>
           </TouchableOpacity>
           {showDatePicker && (
@@ -242,7 +276,7 @@ const EditProfileScreen = ({ navigation }) => {
                 setShowDatePicker(Platform.OS === 'ios');
                 if (selectedDate) {
                   setDate(selectedDate);
-                  setBirthday(selectedDate.toLocaleDateString());
+                  setDob(formatDate(selectedDate));
                 }
               }}
             />
@@ -256,7 +290,9 @@ const EditProfileScreen = ({ navigation }) => {
             {isLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.saveButtonText}>{t('editProfile.saveButtonText')}</Text>
+              <Text style={styles.saveButtonText}>
+                {t('editProfile.saveButtonText')}
+              </Text>
             )}
           </TouchableOpacity>
         </View>
@@ -372,7 +408,9 @@ const styles = StyleSheet.create({
     borderColor: '#eee',
     justifyContent: 'center',
   },
-  dateText: { fontSize: 16 },
+  dateText: {
+    fontSize: 16,
+  },
   saveButton: {
     backgroundColor: '#FF4B8C',
     marginTop: 30,

@@ -89,22 +89,22 @@
         "systemDefault": "सिस्टम डिफॉल्ट"
       },
       "editProfile": {
-        "headerTitle": "प्रोफ़ाइल संपादित करा",
+        "headerTitle": "प्रोफाइल संपादित करा",
         "nameLabel": "नाव",
         "namePlaceholder": "तुमचे नाव",
         "phoneLabel": "फोन",
-        "phonePlaceholder": "+91XXXXXXXXXX",
+        "phonePlaceholder": "उदा. +91 1234567890",
         "emailLabel": "ईमेल",
-        "emailPlaceholder": "your@email.com",
+        "emailPlaceholder": "तुमचा ईमेल",
         "addressLabel": "पत्ता",
         "addressPlaceholder": "123 मुख्य रस्ता",
         "genderLabel": "लिंग",
-        "genderOptions": ["पुरुष", "स्त्री", "इतर"],
-        "birthdayLabel": "जन्मदिन",
-        "birthdayPlaceholder": "तुमचा जन्मदिन निवडा",
+        "genderOptions": ["पुरुष", "महिला", "इतर"],
+        "dobLabel": "जन्मतारीख",
+        "dobPlaceholder": "तुमची जन्मतारीख निवडा",
         "saveButtonText": "बदल जतन करा",
-        "uploadError": "प्रतिमा अपलोड करण्यात अयशस्वी",
-        "noData": "या वापरकर्त्यासाठी प्रोफ़ाइल डेटा सापडला नाही."
+        "noData": "कोणतेही प्रोफाइल डेटा सापडले नाही.",
+        "uploadError": "प्रतिमा अपलोड करण्यात अयशस्वी."
       },
       "sos": {
         "header": "रक्षासेतु SOS",

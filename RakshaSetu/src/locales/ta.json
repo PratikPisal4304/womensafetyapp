@@ -89,22 +89,22 @@
         "systemDefault": "கணினி இயல்பு"
       },
       "editProfile": {
-        "headerTitle": "ப்ரொஃபைல் திருத்தம்",
+        "headerTitle": "சுயவிவரத்தை திருத்துக",
         "nameLabel": "பெயர்",
         "namePlaceholder": "உங்கள் பெயர்",
         "phoneLabel": "தொலைபேசி",
-        "phonePlaceholder": "+91XXXXXXXXXX",
+        "phonePlaceholder": "உதா: +91 1234567890",
         "emailLabel": "மின்னஞ்சல்",
-        "emailPlaceholder": "your@email.com",
+        "emailPlaceholder": "உங்கள் மின்னஞ்சல்",
         "addressLabel": "முகவரி",
-        "addressPlaceholder": "123 முக்கிய வீதி",
+        "addressPlaceholder": "123 முதன்மை தெரு",
         "genderLabel": "பாலினம்",
-        "genderOptions": ["ஆண்", "பெண்", "மற்றவை"],
-        "birthdayLabel": "பிறந்த தேதி",
-        "birthdayPlaceholder": "உங்கள் பிறந்த தேதியை தேர்வு செய்",
-        "saveButtonText": "மாற்றங்களை சேமி",
-        "uploadError": "படத்தை பதிவேற்ற முடியவில்லை",
-        "noData": "இந்த பயனருக்கான ப்ரொஃபைல் தரவு கிடைக்கவில்லை."
+        "genderOptions": ["ஆண்", "பெண்", "மற்றது"],
+        "dobLabel": "பிறந்த தேதி",
+        "dobPlaceholder": "உங்கள் பிறந்த தேதியை தேர்ந்தெடுக்கவும்",
+        "saveButtonText": "மாற்றங்களை சேமிக்கவும்",
+        "noData": "சுயவிவர தரவு கிடைக்கவில்லை.",
+        "uploadError": "படத்தை பதிவேற்றுவதில் தோல்வி."
       },
       "sos": {
         "header": "ரக்ஷாசேது SOS",

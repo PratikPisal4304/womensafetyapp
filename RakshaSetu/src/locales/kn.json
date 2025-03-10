@@ -89,22 +89,22 @@
         "systemDefault": "ಸಿಸ್ಟಮ್ ಡೀಫಾಲ್ಟ್"
       },
       "editProfile": {
-        "headerTitle": "ಪ್ರೊಫೈಲ್ ಸಂಪಾದನೆ",
+        "headerTitle": "ಪ್ರೊಫೈಲ್ ಸಂಪಾದಿಸಿ",
         "nameLabel": "ಹೆಸರು",
         "namePlaceholder": "ನಿಮ್ಮ ಹೆಸರು",
         "phoneLabel": "ಫೋನ್",
-        "phonePlaceholder": "+91XXXXXXXXXX",
+        "phonePlaceholder": "ಉದಾ: +91 1234567890",
         "emailLabel": "ಇಮೇಲ್",
-        "emailPlaceholder": "your@email.com",
-        "addressLabel": "ಸರಿಯೆ",
+        "emailPlaceholder": "ನಿಮ್ಮ ಇಮೇಲ್",
+        "addressLabel": "ವಿಳಾಸ",
         "addressPlaceholder": "123 ಮುಖ್ಯ ರಸ್ತೆ",
         "genderLabel": "ಲಿಂಗ",
-        "genderOptions": ["ಪುರುಷ", "ಸ್ತ್ರೀ", "ಇತರೆ"],
-        "birthdayLabel": "ಹುಟ್ಟು ದಿನ",
-        "birthdayPlaceholder": "ನಿಮ್ಮ ಹುಟ್ಟು ದಿನವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+        "genderOptions": ["ಪುರುಷ", "ಮಹಿಳೆ", "ಇತರೆ"],
+        "dobLabel": "ಜನ್ಮದಿನಾಂಕ",
+        "dobPlaceholder": "ನಿಮ್ಮ ಜನ್ಮದಿನಾಂಕವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
         "saveButtonText": "ಬದಲಾವಣೆಗಳನ್ನು ಉಳಿಸಿ",
-        "uploadError": "ಚಿತ್ರವನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ",
-        "noData": "ಈ ಬಳಕೆದಾರನಿಗಾಗಿ ಪ್ರೊಫೈಲ್ ಡೇಟಾ ಲಭ್ಯವಿಲ್ಲ."
+        "noData": "ಪ್ರೊಫೈಲ್ ಡೇಟಾ ದೊರಕಲಿಲ್ಲ.",
+        "uploadError": "ಚಿತ್ರವನ್ನು ಅಪ್ಲೋಡ್ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ."
       },
       "sos": {
         "header": "ರಕ್ಷಾಸೇತು SOS",

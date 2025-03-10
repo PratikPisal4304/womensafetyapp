@@ -89,22 +89,22 @@
         "systemDefault": "సిస్టమ్ డిఫాల్ట్"
       },
       "editProfile": {
-        "headerTitle": "ప్రొఫైల్ సవరించండి",
+        "headerTitle": "ప్రొఫైల్‌ను సవరించండి",
         "nameLabel": "పేరు",
         "namePlaceholder": "మీ పేరు",
         "phoneLabel": "ఫోన్",
-        "phonePlaceholder": "+91XXXXXXXXXX",
+        "phonePlaceholder": "ఉదా: +91 1234567890",
         "emailLabel": "ఇమెయిల్",
-        "emailPlaceholder": "your@email.com",
+        "emailPlaceholder": "మీ ఇమెయిల్",
         "addressLabel": "చిరునామా",
         "addressPlaceholder": "123 ప్రధాన వీధి",
         "genderLabel": "లింగం",
         "genderOptions": ["పురుషుడు", "స్త్రీ", "ఇతర"],
-        "birthdayLabel": "పుట్టినరోజు",
-        "birthdayPlaceholder": "మీ పుట్టినరోజును ఎంచుకోండి",
+        "dobLabel": "జన్మ తేది",
+        "dobPlaceholder": "మీ జన్మ తేదిని ఎంచుకోండి",
         "saveButtonText": "మార్పులను సేవ్ చేయండి",
-        "uploadError": "చిత్రం అప్‌లోడ్ చేయడంలో వైఫల్యం",
-        "noData": "ఈ వినియోగదారుడికి ప్రొఫైల్ డేటా కనుగొనబడలేదు."
+        "noData": "ప్రొఫైల్ డేటా దొరకలేదు.",
+        "uploadError": "చిత్రం అప్‌లోడ్ చేయడంలో వైఫల్యం."
       },
       "sos": {
         "header": "రక్షాసేతు SOS",
