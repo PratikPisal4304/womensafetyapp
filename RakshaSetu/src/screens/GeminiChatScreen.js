@@ -471,6 +471,23 @@ export default function GeminiChatScreen({ navigation }) {
     );
   };
 
+  // New function: Delete a previous conversation.
+  const handleDeleteChat = (chatId) => {
+    Alert.alert(
+      'Delete Conversation',
+      'Are you sure you want to delete this conversation?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: async () => {
+            const updatedChats = previousChats.filter(chat => chat.id !== chatId);
+            setPreviousChats(updatedChats);
+            await AsyncStorage.setItem('previousLegalChats', JSON.stringify(updatedChats));
+          }
+        },
+      ]
+    );
+  };
+
   // Load a previous chat.
   const handleLoadChat = (chat) => {
     setMessages(chat.messages);
@@ -629,20 +646,27 @@ export default function GeminiChatScreen({ navigation }) {
               </View>
             ) : (
               previousChats.map(chat => (
-                <TouchableOpacity key={chat.id} style={[styles.historyItem, { borderBottomColor: BORDER_COLOR }]} onPress={() => handleLoadChat(chat)}>
-                  <View style={styles.historyItemContent}>
-                    <MaterialIcons name="history" size={20} color={PINK} />
-                    <View style={styles.historyItemText}>
-                      <Text style={[styles.historyItemTitle, { color: TEXT_COLOR }]} numberOfLines={1}>
-                        {chat.title}
-                      </Text>
-                      <Text style={[styles.historyItemDate, { color: LIGHT_TEXT }]}>
-                        {new Date(chat.timestamp).toLocaleDateString()}
-                      </Text>
+                <View key={chat.id} style={[styles.historyItem, { borderBottomColor: BORDER_COLOR, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+                  <TouchableOpacity style={{ flex: 1 }} onPress={() => handleLoadChat(chat)}>
+                    <View style={styles.historyItemContent}>
+                      <MaterialIcons name="history" size={20} color={PINK} />
+                      <View style={styles.historyItemText}>
+                        <Text style={[styles.historyItemTitle, { color: TEXT_COLOR }]} numberOfLines={1}>
+                          {chat.title}
+                        </Text>
+                        <Text style={[styles.historyItemDate, { color: LIGHT_TEXT }]}>
+                          {new Date(chat.timestamp).toLocaleDateString()}
+                        </Text>
+                      </View>
                     </View>
+                  </TouchableOpacity>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <TouchableOpacity onPress={() => handleDeleteChat(chat.id)}>
+                      <Ionicons name="trash-outline" size={20} color={DANGER_COLOR} style={{ marginRight: 8 }} />
+                    </TouchableOpacity>
+                    <Ionicons name="chevron-forward" size={20} color={LIGHT_TEXT} />
                   </View>
-                  <Ionicons name="chevron-forward" size={20} color={LIGHT_TEXT} />
-                </TouchableOpacity>
+                </View>
               ))
             )}
           </ScrollView>
@@ -844,10 +868,7 @@ const styles = StyleSheet.create({
   },
   historyItem: {
     paddingVertical: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     borderBottomWidth: 1,
-    alignItems: 'center',
   },
   historyItemContent: {
     flexDirection: 'row',
