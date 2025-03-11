@@ -19,10 +19,14 @@ import * as Location from 'expo-location';
 import { Audio } from 'expo-av';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+// New Firestore imports
+import { setDoc, doc } from 'firebase/firestore';
+import { db } from '../../config/firebaseConfig';
 
 const GEMINI_API_KEY = 'AIzaSyBzqSJUt0MVs3xFjFWTvLwiyjXwnzbkXok'; // Replace with your key or use env variables
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
@@ -317,12 +321,10 @@ ____________________________
     }
   };
 
+  // Connect with Firestore: Save report to database
   const saveReport = async (reportData) => {
     try {
-      const reportsJson = await AsyncStorage.getItem('incident_reports');
-      const reports = reportsJson ? JSON.parse(reportsJson) : [];
-      reports.unshift(reportData);
-      await AsyncStorage.setItem('incident_reports', JSON.stringify(reports));
+      await setDoc(doc(db, 'incident_reports', reportData.id), reportData);
     } catch (error) {
       console.error('Saving report error:', error);
     }

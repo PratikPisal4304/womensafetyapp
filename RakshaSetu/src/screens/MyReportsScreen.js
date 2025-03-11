@@ -15,9 +15,10 @@ import {
   Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { Audio } from 'expo-av';
+import { collection, query, orderBy, getDocs, deleteDoc, updateDoc, doc } from 'firebase/firestore';
+import { db } from '../../config/firebaseConfig';
 
 const MyReportScreen = ({ navigation }) => {
   const [reports, setReports] = useState([]);
@@ -33,14 +34,17 @@ const MyReportScreen = ({ navigation }) => {
   const [editedDescription, setEditedDescription] = useState('');
   const [editedLocation, setEditedLocation] = useState('');
 
-  // Load reports from storage and sort them (newest first)
+  // Load reports from Firestore and sort them (newest first)
   const loadReports = async () => {
     try {
       setLoading(true);
-      const reportsJson = await AsyncStorage.getItem('incident_reports');
-      const loadedReports = reportsJson ? JSON.parse(reportsJson) : [];
-      const sortedReports = loadedReports.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-      setReports(sortedReports);
+      const q = query(collection(db, 'incident_reports'), orderBy('timestamp', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const reportsArray = [];
+      querySnapshot.forEach((docSnap) => {
+        reportsArray.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      setReports(reportsArray);
     } catch (error) {
       Alert.alert('Error', 'Failed to load reports');
     } finally {
@@ -73,7 +77,7 @@ const MyReportScreen = ({ navigation }) => {
     setIsEditing(false);
   };
 
-  // Confirm and delete report
+  // Confirm and delete report from Firestore
   const deleteReport = (id) => {
     Alert.alert(
       "Confirm Delete",
@@ -85,9 +89,8 @@ const MyReportScreen = ({ navigation }) => {
           style: "destructive", 
           onPress: async () => {
             try {
-              const updatedReports = reports.filter(report => report.id !== id);
-              setReports(updatedReports);
-              await AsyncStorage.setItem('incident_reports', JSON.stringify(updatedReports));
+              await deleteDoc(doc(db, 'incident_reports', id));
+              setReports(reports.filter(report => report.id !== id));
               if (selectedReport && selectedReport.id === id) {
                 goBackToList();
               }
@@ -125,16 +128,16 @@ const MyReportScreen = ({ navigation }) => {
     );
   };
 
-  // Submit a report: update status from Draft to Submitted and save
+  // Submit a report: update status from Draft to Submitted and save in Firestore
   const submitReport = async () => {
     if (!selectedReport) return;
     const updatedReport = { ...selectedReport, status: 'Submitted' };
-    const updatedReports = reports.map(report => 
-      report.id === selectedReport.id ? updatedReport : report
-    );
     try {
+      await updateDoc(doc(db, 'incident_reports', selectedReport.id), { status: 'Submitted' });
+      const updatedReports = reports.map(report => 
+        report.id === selectedReport.id ? updatedReport : report
+      );
       setReports(updatedReports);
-      await AsyncStorage.setItem('incident_reports', JSON.stringify(updatedReports));
       setSelectedReport(updatedReport);
       setIsEditing(false);
       Alert.alert('Success', 'Report submitted successfully');
@@ -161,12 +164,16 @@ const MyReportScreen = ({ navigation }) => {
       description: editedDescription,
       location: editedLocation
     };
-    const updatedReports = reports.map(report =>
-      report.id === selectedReport.id ? updatedReport : report
-    );
     try {
+      await updateDoc(doc(db, 'incident_reports', selectedReport.id), {
+        incidentType: editedIncidentType,
+        description: editedDescription,
+        location: editedLocation
+      });
+      const updatedReports = reports.map(report =>
+        report.id === selectedReport.id ? updatedReport : report
+      );
       setReports(updatedReports);
-      await AsyncStorage.setItem('incident_reports', JSON.stringify(updatedReports));
       setSelectedReport(updatedReport);
       setIsEditing(false);
       Alert.alert('Success', 'Report updated successfully');
