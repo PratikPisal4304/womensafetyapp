@@ -24,10 +24,10 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// New Firebase Storage imports
+// Firebase imports for Storage, Firestore, and Auth
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { setDoc, doc } from 'firebase/firestore';
-import { db } from '../../config/firebaseConfig';
+import { setDoc, doc, getDoc } from 'firebase/firestore';
+import { db, auth } from '../../config/firebaseConfig';
 
 const GEMINI_API_KEY = 'AIzaSyBzqSJUt0MVs3xFjFWTvLwiyjXwnzbkXok'; // Replace with your key or use env variables
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
@@ -297,6 +297,18 @@ ____________________________
       const aiResponse = await result.response;
       const aiReport = aiResponse.text();
       const timestamp = new Date();
+      
+      // Fetch the logged in user's name from Firestore "users" collection using their uid
+      let reportedBy = 'Anonymous';
+      if (auth.currentUser) {
+        const userDocSnap = await getDoc(doc(db, 'users', auth.currentUser.uid));
+        if (userDocSnap.exists()) {
+          reportedBy = userDocSnap.data().name || auth.currentUser.displayName || 'Anonymous';
+        } else {
+          reportedBy = auth.currentUser.displayName || 'Anonymous';
+        }
+      }
+
       const formattedReportData = {
         id: timestamp.toISOString(),
         incidentId: timestamp.toISOString(),
@@ -308,7 +320,8 @@ ____________________________
         hasRecording: !!recordingUri,
         imageCount: images.length,
         reportContent: aiReport,
-        attachedImages: images
+        attachedImages: images,
+        reportedBy
       };
       await saveReport(formattedReportData);
       setReportData(formattedReportData);
@@ -423,6 +436,7 @@ ____________________________
               <p><strong>Date & Time of Incident:</strong> ${reportData.timestamp.toLocaleString()}</p>
               <p><strong>Location:</strong> ${reportData.location}</p>
               ${reportData.locationCoords ? `<p><strong>GPS Coordinates:</strong> (${reportData.locationCoords.latitude.toFixed(6)}, ${reportData.locationCoords.longitude.toFixed(6)})</p>` : ''}
+              <p><strong>Reported By:</strong> ${reportData.reportedBy}</p>
             </div>
             <div class="section">
               <h2>Detailed Description</h2>
