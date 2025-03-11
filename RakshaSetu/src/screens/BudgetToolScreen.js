@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { PieChart } from 'react-native-chart-kit';
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 const themeColor = '#ff5f96';
@@ -125,8 +126,8 @@ const InsightCard = ({ insight }) => (
   </View>
 );
 
-// Goal Card Component with inline editing functionality
-const GoalCard = ({ goal, onUpdateGoal }) => {
+// Goal Card Component with inline editing functionality and delete option
+const GoalCard = ({ goal, onUpdateGoal, onDeleteGoal }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedCurrent, setEditedCurrent] = useState(goal.current.toString());
   const [editedTarget, setEditedTarget] = useState(goal.target.toString());
@@ -144,9 +145,14 @@ const GoalCard = ({ goal, onUpdateGoal }) => {
     <View style={styles.goalCard}>
       <View style={styles.goalHeader}>
         <Text style={styles.goalName}>{goal.name}</Text>
-        <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(!isEditing)}>
-          <FontAwesome5 name={isEditing ? 'check' : 'edit'} size={16} color={isEditing ? '#2EC4B6' : '#666'} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row' }}>
+          <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(!isEditing)}>
+            <FontAwesome5 name={isEditing ? 'check' : 'edit'} size={16} color={isEditing ? '#2EC4B6' : '#666'} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.deleteButton} onPress={() => onDeleteGoal(goal.id)}>
+            <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
+          </TouchableOpacity>
+        </View>
       </View>
       {isEditing ? (
         <View style={styles.goalEditContainer}>
@@ -462,6 +468,21 @@ const BudgetToolScreen = () => {
     loadData();
   }, []);
 
+  // Reload categories when the screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      const loadCategoriesFocus = async () => {
+        try {
+          const storedCategories = await AsyncStorage.getItem('@categories');
+          if (storedCategories) setCategories(JSON.parse(storedCategories));
+        } catch (error) {
+          console.error('Error loading categories on focus', error);
+        }
+      };
+      loadCategoriesFocus();
+    }, [])
+  );
+
   // Save transactions to AsyncStorage
   useEffect(() => {
     const saveTransactions = async () => {
@@ -581,6 +602,12 @@ const BudgetToolScreen = () => {
   // Function to delete a transaction
   const deleteTransaction = (txnId) => {
     setTransactions(transactions.filter((txn) => txn.id !== txnId));
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  // Function to delete a financial goal
+  const deleteGoal = (goalId) => {
+    setGoals((prevGoals) => prevGoals.filter((goal) => goal.id !== goalId));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
@@ -727,12 +754,15 @@ const BudgetToolScreen = () => {
                   key={cat.id}
                   category={cat}
                   computedSpent={cat.spent}
-                  onUpdateBudget={(id, newBudget) => {
-                    setCategories(
-                      categories.map((cat) =>
+                  onUpdateBudget={async (id, newBudget) => {
+                    setCategories((prevCategories) => {
+                      const updatedCategories = prevCategories.map((cat) =>
                         cat.id === id ? { ...cat, budget: newBudget } : cat
-                      )
-                    );
+                      );
+                      AsyncStorage.setItem('@categories', JSON.stringify(updatedCategories))
+                        .catch((error) => console.error("Error saving updated categories", error));
+                      return updatedCategories;
+                    });
                   }}
                 />
               ))}
@@ -847,7 +877,12 @@ const BudgetToolScreen = () => {
               </TouchableOpacity>
             </View>
             {goals.map((goal) => (
-              <GoalCard key={goal.id} goal={goal} onUpdateGoal={updateGoal} />
+              <GoalCard
+                key={goal.id}
+                goal={goal}
+                onUpdateGoal={updateGoal}
+                onDeleteGoal={deleteGoal}
+              />
             ))}
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recommendations</Text>
@@ -1125,6 +1160,7 @@ const styles = StyleSheet.create({
   goalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   goalName: { fontSize: 16, fontWeight: 'bold', color: '#333' },
   editButton: { padding: 5 },
+  deleteButton: { padding: 5, marginLeft: 10 },
   goalProgressContainer: { height: 8, backgroundColor: '#EAEAEA', borderRadius: 4, overflow: 'hidden', marginBottom: 10 },
   goalProgressBar: { height: '100%', backgroundColor: '#ff5f96' },
   goalDetails: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
