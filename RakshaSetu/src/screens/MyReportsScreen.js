@@ -12,7 +12,9 @@ import {
   Share,
   RefreshControl,
   ActivityIndicator,
-  Image
+  Image,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -370,7 +372,15 @@ const MyReportScreen = ({ navigation }) => {
     );
   };
 
-  return currentView === 'list' ? <ReportListView /> : <ReportDetailView />;
+  return (
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={60}
+    >
+      {currentView === 'list' ? <ReportListView /> : <ReportDetailView />}
+    </KeyboardAvoidingView>
+  );
 };
 
 const styles = StyleSheet.create({
@@ -454,6 +464,52 @@ const styles = StyleSheet.create({
   saveButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   cancelButton: { backgroundColor: '#dc3545', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 4 },
   cancelButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+  modalContent: { backgroundColor: 'white', borderRadius: 8, padding: 20, maxHeight: '80%' },
+  modalHeader: { borderBottomWidth: 1, borderBottomColor: '#ddd', paddingBottom: 8, marginBottom: 12 },
+  modalTitle: { fontSize: 20, fontWeight: '600', color: '#333', textAlign: 'center' },
+  modalScroll: { paddingBottom: 20 },
+  reportContainer: { marginBottom: 20 },
+  reportTitle: { fontSize: 18, fontWeight: '600', marginBottom: 4, color: '#333', textAlign: 'center' },
+  reportTimestamp: { fontSize: 12, color: '#666', marginBottom: 12, textAlign: 'center' },
+  reportSectionTitle: { fontSize: 16, fontWeight: '600', marginTop: 12, marginBottom: 4, color: '#444' },
+  reportText: { fontSize: 14, color: '#444', lineHeight: 20 },
+  photoScroll: { marginVertical: 8 },
+  reportPhoto: { width: 120, height: 120, borderRadius: 8, marginRight: 8 },
+  aiAnalysisContainer: { marginTop: 8, backgroundColor: '#f0f0f0', borderRadius: 8, padding: 10 },
+  aiAnalysisText: { fontSize: 14, color: '#333', lineHeight: 20 },
+  modalFooter: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  modalActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ff6b93',
+    paddingVertical: 5,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginHorizontal: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  modalActionButtonText: { color: 'white', fontWeight: '700', fontSize: 16, marginLeft: 8 },
+  closeModalButton: {
+    backgroundColor: '#ff6b93',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  closeModalButtonText: { color: 'white', fontWeight: '700', fontSize: 16 },
 });
 
 export default MyReportScreen;
