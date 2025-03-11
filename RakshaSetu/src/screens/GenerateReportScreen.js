@@ -24,7 +24,8 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// New Firestore imports
+// New Firebase Storage imports
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { setDoc, doc } from 'firebase/firestore';
 import { db } from '../../config/firebaseConfig';
 
@@ -321,9 +322,40 @@ ____________________________
     }
   };
 
-  // Connect with Firestore: Save report to database
+  // --- New Helper Function for Uploading Images to Firebase Storage ---
+  const uploadImageAsync = async (uri, imageName, reportId) => {
+    const blob = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = function() {
+        resolve(xhr.response);
+      };
+      xhr.onerror = function(e) {
+        console.error(e);
+        reject(new TypeError('Network request failed'));
+      };
+      xhr.responseType = 'blob';
+      xhr.open('GET', uri, true);
+      xhr.send(null);
+    });
+    const storage = getStorage();
+    const storageRef = ref(storage, `incident_reports/${reportId}/${imageName}`);
+    await uploadBytes(storageRef, blob);
+    blob.close();
+    const downloadURL = await getDownloadURL(storageRef);
+    return downloadURL;
+  };
+
+  // Connect with Firestore and Firebase Storage: Save report to database and upload images
   const saveReport = async (reportData) => {
     try {
+      let uploadedImages = [];
+      if (images.length > 0) {
+        uploadedImages = await Promise.all(
+          images.map((uri, index) => uploadImageAsync(uri, `image_${index}.jpg`, reportData.id))
+        );
+      }
+      reportData.attachedImages = uploadedImages;
+      reportData.imageCount = uploadedImages.length;
       await setDoc(doc(db, 'incident_reports', reportData.id), reportData);
     } catch (error) {
       console.error('Saving report error:', error);
