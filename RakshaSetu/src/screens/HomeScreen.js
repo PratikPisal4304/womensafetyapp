@@ -188,7 +188,7 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         {/* Journey Section */}
-        <TouchableOpacity style={styles.journeySection} onPress={() => navigation.navigate('Journey')}>
+        <TouchableOpacity style={styles.journeySection} onPress={() => navigation.navigate('TrackMe')}>
           <View style={styles.journeyContent}>
             <Image
               source={require('../../assets/journey.png')}

@@ -76,6 +76,7 @@ export default function TrackMeScreen() {
   const mapRef = useRef(null);
   const debounceTimerRef = useRef(null);
   const journeyStartTimeRef = useRef(null); // New ref to track journey start time
+  const searchInputRef = useRef(null);
 
   // Basic state variables
   const [location, setLocation] = useState(null);
@@ -117,6 +118,8 @@ export default function TrackMeScreen() {
 
   useEffect(() => {
     requestLocationPermission();
+    // Auto-focus the search bar on mount
+    searchInputRef.current?.focus();
   }, []);
 
   const requestLocationPermission = async () => {
@@ -613,6 +616,7 @@ export default function TrackMeScreen() {
         <View style={styles.searchCard}>
           <Ionicons name="search" size={20} color="#666" style={{ marginLeft: 10 }} />
           <TextInput
+            ref={searchInputRef}
             style={styles.searchInput}
             placeholder="Enter destination"
             placeholderTextColor="#666"
@@ -939,7 +943,6 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     maxHeight: height * 0.7,
     marginHorizontal: 20,
-    // Shadow for iOS and elevation for Android
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.3,

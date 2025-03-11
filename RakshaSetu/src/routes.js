@@ -49,6 +49,7 @@ function HomeStack() {
       <Stack.Screen name="FakeCall" component={FakeCallScreen} />
       <Stack.Screen name="AddFriends" component={AddFriendsScreen} />
       <Stack.Screen name="GenerateReport" component={GenerateReportScreen} />
+      <Stack.Screen name="TrackMe" component={TrackMeScreen} />
       <Stack.Screen name="SkillDevelopment" component={SkillDevelopmentScreen} />
       <Stack.Screen name="BudgetTool" component={BudgetToolScreen} />
       <Stack.Screen name="FinancialNews" component={FinancialNews} />
