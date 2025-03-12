@@ -22,14 +22,15 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { useTranslation } from 'react-i18next';
-import i18next from '../i18n';
+// Import client IDs from environment variables
+import { EXPO_CLIENT_ID, IOS_CLIENT_ID, ANDROID_CLIENT_ID, WEB_CLIENT_ID } from '@env';
 
 const { width, height } = Dimensions.get('window');
 const PINK = '#ff5f96';
 
 WebBrowser.maybeCompleteAuthSession();
 
-export default function LoginScreen({ navigation }) {
+ function LoginScreen({ navigation }) {
   const { t, i18n } = useTranslation();
   const [mobileNumber, setMobileNumber] = useState('');
   // selectedLanguage is now managed with i18n.changeLanguage if needed
@@ -54,10 +55,10 @@ export default function LoginScreen({ navigation }) {
   }, []);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    expoClientId: 'YOUR_EXPO_CLIENT_ID.apps.googleusercontent.com',
-    iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com',
-    androidClientId: 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com',
-    webClientId: '704291591905-l12877n9vn4koms6lj9un8fvanb6av0u.apps.googleusercontent.com',
+    expoClientId: EXPO_CLIENT_ID,
+    iosClientId: IOS_CLIENT_ID,
+    androidClientId: ANDROID_CLIENT_ID,
+    webClientId: WEB_CLIENT_ID,
   });
 
   useEffect(() => {
@@ -316,3 +317,5 @@ const styles = StyleSheet.create({
   languageItem: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
   languageItemText: { fontSize: 16, color: '#333' },
 });
+
+export default LoginScreen;
