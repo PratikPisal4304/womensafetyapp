@@ -1,35 +1,42 @@
 // firebaseConfig.js
 
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 import {
   initializeAuth,
-  getReactNativePersistence
+  getReactNativePersistence,
 } from 'firebase/auth';
-// Import the AsyncStorage library for React Native:
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-// --- Your existing Firebase web config:
+
+// Import configuration values from .env
+import { 
+  FIREBASE_API_KEY, 
+  FIREBASE_AUTH_DOMAIN, 
+  FIREBASE_PROJECT_ID, 
+  FIREBASE_STORAGE_BUCKET, 
+  FIREBASE_MESSAGING_SENDER_ID, 
+  FIREBASE_APP_ID, 
+  FIREBASE_MEASUREMENT_ID 
+} from '@env';
+
+// Your Firebase config object
 const firebaseConfig = {
-  apiKey: "AIzaSyBRD6pmrMCcuAksz8hqxXAkP8hV3jih47c",
-  authDomain: "rakshasetu-c9e0b.firebaseapp.com",
-  projectId: "rakshasetu-c9e0b",
-  storageBucket: "rakshasetu-c9e0b.firebasestorage.app",
-  messagingSenderId: "704291591905",
-  appId: "1:704291591905:web:ffde7bd519cfad3106c9a0",
-  measurementId: "G-JJ881F4VBQ"
+  apiKey: FIREBASE_API_KEY,
+  authDomain: FIREBASE_AUTH_DOMAIN,
+  projectId: FIREBASE_PROJECT_ID,
+  storageBucket: FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: FIREBASE_MESSAGING_SENDER_ID,
+  appId: FIREBASE_APP_ID,
+  measurementId: FIREBASE_MEASUREMENT_ID,
 };
 
-// 1) Initialize the Firebase app:
-const app = initializeApp(firebaseConfig);
+// Only initialize if no apps have been initialized yet
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-// 2) Set up auth with RN persistence:
+// Set up auth with React Native persistence:
 export const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(AsyncStorage),
 });
 export const db = getFirestore(app);
 export const storage = getStorage(app);
-
-
-
-
