@@ -37,6 +37,7 @@ import {
 } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { app } from '../../config/firebaseConfig';
+import { useNavigation } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
 const HEADER_HEIGHT = 160;
@@ -142,24 +143,35 @@ const HeaderComponent = ({
   setSearchQuery,
   onFocusSearch,
   onClearSearch
-}) => (
-  <SafeAreaView style={styles.fixedHeader}>
-    <View style={styles.headerContent}>
-      <View style={styles.headerTop}>
-        <View>
-          <Text style={styles.welcomeText}>Hello, {userName}</Text>
-          <Text style={styles.headerTitle}>Financial Skills Hub</Text>
+}) => {
+  const navigation = useNavigation(); // Get navigation object here
+  return (
+    <SafeAreaView style={styles.fixedHeader}>
+      <View style={styles.headerContent}>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.welcomeText}>Hello, {userName}</Text>
+            <Text style={styles.headerTitle}>Financial Skills Hub</Text>
+          </View>
+          {/* News Button with Label */}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('FinancialNews')}
+            style={styles.newsButton}
+          >
+            <Ionicons name="newspaper-outline" size={24} color="white" />
+            <Text style={styles.newsLabel}>News</Text>
+          </TouchableOpacity>
         </View>
+        <SearchBar
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          onFocus={onFocusSearch}
+          onClear={onClearSearch}
+        />
       </View>
-      <SearchBar
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        onFocus={onFocusSearch}
-        onClear={onClearSearch}
-      />
-    </View>
-  </SafeAreaView>
-);
+    </SafeAreaView>
+  );
+};
 
 const SearchBar = ({ searchQuery, setSearchQuery, onFocus, onClear }) => (
   <View style={styles.searchBarContainer}>
@@ -1000,6 +1012,8 @@ const styles = StyleSheet.create({
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 },
   welcomeText: { fontSize: 14, color: 'rgba(255,255,255,0.9)', marginBottom: 4 },
   headerTitle: { fontSize: 24, fontWeight: 'bold', color: 'white' },
+  newsButton: { padding: 8, alignItems: 'center' },
+  newsLabel: { color: 'white', fontSize: 12, marginTop: 4 },
   headerIcons: { flexDirection: 'row', alignItems: 'center' },
   iconButton: { marginRight: 16, position: 'relative' },
   notificationBadge: { position: 'absolute', top: -5, right: -5, backgroundColor: '#FF8C00', borderRadius: 10, width: 16, height: 16, justifyContent: 'center', alignItems: 'center' },
@@ -1116,7 +1130,15 @@ const styles = StyleSheet.create({
   video: { width: '100%', height: 300 },
   closeButton: { marginTop: 20, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#ff5f96', borderRadius: 10 },
   closeButtonText: { color: 'white', fontSize: 16 },
-  // Note Modal Styles removed.
+  // Notification Modal Styles
+  modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
+  modalContent: { width: '80%', backgroundColor: 'white', borderRadius: 12, padding: 20 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10, color: '#333' },
+  modalScrollView: { maxHeight: 200 },
+  notificationItem: { paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  notificationText: { fontSize: 16, color: '#555' },
+  modalCloseButton: { marginTop: 20, backgroundColor: '#ff5f96', paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  modalCloseButtonText: { color: 'white', fontSize: 16 },
 });
 
 export default SkillDevelopmentScreen;
