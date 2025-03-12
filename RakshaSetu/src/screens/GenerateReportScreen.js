@@ -24,12 +24,14 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+// Import the API key from the .env file
+import { GEMINI_API_KEY } from '@env';
+
 // Firebase imports for Storage, Firestore, and Auth
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { setDoc, doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../../config/firebaseConfig';
 
-const GEMINI_API_KEY = 'AIzaSyBzqSJUt0MVs3xFjFWTvLwiyjXwnzbkXok'; // Replace with your key or use env variables
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 const GenerateReportScreen = ({ navigation }) => {
