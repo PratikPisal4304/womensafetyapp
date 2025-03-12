@@ -27,12 +27,15 @@ import * as Google from 'expo-auth-session/providers/google';
 
 import { useTranslation } from 'react-i18next';
 
+// Import the client IDs from environment variables
+import { EXPO_CLIENT_ID, IOS_CLIENT_ID, ANDROID_CLIENT_ID, WEB_CLIENT_ID } from '@env';
+
 const { width, height } = Dimensions.get('window');
 const PINK = '#ff5f96';
 
 WebBrowser.maybeCompleteAuthSession();
 
-export default function SignUpScreen({ navigation }) {
+function SignUpScreen({ navigation }) {
   // Form fields for email sign up
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -58,12 +61,12 @@ export default function SignUpScreen({ navigation }) {
     console.log('i18n object:', i18n);
   }, [i18n]);
 
-  // Google sign-in hook (Replace placeholder client IDs with your actual ones)
+  // Google sign-in hook using environment variables for client IDs
   const [request, response, promptAsync] = Google.useAuthRequest({
-    expoClientId: 'YOUR_EXPO_CLIENT_ID.apps.googleusercontent.com',
-    iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com',
-    androidClientId: 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com',
-    webClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+    expoClientId: EXPO_CLIENT_ID,
+    iosClientId: IOS_CLIENT_ID,
+    androidClientId: ANDROID_CLIENT_ID,
+    webClientId: WEB_CLIENT_ID,
   });
 
   // Monitor Google sign-in response
@@ -278,11 +281,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginRight: 6,
   },
-  languageText: {
-    color: '#fff',
-    fontSize: 14,
-    marginRight: 4,
-  },
+  languageText: { color: '#fff', fontSize: 14, marginRight: 4 },
   formCard: {
     backgroundColor: '#fff',
     borderRadius: 40,
@@ -298,12 +297,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
-  label: {
-    fontSize: 17,
-    color: '#333',
-    fontWeight: '600',
-    marginBottom: 8,
-  },
+  label: { fontSize: 17, color: '#333', fontWeight: '600', marginBottom: 8 },
   input: {
     height: 50,
     backgroundColor: '#f8f8f8',
@@ -323,11 +317,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 20,
   },
-  googleButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  googleButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   signUpButton: {
     backgroundColor: '#ff5f96',
     paddingVertical: 16,
@@ -336,11 +326,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     elevation: 3,
   },
-  signUpButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+  signUpButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   footerContainer: {
     marginTop: 'auto',
     alignItems: 'center',
@@ -352,41 +338,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
-  linkText: {
-    color: '#ff5f96',
-    fontWeight: '600',
-  },
-  signupContainer: {
-    flexDirection: 'row',
-    marginTop: 10,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  modalContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 20,
-    maxHeight: '60%',
-    alignSelf: 'center',
-    width: '100%',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 10,
-    color: '#333',
-  },
-  languageItem: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  languageItemText: {
-    fontSize: 16,
-    color: '#333',
-  },
+  linkText: { color: '#ff5f96', fontWeight: '600' },
+  signupContainer: { flexDirection: 'row', marginTop: 10 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', padding: 20 },
+  modalContainer: { backgroundColor: '#fff', borderRadius: 15, padding: 20, maxHeight: '60%', alignSelf: 'center', width: '100%' },
+  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 10, color: '#333' },
+  languageItem: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  languageItemText: { fontSize: 16, color: '#333' },
 });
+
+export default SignUpScreen;
