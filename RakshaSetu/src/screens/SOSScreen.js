@@ -25,8 +25,8 @@ import {
 import { auth, db } from '../../config/firebaseConfig';
 import { useRoute, useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-
-const GOOGLE_API_KEY = 'AIzaSyBzqSJUt0MVs3xFjFWTvLwiyjXwnzbkXok';
+// Import the API key from the .env file
+import { GOOGLE_MAPS_API_KEY } from '@env';
 
 function SOSScreen() {
   const { t } = useTranslation();
@@ -116,7 +116,7 @@ function SOSScreen() {
     setCountdown(10);
   };
 
-  // Send an in-app chat message (already implemented).
+  // Send an in-app chat message.
   const sendSOSInAppChat = async (message) => {
     const user = auth.currentUser;
     if (!user) return;
@@ -146,7 +146,7 @@ function SOSScreen() {
     }
   };
 
-  // Log the SOS event to Firestore in a new "sosAlerts" collection.
+  // Log the SOS event to Firestore.
   const logSOSEvent = async (data) => {
     try {
       await addDoc(collection(db, 'sosAlerts'), {
@@ -182,10 +182,24 @@ function SOSScreen() {
       setLocation(loc.coords);
       const { latitude, longitude } = loc.coords;
 
-      // Construct Street View URLs for multiple headings
-      const streetViewUrl1 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=0&pitch=10&key=${GOOGLE_API_KEY}`;
-      const streetViewUrl2 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=120&pitch=10&key=${GOOGLE_API_KEY}`;
-      const streetViewUrl3 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=240&pitch=10&key=${GOOGLE_API_KEY}`;
+      // Verify API key is loaded
+      if (!GOOGLE_MAPS_API_KEY) {
+        console.error("GOOGLE_MAPS_API_KEY is not defined!");
+        Alert.alert(t('common.error'), "API key not found.");
+        setIsSendingSOS(false);
+        return;
+      }
+      console.log("GOOGLE_MAPS_API_KEY:", GOOGLE_MAPS_API_KEY);
+
+      // Construct Street View URLs using the API key from .env.
+      const streetViewUrl1 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=0&pitch=10&key=${GOOGLE_MAPS_API_KEY}`;
+      const streetViewUrl2 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=120&pitch=10&key=${GOOGLE_MAPS_API_KEY}`;
+      const streetViewUrl3 = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${latitude},${longitude}&fov=90&heading=240&pitch=10&key=${GOOGLE_MAPS_API_KEY}`;
+
+      // Log the constructed URLs for debugging purposes.
+      console.log("Street View URL 1:", streetViewUrl1);
+      console.log("Street View URL 2:", streetViewUrl2);
+      console.log("Street View URL 3:", streetViewUrl3);
       
       // Build message text
       const message = `${t('sos.header')}
