@@ -17,11 +17,11 @@ import MapView, { Marker, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import PolylineDecoder from '@mapbox/polyline';
 import { Ionicons } from '@expo/vector-icons';
+// Import the API key from the .env file
+import { GOOGLE_MAPS_API_KEY } from '@env';
 
 const { width, height } = Dimensions.get('window');
 const PINK = '#ff5f96'; // Used in other parts of the app (header, buttons, etc.)
-// Replace with your actual Google Maps API Key
-const GOOGLE_MAPS_API_KEY = 'AIzaSyBzqSJUt0MVs3xFjFWTvLwiyjXwnzbkXok';
 
 // Custom map style
 const customMapStyle = [
@@ -72,10 +72,10 @@ const SafetyRatingIndicator = ({ score }) => {
   );
 };
 
-export default function TrackMeScreen() {
+function TrackMeScreen() {
   const mapRef = useRef(null);
   const debounceTimerRef = useRef(null);
-  const journeyStartTimeRef = useRef(null); // New ref to track journey start time
+  const journeyStartTimeRef = useRef(null); // Track journey start time
   const searchInputRef = useRef(null);
 
   // Basic state variables
@@ -281,10 +281,12 @@ export default function TrackMeScreen() {
         `https://maps.googleapis.com/maps/api/directions/json?origin=${location.latitude},${location.longitude}&destination=${destinationCoord.latitude},${destinationCoord.longitude}&mode=${mode}&alternatives=true&key=${GOOGLE_MAPS_API_KEY}`
       );
       const data = await response.json();
+      console.log('Routes returned:', data.routes.length);
       if (data.status !== 'OK' || !data.routes || data.routes.length === 0) {
         Alert.alert('Route not found');
         return;
       }
+      // Use the first route as primary
       const primaryRoute = data.routes[0];
       const points = PolylineDecoder.decode(primaryRoute.overview_polyline.points);
       const coords = points.map((point) => ({
@@ -296,9 +298,15 @@ export default function TrackMeScreen() {
         setETA(primaryRoute.legs[0].duration.text);
         setDirectionsSteps(primaryRoute.legs[0].steps);
       }
+      // If there are alternatives (more than one route returned),
+      // set them in state and show the alternative modal.
       if (data.routes.length > 1) {
+        // data.routes.slice(1) returns all alternative routes (if any)
         setAlternativeRoutes(data.routes.slice(1));
         setAlternativeModalVisible(true);
+      } else {
+        setAlternativeRoutes([]);
+        setAlternativeModalVisible(false);
       }
     } catch (error) {
       console.error('Error fetching route', error);
@@ -364,30 +372,34 @@ export default function TrackMeScreen() {
             </TouchableOpacity>
           </View>
           <ScrollView style={styles.modalBodyEnhanced}>
-            {alternativeRoutes.map((route, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.altRouteCard}
-                onPress={() => {
-                  const points = PolylineDecoder.decode(route.overview_polyline.points);
-                  const coords = points.map((point) => ({
-                    latitude: point[0],
-                    longitude: point[1],
-                  }));
-                  setRouteCoords(coords);
-                  if (route.legs && route.legs[0]) {
-                    setETA(route.legs[0].duration.text);
-                    setDirectionsSteps(route.legs[0].steps);
-                  }
-                  setAlternativeModalVisible(false);
-                }}
-              >
-                <Ionicons name="navigate" size={20} color="#333" style={styles.altRouteIcon} />
-                <Text style={styles.altRouteTextEnhanced}>
-                  Route {index + 1}: {route.legs[0].duration.text} ({route.legs[0].distance.text})
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {alternativeRoutes.length > 0 ? (
+              alternativeRoutes.map((route, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.altRouteCard}
+                  onPress={() => {
+                    const points = PolylineDecoder.decode(route.overview_polyline.points);
+                    const coords = points.map((point) => ({
+                      latitude: point[0],
+                      longitude: point[1],
+                    }));
+                    setRouteCoords(coords);
+                    if (route.legs && route.legs[0]) {
+                      setETA(route.legs[0].duration.text);
+                      setDirectionsSteps(route.legs[0].steps);
+                    }
+                    setAlternativeModalVisible(false);
+                  }}
+                >
+                  <Ionicons name="navigate" size={20} color="#333" style={styles.altRouteIcon} />
+                  <Text style={styles.altRouteTextEnhanced}>
+                    Route {index + 1}: {route.legs[0].duration.text} ({route.legs[0].distance.text})
+                  </Text>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <Text style={styles.directionStepTextEnhanced}>No alternative routes available.</Text>
+            )}
           </ScrollView>
         </View>
       </View>
@@ -1002,3 +1014,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+export default TrackMeScreen;
