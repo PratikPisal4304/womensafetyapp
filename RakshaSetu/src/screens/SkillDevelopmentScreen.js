@@ -144,7 +144,7 @@ const HeaderComponent = ({
   onFocusSearch,
   onClearSearch
 }) => {
-  const navigation = useNavigation(); // Get navigation object here
+  const navigation = useNavigation();
   return (
     <SafeAreaView style={styles.fixedHeader}>
       <View style={styles.headerContent}>
@@ -325,7 +325,6 @@ const RecommendedCard = ({ course, onPress, onToggleFavorite, isFavorite }) => (
 
 function SkillDevelopmentScreen({ navigation }) {
   // Core state variables.
-  const [activeTab, setActiveTab] = useState('All');
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -397,13 +396,10 @@ function SkillDevelopmentScreen({ navigation }) {
   const [videoModalVisible, setVideoModalVisible] = useState(false);
   const [videoProgress, setVideoProgress] = useState({});
   const [completedVideoIds, setCompletedVideoIds] = useState([]);
-  // New state to track completed courses.
   const [completedCourses, setCompletedCourses] = useState([]);
-  // New state to track bookmarked videos.
   const [bookmarkedVideos, setBookmarkedVideos] = useState([]);
 
-  // Tabs and quick access categories.
-  const tabs = ['All', 'Financial Basics', 'Investing', 'Entrepreneurship', 'Career Growth', 'Budgeting'];
+  // Quick access categories.
   const categories = [
     { id: 1, name: 'My Learning Path', icon: 'route', gradient: ['#66BB6A', '#43A047'] },
     { id: 2, name: 'Budget Tools', icon: 'calculator', gradient: ['#FF8A65', '#FF5722'] }
@@ -546,7 +542,7 @@ function SkillDevelopmentScreen({ navigation }) {
     }
   }, [currentUser]);
 
-  // Filter courses.
+  // Filter courses based solely on search query.
   const getFilteredCourses = () => {
     let filtered = [...microLearningModules];
     if (debouncedSearchQuery) {
@@ -555,11 +551,6 @@ function SkillDevelopmentScreen({ navigation }) {
           module.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
           module.author.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
           module.tags.some(tag => tag.toLowerCase().includes(debouncedSearchQuery.toLowerCase()))
-      );
-    }
-    if (activeTab !== 'All') {
-      filtered = filtered.filter(module =>
-        module.tags.some(tag => tag.includes(activeTab.split(' ')[0]))
       );
     }
     return filtered;
@@ -788,23 +779,6 @@ function SkillDevelopmentScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#ff5f96']} tintColor="#ff5f96" />
         }
       >
-        {/* Tabs Section */}
-        <View style={styles.tabsContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsScrollContent}>
-            {tabs.map((tab) => (
-              <TouchableOpacity
-                key={tab}
-                style={[styles.tabItem, activeTab === tab && styles.activeTabItem]}
-                onPress={() => {
-                  setActiveTab(tab);
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }}
-              >
-                <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
         {/* Quick Actions Section */}
         <QuickActions
           categories={categories}
@@ -871,7 +845,6 @@ function SkillDevelopmentScreen({ navigation }) {
           onRequestClose={() => setCourseDetailModalVisible(false)}
         >
           <View style={styles.courseDetailModalContainer}>
-            {/* Gradient Header with Share Icon */}
             <LinearGradient colors={['#ff7eb3', '#ff5f96']} style={styles.courseDetailModalHeader}>
               <Text style={styles.courseDetailModalTitle}>Course Details</Text>
               <View style={styles.headerActions}>
@@ -893,7 +866,6 @@ function SkillDevelopmentScreen({ navigation }) {
             <Text style={styles.courseDetailDescription}>
               This course includes multiple video lectures to enhance your learning experience.
             </Text>
-            {/* Overall Progress Bar */}
             <View style={styles.progressBarContainer}>
               <Text style={styles.progressLabel}>Course Progress: {computeCourseProgress()}%</Text>
               <View style={styles.overallProgressBar}>
@@ -919,13 +891,11 @@ function SkillDevelopmentScreen({ navigation }) {
                 </TouchableOpacity>
               ))}
             </ScrollView>
-            {/* If course progress is 100% and not already marked complete, show "Mark as Completed" button */}
             {computeCourseProgress() === 100 && !completedCourses.includes(selectedModule.id) && (
               <TouchableOpacity style={styles.resumeCourseButton} onPress={handleCourseCompletion}>
                 <Text style={styles.resumeCourseButtonText}>Mark as Completed</Text>
               </TouchableOpacity>
             )}
-            {/* Otherwise, if not complete, show Resume Course button */}
             {computeCourseProgress() < 100 && (
               <TouchableOpacity style={styles.resumeCourseButton} onPress={() => setCourseDetailModalVisible(false)}>
                 <Text style={styles.resumeCourseButtonText}>Resume Course</Text>
@@ -1026,18 +996,12 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 15, color: '#333' },
   filterButton: { padding: 8, borderRadius: 8, backgroundColor: '#F5EEF8' },
   scrollContainer: { flex: 1, backgroundColor: '#f8f9fc' },
-  tabsContainer: { backgroundColor: 'white', top: 25, marginBottom: 5, paddingVertical: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  tabsScrollContent: { paddingHorizontal: 16 },
-  tabItem: { paddingHorizontal: 16, paddingVertical: 8, marginRight: 8, borderRadius: 20 },
-  activeTabItem: { backgroundColor: '#ff5f96' },
-  tabText: { fontSize: 14, fontWeight: '500', color: '#666' },
-  activeTabText: { color: 'white', fontWeight: '600' },
-  sectionContainer: { marginTop: 24, paddingHorizontal: 20 },
+  sectionContainer: { marginTop: 50, paddingHorizontal: 20 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sectionTitle: { fontSize: 20, fontWeight: 'bold', color: '#333' },
   seeAllButton: { flexDirection: 'row', alignItems: 'center' },
   seeAllText: { fontSize: 14, color: '#ff5f96', fontWeight: '500', marginRight: 2 },
-  categoriesContainer: { flexDirection: 'row', justifyContent: 'space-between' },
+  categoriesContainer: { flexDirection: 'row', justifyContent: 'space-between', },
   categoryCard: { width: '48%', backgroundColor: 'white', borderRadius: 16, padding: 16, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
   iconContainer: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
   categoryName: { fontSize: 13, fontWeight: '500', textAlign: 'center', color: '#333' },
@@ -1086,7 +1050,6 @@ const styles = StyleSheet.create({
   progressContainer: { marginTop: 8 },
   recommendedActions: { justifyContent: 'center', alignItems: 'center' },
   favoriteButton: { padding: 8 },
-  // Course Detail Modal Styles
   courseDetailModalContainer: { flex: 1, backgroundColor: 'white', marginBottom: 50 },
   courseDetailModalHeader: {
     flexDirection: 'row',
@@ -1123,14 +1086,12 @@ const styles = StyleSheet.create({
   resumeCourseButtonText: { color: 'white', fontSize: 16, fontWeight: '600' },
   closeCourseDetailButton: { marginTop: 12, alignSelf: 'center', padding: 12, backgroundColor: '#ff5f96', borderRadius: 8 },
   closeCourseDetailButtonText: { color: 'white', fontSize: 16 },
-  // Video Modal Styles
   videoModalContainer: { flex: 1, backgroundColor: 'black', justifyContent: 'center', alignItems: 'center' },
   videoModalHeader: { flexDirection: 'row', alignItems: 'center', width: '100%', padding: 10, backgroundColor: 'rgba(0,0,0,0.8)' },
   videoModalTitle: { flex: 1, textAlign: 'center', fontSize: 18, color: 'white' },
   video: { width: '100%', height: 300 },
   closeButton: { marginTop: 20, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#ff5f96', borderRadius: 10 },
   closeButtonText: { color: 'white', fontSize: 16 },
-  // Notification Modal Styles
   modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
   modalContent: { width: '80%', backgroundColor: 'white', borderRadius: 12, padding: 20 },
   modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10, color: '#333' },
