@@ -1,288 +1,397 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Image, ActivityIndicator, StyleSheet, TouchableOpacity, RefreshControl, SafeAreaView, StatusBar, Linking } from 'react-native';
-import { Ionicons } from '@expo/vector-icons'; // Assuming you have Expo installed
+import {
+  View,
+  Text,
+  FlatList,
+  Image,
+  ActivityIndicator,
+  StyleSheet,
+  TouchableOpacity,
+  RefreshControl,
+  SafeAreaView,
+  StatusBar,
+  Linking,
+  Dimensions,
+  Platform,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+
+const { width } = Dimensions.get('window');
+const HEADER_HEIGHT = 190; // Increased header height
 
 const NewsScreen = () => {
-    const [news, setNews] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
+  const [news, setNews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-    const fetchNews = async () => {
-        try {
-            const response = await fetch(
-                'https://newsapi.org/v2/everything?q=women&language=en&apiKey=479eb36d2cdf4453a5dc97c5ac585cec'
-            );
-            const data = await response.json();
-            setNews(data.articles || []);
-        } catch (error) {
-            console.error('Error fetching news:', error);
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
-        }
-    };
+  const fetchNews = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        'https://newsapi.org/v2/everything?q=women+empowerment+finance&language=en&apiKey=479eb36d2cdf4453a5dc97c5ac585cec'
+      );
+      const data = await response.json();
+      setNews(data.articles || []);
+    } catch (error) {
+      console.error('Error fetching news:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
-    useEffect(() => {
-        fetchNews();
-    }, []);
+  useEffect(() => {
+    fetchNews();
+  }, []);
 
-    const onRefresh = () => {
-        setRefreshing(true);
-        fetchNews();
-    };
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchNews();
+  };
 
-    const formatDate = (dateString) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric', 
-            hour: '2-digit', 
-            minute: '2-digit' 
-        });
-    };
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric'
+    });
+  };
 
-    const openArticle = (url) => {
-        if (url) {
-            Linking.openURL(url);
-        }
-    };
+  const openArticle = (url) => {
+    if (url) {
+      Linking.openURL(url);
+    }
+  };
 
-    const renderItem = ({ item }) => (
-        <TouchableOpacity 
-            style={styles.card} 
-            onPress={() => openArticle(item.url)}
-            activeOpacity={0.7}
-        >
-            {item.urlToImage ? (
-                <Image 
-                    source={{ uri: item.urlToImage }} 
-                    style={styles.image}
-                    resizeMode="cover"
-                />
-            ) : (
-                <View style={[styles.image, styles.imagePlaceholder]}>
-                    <Ionicons name="image-outline" size={40} color="#ccc" />
-                </View>
-            )}
-            
-            <View style={styles.cardContent}>
-                <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
-                <Text style={styles.snippet} numberOfLines={3}>{item.description}</Text>
-                
-                <View style={styles.metaContainer}>
-                    <View style={styles.sourceContainer}>
-                        <Ionicons name="newspaper-outline" size={12} color="#6a5bc9" />
-                        <Text style={styles.source}>{item.source?.name || 'Unknown'}</Text>
-                    </View>
-                    <View style={styles.dateContainer}>
-                        <Ionicons name="time-outline" size={12} color="#8e8e8e" />
-                        <Text style={styles.date}>{formatDate(item.publishedAt)}</Text>
-                    </View>
-                </View>
-                
-                {item.author && (
-                    <View style={styles.authorContainer}>
-                        <Ionicons name="person-outline" size={12} color="#8e8e8e" />
-                        <Text style={styles.author} numberOfLines={1}>
-                            {item.author}
-                        </Text>
-                    </View>
-                )}
-            </View>
-        </TouchableOpacity>
-    );
-
-    const renderHeader = () => (
-        <View style={styles.header}>
-            <View style={styles.headerLeft}>
-                <Text style={styles.headerTitle}>Women's News</Text>
-                <Text style={styles.headerSubtitle}>Latest stories and updates</Text>
-            </View>
-            <TouchableOpacity style={styles.refreshButton} onPress={fetchNews}>
-                <Ionicons name="refresh" size={24} color="#fff" />
-            </TouchableOpacity>
+  const renderItem = ({ item, index }) => (
+    <TouchableOpacity 
+      style={[styles.card, index % 2 === 0 ? styles.cardEven : styles.cardOdd]}
+      onPress={() => openArticle(item.url)}
+      activeOpacity={0.8}
+    >
+      <View style={styles.cardHeader}>
+        <View style={styles.sourceTag}>
+          <Text style={styles.sourceText}>{item.source?.name || 'News'}</Text>
         </View>
-    );
-
-    const renderEmpty = () => (
-        <View style={styles.emptyContainer}>
-            <Ionicons name="newspaper-outline" size={50} color="#ccc" />
-            <Text style={styles.emptyText}>No news articles found</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={fetchNews}>
-                <Text style={styles.retryText}>Retry</Text>
-            </TouchableOpacity>
+        <Text style={styles.dateText}>{formatDate(item.publishedAt)}</Text>
+      </View>
+      
+      <View style={styles.cardBody}>
+        {item.urlToImage ? (
+          <Image 
+            source={{ uri: item.urlToImage }} 
+            style={styles.image}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[styles.image, styles.imagePlaceholder]}>
+            <Ionicons name="images" size={40} color="#ffd3e0" />
+          </View>
+        )}
+        
+        <View style={styles.contentContainer}>
+          <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
+          <Text style={styles.snippet} numberOfLines={2}>{item.description}</Text>
+          
+          <View style={styles.cardFooter}>
+            <View style={styles.authorContainer}>
+              <Ionicons name="person" size={14} color="#ff5f96" />
+              <Text style={styles.author} numberOfLines={1}>
+                {item.author || 'Unknown author'}
+              </Text>
+            </View>
+            <View style={styles.readMoreContainer}>
+              <Text style={styles.readMore}>Read more</Text>
+              <Ionicons name="arrow-forward" size={14} color="#ff5f96" />
+            </View>
+          </View>
         </View>
-    );
+      </View>
+    </TouchableOpacity>
+  );
 
-    return (
-        <SafeAreaView style={styles.safeArea}>
-            <StatusBar barStyle="light-content" backgroundColor="#6a5bc9" />
-            {renderHeader()}
-            
-            {loading ? (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#6a5bc9" />
-                    <Text style={styles.loadingText}>Loading latest news...</Text>
-                </View>
-            ) : (
-                <FlatList
-                    data={news}
-                    keyExtractor={(item, index) => item.url || `news-${index}`}
-                    renderItem={renderItem}
-                    contentContainerStyle={styles.listContainer}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={refreshing}
-                            onRefresh={onRefresh}
-                            colors={["#6a5bc9"]}
-                        />
-                    }
-                    ListEmptyComponent={renderEmpty}
-                    showsVerticalScrollIndicator={false}
-                />
-            )}
-        </SafeAreaView>
-    );
+  const renderEmpty = () => (
+    <View style={styles.emptyContainer}>
+      <Ionicons name="newspaper" size={60} color="#ffd3e0" />
+      <Text style={styles.emptyText}>No news articles found</Text>
+      <TouchableOpacity style={styles.retryButton} onPress={fetchNews}>
+        <Text style={styles.retryText}>Refresh</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" backgroundColor="#ff5f96" />
+      {/* Fixed Header that extends to the notification panel */}
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerTitle}>Women's Pulse</Text>
+            <Text style={styles.headerSubtitle}>Stories that matter</Text>
+          </View>
+          <TouchableOpacity style={styles.refreshButton} onPress={fetchNews}>
+            <Ionicons name="refresh" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+        
+        <View style={styles.searchContainer}>
+          <View style={styles.searchBox}>
+            <Ionicons name="search" size={20} color="#ff5f96" />
+            <Text style={styles.searchPlaceholder}>Search for articles...</Text>
+          </View>
+        </View>
+      </View>
+      
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#ff5f96" />
+          <Text style={styles.loadingText}>Finding the latest stories...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={news}
+          keyExtractor={(item, index) => item.url || `news-${index}`}
+          renderItem={renderItem}
+          contentContainerStyle={[styles.listContainer, { marginTop: HEADER_HEIGHT }]}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#ff5f96"]}
+            />
+          }
+          ListEmptyComponent={renderEmpty}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+    </SafeAreaView>
+  );
 };
 
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: '#f8f6ff',
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 16,
-        backgroundColor: '#6a5bc9',
-    },
-    headerLeft: {
-        flex: 1,
-    },
-    headerTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#fff',
-    },
-    headerSubtitle: {
-        fontSize: 14,
-        color: 'rgba(255,255,255,0.8)',
-        marginTop: 2,
-    },
-    refreshButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    listContainer: {
-        padding: 12,
-        paddingBottom: 24,
-    },
-    card: {
-        backgroundColor: '#fff',
-        marginBottom: 16,
-        borderRadius: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
-        overflow: 'hidden',
-    },
-    image: {
-        width: '100%',
-        height: 180,
-    },
-    imagePlaceholder: {
-        backgroundColor: '#f0f0f0',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    cardContent: {
-        padding: 16,
-    },
-    title: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 8,
-    },
-    snippet: {
-        fontSize: 14,
-        color: '#606060',
-        marginBottom: 12,
-        lineHeight: 20,
-    },
-    metaContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    sourceContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    source: {
-        fontSize: 12,
-        color: '#6a5bc9',
-        fontWeight: '500',
-        marginLeft: 4,
-    },
-    dateContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    date: {
-        fontSize: 12,
-        color: '#8e8e8e',
-        marginLeft: 4,
-    },
-    authorContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 4,
-    },
-    author: {
-        fontSize: 12,
-        color: '#8e8e8e',
-        marginLeft: 4,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    loadingText: {
-        marginTop: 12,
-        color: '#606060',
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 60,
-    },
-    emptyText: {
-        fontSize: 16,
-        color: '#8e8e8e',
-        marginTop: 12,
-    },
-    retryButton: {
-        marginTop: 16,
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        backgroundColor: '#6a5bc9',
-        borderRadius: 8,
-    },
-    retryText: {
-        color: '#fff',
-        fontWeight: '500',
-    },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff5f8',
+  },
+  // Fixed header style extended vertically with increased HEADER_HEIGHT
+  header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: HEADER_HEIGHT,
+    backgroundColor: '#ff5f96',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 16 : 16,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    // Increased vertical padding for a taller header
+    paddingTop: 65,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 10,
+    zIndex: 999,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 2,
+  },
+  refreshButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchContainer: {
+    marginTop: 16,
+  },
+  searchBox: {
+    backgroundColor: 'white',
+    borderRadius: 30,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  searchPlaceholder: {
+    color: '#aaa',
+    marginLeft: 8,
+    fontSize: 14,
+  },
+  featuredContainer: {
+    marginTop: 16,
+    marginBottom: 8,
+    paddingHorizontal: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  seeAllText: {
+    color: '#ff5f96',
+    fontSize: 14,
+  },
+  listContainer: {
+    paddingBottom: 24,
+  },
+  card: {
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 16,
+    shadowColor: '#ff5f96',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  cardEven: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#ff5f96',
+  },
+  cardOdd: {
+    borderRightWidth: 4,
+    borderRightColor: '#ff5f96',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  sourceTag: {
+    backgroundColor: '#ffebf2',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  sourceText: {
+    color: '#ff5f96',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  dateText: {
+    color: '#888',
+    fontSize: 12,
+  },
+  cardBody: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  image: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+  },
+  imagePlaceholder: {
+    backgroundColor: '#ffebf2',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  contentContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  snippet: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  authorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  author: {
+    fontSize: 12,
+    color: '#888',
+    marginLeft: 4,
+    maxWidth: width * 0.3,
+  },
+  readMoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  readMore: {
+    fontSize: 12,
+    color: '#ff5f96',
+    fontWeight: '500',
+    marginRight: 4,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    color: '#ff5f96',
+    fontSize: 16,
+  },
+  emptyContainer: {
+    padding: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#888',
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  retryButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: '#ff5f96',
+    borderRadius: 30,
+  },
+  retryText: {
+    color: '#fff',
+    fontWeight: '500',
+  },
 });
 
 export default NewsScreen;
