@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,20 @@ import {
   StatusBar,
   ScrollView,
   Linking,
+  Modal,
+  Animated,
+  TouchableWithoutFeedback,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { 
+  collection, 
+  query, 
+  getDocs, 
+  updateDoc, 
+  writeBatch, 
+  orderBy 
+} from 'firebase/firestore';
+import { ActivityIndicator } from 'react-native';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { doc, getDoc } from 'firebase/firestore';
@@ -22,6 +34,42 @@ const HomeScreen = ({ navigation }) => {
   const { t } = useTranslation();
   const [username, setUsername] = useState('Lucy Patil'); // fallback
   const [avatarUrl, setAvatarUrl] = useState(null);
+  const [notificationModalVisible, setNotificationModalVisible] = useState(false);
+
+  // Animated values for scale and opacity
+  const modalScale = useRef(new Animated.Value(0)).current;
+  const modalOpacity = useRef(new Animated.Value(0)).current;
+
+  // Animate modal when visibility changes
+  useEffect(() => {
+    if (notificationModalVisible) {
+      Animated.parallel([
+        Animated.timing(modalScale, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(modalOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(modalScale, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(modalOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [notificationModalVisible]);
 
   // Fetch user data from Firestore on mount
   useEffect(() => {
@@ -41,6 +89,88 @@ const HomeScreen = ({ navigation }) => {
       }
     })();
   }, []);
+  // Add this to your state declarations
+const [notifications, setNotifications] = useState([]);
+const [loading, setLoading] = useState(false);
+
+// Add this function to fetch notifications
+const fetchNotifications = async () => {
+  setLoading(true);
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    
+    // Query your notifications collection
+    const notificationsRef = collection(db, 'users', user.uid, 'notifications');
+    const q = query(notificationsRef, orderBy('timestamp', 'desc'));
+    const querySnapshot = await getDocs(q);
+    
+    const notificationData = [];
+    querySnapshot.forEach((doc) => {
+      notificationData.push({
+        id: doc.id,
+        ...doc.data(),
+      });
+    });
+    
+    setNotifications(notificationData);
+  } catch (error) {
+    console.log('Error fetching notifications:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Add this useEffect to fetch notifications when modal opens
+useEffect(() => {
+  if (notificationModalVisible) {
+    fetchNotifications();
+  }
+}, [notificationModalVisible]);
+
+// Add this function to mark notification as read
+const markAsRead = async (notificationId) => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+    
+    const notificationRef = doc(db, 'users', user.uid, 'notifications', notificationId);
+    await updateDoc(notificationRef, {
+      read: true
+    });
+    
+    // Update local state
+    setNotifications(notifications.map(item => 
+      item.id === notificationId ? {...item, read: true} : item
+    ));
+  } catch (error) {
+    console.log('Error marking notification as read:', error);
+  }
+};
+
+// Add this function to clear all notifications
+const clearAllNotifications = async () => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+    
+    const batch = writeBatch(db);
+    const notificationsRef = collection(db, 'users', user.uid, 'notifications');
+    const querySnapshot = await getDocs(notificationsRef);
+    
+    querySnapshot.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+    
+    await batch.commit();
+    setNotifications([]);
+  } catch (error) {
+    console.log('Error clearing notifications:', error);
+  }
+};
 
   const openNearbyPoliceStations = async () => {
     try {
@@ -93,6 +223,83 @@ const HomeScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+
+      {/* Notification Modal */}
+{/* Notification Modal */}
+<Modal
+  transparent={true}
+  visible={notificationModalVisible}
+  onRequestClose={() => setNotificationModalVisible(false)}
+  animationType="none"
+>
+  <TouchableWithoutFeedback onPress={() => setNotificationModalVisible(false)}>
+    <View style={styles.modalOverlay}>
+      <Animated.View
+        style={[
+          styles.modalContainer,
+          {
+            transform: [{ scale: modalScale }],
+            opacity: modalOpacity,
+          },
+        ]}
+      >
+        <View style={styles.notificationHeader}>
+          <Ionicons name="notifications" size={20} color="#fff" />
+          <Text style={styles.notificationHeaderText}>Notifications</Text>
+        </View>
+        
+        <ScrollView style={styles.notificationBody}>
+          {loading ? (
+            <ActivityIndicator color={PINK} size="small" style={{ padding: 20 }} />
+          ) : notifications.length > 0 ? (
+            notifications.map((notification) => (
+              <TouchableOpacity 
+                key={notification.id}
+                style={[
+                  styles.notificationItem,
+                  { backgroundColor: notification.read ? '#F8F8F8' : '#FFF0F5' }
+                ]}
+                onPress={() => markAsRead(notification.id)}
+              >
+                <Text style={styles.notificationTitle}>{notification.title}</Text>
+                <Text style={styles.notificationMessage}>{notification.message}</Text>
+                <Text style={styles.notificationTime}>
+                  {notification.timestamp?.toDate().toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })} · {notification.timestamp?.toDate().toLocaleDateString()}
+                </Text>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={styles.emptyNotification}>
+              <Ionicons name="notifications-off-outline" size={40} color="#DDD" />
+              <Text style={styles.emptyNotificationText}>No new notifications</Text>
+            </View>
+          )}
+        </ScrollView>
+        
+        <View style={{ flexDirection: 'row' }}>
+          {notifications.length > 0 && (
+            <TouchableOpacity 
+              style={[styles.closeButton, { flex: 1, borderRightWidth: 1, borderRightColor: '#EEE' }]}
+              onPress={clearAllNotifications}
+            >
+              <Text style={styles.closeButtonText}>Clear All</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity 
+            style={[styles.closeButton, { flex: 1 }]}
+            onPress={() => setNotificationModalVisible(false)}
+          >
+            <Text style={styles.closeButtonText}>Dismiss</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+    </View>
+  </TouchableWithoutFeedback>
+</Modal>
+
       <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}>
         {/* Pink Header with Curve */}
         <View style={styles.header}>
@@ -108,7 +315,7 @@ const HomeScreen = ({ navigation }) => {
             <TouchableOpacity>
               <Ionicons name="mic-outline" size={24} color="black" />
             </TouchableOpacity>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => setNotificationModalVisible(true)}>
               <Ionicons name="notifications-outline" size={24} color="black" />
             </TouchableOpacity>
           </View>
@@ -454,5 +661,113 @@ const styles = StyleSheet.create({
     marginLeft: 15,
     fontSize: 16,
     color: '#000',
+  },
+  // Modal styles
+// Updated modal styling for a softer, more modern look
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+  },
+  modalContainer: {
+    position: 'absolute',
+    top: StatusBar.currentHeight ? StatusBar.currentHeight + 15 : 55,
+    right: 15,
+    width: 300,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  notificationHeader: {
+    backgroundColor: PINK,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+  },
+  notificationHeaderText: {
+    color: '#fff',
+    fontSize: 16,
+    marginLeft: 10,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  notificationBody: {
+    padding: 12,
+    maxHeight: 350,
+  },
+  notificationItem: {
+    backgroundColor: '#f9f9f9',
+    padding: 14,
+    borderRadius: 16,
+    marginBottom: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: PINK,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  notificationTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 5,
+  },
+  notificationMessage: {
+    fontSize: 14,
+    color: '#555',
+    lineHeight: 20,
+  },
+  notificationTime: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 8,
+    textAlign: 'right',
+  },
+  emptyNotification: {
+    padding: 25,
+    alignItems: 'center',
+  },
+  emptyNotificationText: {
+    color: '#888',
+    textAlign: 'center',
+    marginTop: 10,
+    fontSize: 14,
+  },
+  closeButton: {
+    backgroundColor: '#f6f6f6',
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  closeButtonText: {
+    color: PINK,
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  clearAllButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    borderRightWidth: 1,
+    borderRightColor: '#eee',
+  },
+  clearAllButtonText: {
+    color: '#777',
+    fontWeight: '500',
+    fontSize: 15,
   },
 });
