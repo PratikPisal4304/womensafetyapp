@@ -127,7 +127,7 @@ function SignUpScreen({ navigation }) {
         createdAt: new Date(),
       });
       Alert.alert(t('signup.userCreated'), `${t('signup.userCreatedMessage')} ${email}`);
-      navigation.replace('CreatePinScreen');
+      navigation.replace('TellUsAboutYourselfScreen');
     } catch (error) {
       Alert.alert(t('common.error'), error.message);
     }
