@@ -87,7 +87,7 @@ function SignUpScreen({ navigation }) {
             { merge: true }
           );
           Alert.alert(t('signup.successAlertTitle'), t('signup.successAlertMessage'));
-          navigation.replace('CreatePinScreen');
+          navigation.replace('TellUsAboutYourselfScreen');
         })
         .catch((error) => {
           Alert.alert(t('common.error'), error.message);

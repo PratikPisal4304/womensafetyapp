@@ -12,7 +12,6 @@ import SplashScreen from "./screens/SplashScreen";
 import LoginScreen from "./screens/LoginScreen";
 import OTPVerificationScreen from "./screens/OTPVerificationScreen";
 import SignUpScreen from "./screens/SignUpScreen";
-import CreatePinScreen from "./screens/CreatePinScreen";
 import TellUsAboutYourselfScreen from "./screens/TellUsAboutYourselfScreen";
 import HomeScreen from "./screens/HomeScreen";
 import FakeCallScreen from "./screens/FakeCallScreen";
@@ -195,7 +194,6 @@ export default function Routes() {
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
-        <Stack.Screen name="CreatePinScreen" component={CreatePinScreen} />
         <Stack.Screen name="TellUsAboutYourselfScreen" component={TellUsAboutYourselfScreen} />
         <Stack.Screen name="OTPVerificationScreen" component={OTPVerificationScreen} />
         <Stack.Screen name="MainTabs" component={MainTabs} />
