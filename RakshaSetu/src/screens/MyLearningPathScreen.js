@@ -12,7 +12,6 @@ import {
   Alert,
   StatusBar,
   Platform,
-  SafeAreaView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather, Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
@@ -22,7 +21,7 @@ import { app } from '../../config/firebaseConfig';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 const db = getFirestore(app);
 const auth = getAuth(app);
 
@@ -37,7 +36,7 @@ function MyLearningPathScreen() {
     totalHours: 0, 
     coursesCompleted: 0,
     streakDays: 0,
-    nextMilestone: 5
+    nextMilestone: 0
   });
   const [activeTab, setActiveTab] = useState('enrolled');
   const navigation = useNavigation();
@@ -167,11 +166,11 @@ function MyLearningPathScreen() {
   // Render loading state
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <StatusBar barStyle="light-content" backgroundColor="#ff5f96" />
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <StatusBar barStyle="light-content" />
         <ActivityIndicator size="large" color="#ff5f96" />
         <Text style={{ marginTop: 20, color: '#666', fontWeight: '500' }}>Loading your learning path...</Text>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -266,7 +265,7 @@ function MyLearningPathScreen() {
     );
   };
 
-  // Render course card
+  // Render course cards
   const renderCourseCard = (course, index, isEnrolled = true) => (
     <TouchableOpacity
       key={course.id}
@@ -356,10 +355,10 @@ function MyLearningPathScreen() {
         </>
       );
     } else {
-      // Completed courses tab (matches the screenshot)
+      // Completed courses tab (mock data for now)
       return (
         <View style={styles.emptyState}>
-          <FontAwesome5 name="trophy" size={48} color="#ddd" />
+          <Ionicons name="trophy-outline" size={48} color="#ccc" />
           <Text style={styles.emptyStateText}>Complete your first course to see it here!</Text>
           <TouchableOpacity 
             style={styles.emptyStateButton}
@@ -372,60 +371,13 @@ function MyLearningPathScreen() {
     }
   };
 
-  // Render bottom tab navigation
-  const renderBottomTabs = () => (
-    <View style={styles.bottomTabContainer}>
-      <TouchableOpacity 
-        style={styles.bottomTab} 
-        onPress={() => {/* Handle navigation */}}
-      >
-        <Ionicons name="home" size={24} color="#ff5f96" />
-        <Text style={[styles.bottomTabText, {color: '#ff5f96'}]}>Home</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={styles.bottomTab}
-        onPress={() => {/* Handle navigation */}}
-      >
-        <Ionicons name="navigate-outline" size={24} color="#999" />
-        <Text style={styles.bottomTabText}>Track Me</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={styles.bottomTab}
-        onPress={() => {/* Handle navigation */}}
-      >
-        <Ionicons name="alert-circle-outline" size={24} color="#999" />
-        <Text style={styles.bottomTabText}>SOS</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={styles.bottomTab}
-        onPress={() => {/* Handle navigation */}}
-      >
-        <Ionicons name="people-outline" size={24} color="#999" />
-        <Text style={styles.bottomTabText}>Community</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={styles.bottomTab}
-        onPress={() => {/* Handle navigation */}}
-      >
-        <Ionicons name="person-outline" size={24} color="#999" />
-        <Text style={styles.bottomTabText}>Profile</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#ff5f96" />
-      
-      {/* Header Section */}
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
       <LinearGradient 
         colors={['#ff7eb3', '#ff5f96']} 
         start={{x: 0, y: 0}} 
-        end={{x: 1, y: 0}} 
+        end={{x: 1, y: 1}} 
         style={styles.header}
       >
         <View style={styles.headerContent}>
@@ -453,7 +405,6 @@ function MyLearningPathScreen() {
         </View>
       </LinearGradient>
       
-      {/* Main Content */}
       <ScrollView
         style={styles.scrollContainer}
         contentContainerStyle={styles.scrollContent}
@@ -469,6 +420,9 @@ function MyLearningPathScreen() {
         {/* Stats Section */}
         {renderStatsCard()}
         
+        {/* Continue Learning Section */}
+        {enrolledCourses.length > 0 && renderContinueLearning()}
+        
         {/* Tab Navigation */}
         {renderTabSelector()}
         
@@ -476,9 +430,6 @@ function MyLearningPathScreen() {
         <View style={styles.coursesContainer}>
           {renderCourseList()}
         </View>
-        
-        {/* Add padding to ensure content isn't hidden behind bottom tabs */}
-        <View style={styles.bottomPadding} />
       </ScrollView>
       
       {/* Floating Action Button */}
@@ -488,23 +439,19 @@ function MyLearningPathScreen() {
       >
         <Ionicons name="add" size={24} color="white" />
       </TouchableOpacity>
-      
-      {/* Bottom Tab Navigation */}
-      {renderBottomTabs()}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    // backgroundColor: '#f8f9fc',
-    backgroundColor: '#fff5f8',
+    backgroundColor: '#f8f9fc' 
   },
   header: { 
-    paddingTop: Platform.OS === 'ios' ? 10 : StatusBar.currentHeight,
-    paddingBottom: 15,
-    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 50 : StatusBar.currentHeight + 10,
+    paddingBottom: 20,
+    paddingHorizontal: 20, 
   },
   headerContent: {
     flexDirection: 'row',
@@ -553,7 +500,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 80,
   },
   
   // Stats Section
@@ -562,7 +509,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     marginTop: -20,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   statCard: {
     backgroundColor: 'white',
@@ -587,13 +534,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginTop: 2,
-    textAlign: 'center', // Center align the text
   },
-
+  
   // Continue Learning Section
   continueContainer: {
+    marginTop: 16,
     marginHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   continueHeader: {
     flexDirection: 'row',
@@ -654,20 +601,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   
-  // Tab Navigation - Matching your screenshot
+  // Tab Navigation
   tabContainer: {
     flexDirection: 'row',
     marginHorizontal: 20,
     backgroundColor: '#f0f0f4',
-    borderRadius: 24,
+    borderRadius: 12,
     padding: 4,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   tab: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 10,
     alignItems: 'center',
-    borderRadius: 20,
+    borderRadius: 10,
   },
   activeTab: {
     backgroundColor: 'white',
@@ -679,7 +626,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: 14,
-    color: '#777',
+    color: '#666',
     fontWeight: '500',
   },
   activeTabText: {
@@ -778,7 +725,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   
-  // Empty States - Matching your screenshot
+  // Empty States
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -796,7 +743,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     backgroundColor: '#ff5f96',
-    borderRadius: 25, // More rounded to match screenshot
+    borderRadius: 12,
   },
   emptyStateButtonText: {
     color: 'white',
@@ -807,7 +754,7 @@ const styles = StyleSheet.create({
   // Floating Action Button
   fab: {
     position: 'absolute',
-    bottom: 70, // Adjusted to be above the tab bar
+    bottom: 20,
     right: 20,
     width: 56,
     height: 56,
@@ -821,30 +768,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
-  
-  // Bottom Tab Navigation - Matching your screenshot
-  bottomTabContainer: {
-    flexDirection: 'row',
-    height: 60,
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    paddingBottom: Platform.OS === 'ios' ? 20 : 0, // Adjust for iPhone home indicator
-  },
-  bottomTab: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 8,
-  },
-  bottomTabText: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-  },
-  bottomPadding: {
-    height: 60, // Height to ensure content isn't hidden by bottom tabs
-  }
 });
 
 export default MyLearningPathScreen;
