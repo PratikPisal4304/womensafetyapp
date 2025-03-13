@@ -39,11 +39,11 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { app } from '../../config/firebaseConfig';
 import { useNavigation } from '@react-navigation/native';
 
+// Import the YouTube API key from the .env file
+import { YOUTUBE_API_KEY } from '@env';
+
 const { width } = Dimensions.get('window');
 const HEADER_HEIGHT = 160;
-
-// Replace with your actual YouTube API key.
-const YOUTUBE_API_KEY = 'AIzaSyAJMqQ6n9Ai2Om1Cx_l3FpT8dPS9A3E8ws';
 
 // Initialize Firebase services
 const db = getFirestore(app);
