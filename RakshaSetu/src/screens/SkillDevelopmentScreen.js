@@ -175,20 +175,6 @@ const QuickActions = ({ categories, onCategoryPress }) => (
   </View>
 );
 
-// New TagFilterBar for filtering modules by tag.
-const TagFilterBar = ({ tags, selectedTag, onSelectTag }) => (
-  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagFilterBar}>
-    <TouchableOpacity onPress={() => onSelectTag('')} style={[styles.tagFilterItem, selectedTag === '' && styles.tagFilterItemSelected]}>
-      <Text style={[styles.tagFilterText, selectedTag === '' && styles.tagFilterTextSelected]}>All</Text>
-    </TouchableOpacity>
-    {tags.map(tag => (
-      <TouchableOpacity key={tag} onPress={() => onSelectTag(tag)} style={[styles.tagFilterItem, selectedTag === tag && styles.tagFilterItemSelected]}>
-        <Text style={[styles.tagFilterText, selectedTag === tag && styles.tagFilterTextSelected]}>{tag}</Text>
-      </TouchableOpacity>
-    ))}
-  </ScrollView>
-);
-
 // Enhanced ModuleCard with scale animation, favorite overlay and star rating.
 const ModuleCard = ({ module, onModulePress, onToggleFavorite, isFavorite }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -368,7 +354,6 @@ function SkillDevelopmentScreen({ navigation }) {
   const [completedVideoIds, setCompletedVideoIds] = useState([]);
   const [completedCourses, setCompletedCourses] = useState([]);
   const [bookmarkedVideos, setBookmarkedVideos] = useState([]);
-  const [selectedTag, setSelectedTag] = useState('');
 
   const categories = [
     { id: 1, name: 'My Learning Path', icon: 'route', gradient: ['#66BB6A', '#43A047'] },
@@ -600,6 +585,7 @@ function SkillDevelopmentScreen({ navigation }) {
     }
   }, [currentUser]);
 
+  // Removed tag filtering from getFilteredCourses.
   const getFilteredCourses = () => {
     let filtered = [...microLearningModules];
     if (debouncedSearchQuery) {
@@ -610,13 +596,8 @@ function SkillDevelopmentScreen({ navigation }) {
           module.tags.some(tag => tag.toLowerCase().includes(debouncedSearchQuery.toLowerCase()))
       );
     }
-    if (selectedTag) {
-      filtered = filtered.filter(module => module.tags.includes(selectedTag));
-    }
     return filtered;
   };
-
-  const uniqueTags = Array.from(new Set(microLearningModules.flatMap(module => module.tags)));
 
   const toggleFavorite = async (courseId) => {
     try {
@@ -782,7 +763,7 @@ function SkillDevelopmentScreen({ navigation }) {
         scrollEventThrottle={16}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#ff5f96']} tintColor="#ff5f96" />}
       >
-        <TagFilterBar tags={uniqueTags} selectedTag={selectedTag} onSelectTag={setSelectedTag} />
+        {/* Removed TagFilterBar */}
         <QuickActions
           categories={categories}
           onCategoryPress={(category) => {
@@ -1003,7 +984,7 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 16, color: '#333' },
   filterButton: { padding: 8, borderRadius: 8, backgroundColor: '#f0f0f0' },
   scrollContainer: { flex: 1, backgroundColor: '#fafafa' },
-  sectionContainer: { marginTop: 60, paddingHorizontal: 20 },
+  sectionContainer: { marginTop: 45, paddingHorizontal: 20 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sectionTitle: { fontSize: 22, fontWeight: 'bold', color: '#333' },
   seeAllButton: { flexDirection: 'row', alignItems: 'center' },
@@ -1081,17 +1062,6 @@ const styles = StyleSheet.create({
   progressBar: { flex: 1, height: 6, backgroundColor: '#eee', borderRadius: 3, marginRight: 8 },
   progressFill: { height: '100%', backgroundColor: '#ff5f96', borderRadius: 3 },
   progressText: { fontSize: 13, color: '#666' },
-  tagFilterBar: { marginHorizontal: 20, marginBottom: 16 },
-  tagFilterItem: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    backgroundColor: '#eee',
-    borderRadius: 20,
-    marginRight: 10,
-  },
-  tagFilterItemSelected: { backgroundColor: '#ff5f96' },
-  tagFilterText: { fontSize: 15, color: '#333' },
-  tagFilterTextSelected: { color: '#fff' },
   recommendedCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
