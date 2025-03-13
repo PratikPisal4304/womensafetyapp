@@ -12,10 +12,11 @@ import {
   Alert,
   StatusBar,
   Platform,
+  Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Feather, Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
-import { getFirestore, doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import { getFirestore, doc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { app } from '../../config/firebaseConfig';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -26,11 +27,15 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 function MyLearningPathScreen() {
+  // State variables
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userName, setUserName] = useState('');
   const [enrolledCourses, setEnrolledCourses] = useState([]);
+  const [completedCourses, setCompletedCourses] = useState([]);
   const [recommendedCourses, setRecommendedCourses] = useState([]);
+  const [badges, setBadges] = useState([]);
+  const [lastAccess, setLastAccess] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [learningStats, setLearningStats] = useState({ 
     totalHours: 0, 
@@ -41,7 +46,21 @@ function MyLearningPathScreen() {
   const [activeTab, setActiveTab] = useState('enrolled');
   const navigation = useNavigation();
 
-  // Fetch user data and learning path
+  // Animated value (for future enhancements)
+  const fadeAnim = new Animated.Value(0);
+
+  // Update the user's lastAccess field in Firestore
+  const updateLastAccess = async (userId) => {
+    try {
+      const userDocRef = doc(db, 'users', userId);
+      await updateDoc(userDocRef, { lastAccess: new Date() });
+      setLastAccess(new Date());
+    } catch (error) {
+      console.error('Error updating last access:', error);
+    }
+  };
+
+  // Fetch user data from Firestore and process courses
   const fetchUserData = async (userId) => {
     try {
       setIsLoading(true);
@@ -50,23 +69,47 @@ function MyLearningPathScreen() {
       if (userDocSnap.exists()) {
         const userData = userDocSnap.data();
         setUserName(userData.name || userData.displayName || 'User');
-        
+        setBadges(userData.badges || []);
+
+        // Use a dedicated lastAccess field if available
+        if (userData.lastAccess) {
+          setLastAccess(userData.lastAccess.toDate());
+        } else if (userData.enrolledCourses) {
+          const dates = userData.enrolledCourses
+            .filter(course => course.lastAccessed)
+            .map(course => course.lastAccessed.toDate().getTime());
+          if (dates.length) {
+            setLastAccess(new Date(Math.max(...dates)));
+          }
+        }
+
+        // Split courses into in-progress and completed
         if (userData.enrolledCourses) {
-          // Sort by last accessed or progress percentage
-          const sortedCourses = [...userData.enrolledCourses].sort((a, b) => 
+          const inProgress = [];
+          const completed = [];
+          userData.enrolledCourses.forEach(course => {
+            if (course.progress >= 100) {
+              completed.push(course);
+            } else {
+              inProgress.push(course);
+            }
+          });
+          // Sort in-progress courses by lastAccessed (newest first)
+          const sortedCourses = [...inProgress].sort((a, b) => 
             (b.lastAccessed?.toDate() || 0) - (a.lastAccessed?.toDate() || 0)
           );
           setEnrolledCourses(sortedCourses);
+          setCompletedCourses(completed);
         }
-        
+
         if (userData.recommendedCourses) {
           setRecommendedCourses(userData.recommendedCourses);
         }
-        
+
         // Calculate learning stats
         setLearningStats({
           totalHours: userData.totalLearningHours || 0,
-          coursesCompleted: userData.completedCourses?.length || 0,
+          coursesCompleted: userData.completedCourses?.length || completedCourses.length,
           streakDays: userData.learningStreak || 0,
           nextMilestone: userData.nextMilestone || 5
         });
@@ -83,7 +126,7 @@ function MyLearningPathScreen() {
     }
   };
 
-  // Set up Firestore real-time listener
+  // Set up a real-time Firestore listener for user data updates
   const setupUserListener = (userId) => {
     const userDocRef = doc(db, 'users', userId);
     return onSnapshot(
@@ -92,23 +135,32 @@ function MyLearningPathScreen() {
         if (docSnap.exists()) {
           const userData = docSnap.data();
           setUserName(userData.name || userData.displayName || 'User');
-          
+          setBadges(userData.badges || []);
+          if (userData.lastAccess) {
+            setLastAccess(userData.lastAccess.toDate());
+          }
           if (userData.enrolledCourses) {
-            // Sort by last accessed or progress percentage
-            const sortedCourses = [...userData.enrolledCourses].sort((a, b) => 
+            const inProgress = [];
+            const completed = [];
+            userData.enrolledCourses.forEach(course => {
+              if (course.progress >= 100) {
+                completed.push(course);
+              } else {
+                inProgress.push(course);
+              }
+            });
+            const sortedCourses = [...inProgress].sort((a, b) => 
               (b.lastAccessed?.toDate() || 0) - (a.lastAccessed?.toDate() || 0)
             );
             setEnrolledCourses(sortedCourses);
+            setCompletedCourses(completed);
           }
-          
           if (userData.recommendedCourses) {
             setRecommendedCourses(userData.recommendedCourses);
           }
-          
-          // Calculate learning stats
           setLearningStats({
             totalHours: userData.totalLearningHours || 0,
-            coursesCompleted: userData.completedCourses?.length || 0,
+            coursesCompleted: userData.completedCourses?.length || completedCourses.length,
             streakDays: userData.learningStreak || 0,
             nextMilestone: userData.nextMilestone || 5
           });
@@ -120,7 +172,7 @@ function MyLearningPathScreen() {
     );
   };
 
-  // Authentication listener
+  // Listen to authentication state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -139,7 +191,7 @@ function MyLearningPathScreen() {
     return () => unsubscribe();
   }, []);
 
-  // Refresh data when screen comes into focus
+  // Refresh data when the screen comes into focus
   useFocusEffect(
     useCallback(() => {
       if (currentUser) {
@@ -158,23 +210,50 @@ function MyLearningPathScreen() {
     }
   }, [currentUser]);
 
+  // Handle course press with haptic feedback and update lastAccess
   const handleCoursePress = useCallback((courseId) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (currentUser) {
+      updateLastAccess(currentUser.uid);
+    }
     navigation.navigate('CourseDetail', { courseId });
-  }, [navigation]);
+  }, [navigation, currentUser]);
+
+  // Get the first in-progress course for "Continue Learning"
+  const getContinueCourse = () => {
+    if (enrolledCourses && enrolledCourses.length > 0) {
+      return enrolledCourses[0];
+    }
+    return null;
+  };
+
+  // Render a streak reminder banner if last access was over 24 hours ago
+  const renderStreakReminder = () => {
+    if (lastAccess) {
+      const hoursSince = (new Date() - lastAccess) / (1000 * 3600);
+      if (hoursSince > 24) {
+        return (
+          <View style={styles.streakReminder}>
+            <Text style={styles.streakReminderText}>Don't lose your streak! Complete a lesson today!</Text>
+          </View>
+        );
+      }
+    }
+    return null;
+  };
 
   // Render loading state
   if (isLoading) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[styles.container, styles.center]}>
         <StatusBar barStyle="light-content" />
         <ActivityIndicator size="large" color="#ff5f96" />
-        <Text style={{ marginTop: 20, color: '#666', fontWeight: '500' }}>Loading your learning path...</Text>
+        <Text style={styles.loadingText}>Loading your learning path...</Text>
       </View>
     );
   }
 
-  // Render stats card
+  // Render the stats card at the top (including badges)
   const renderStatsCard = () => (
     <View style={styles.statsContainer}>
       <View style={styles.statCard}>
@@ -184,7 +263,7 @@ function MyLearningPathScreen() {
       </View>
       <View style={styles.statCard}>
         <FontAwesome5 name="award" size={20} color="#ff5f96" />
-        <Text style={styles.statValue}>{learningStats.coursesCompleted}</Text>
+        <Text style={styles.statValue}>{completedCourses.length}</Text>
         <Text style={styles.statLabel}>Completed</Text>
       </View>
       <View style={styles.statCard}>
@@ -192,15 +271,20 @@ function MyLearningPathScreen() {
         <Text style={styles.statValue}>{learningStats.streakDays}d</Text>
         <Text style={styles.statLabel}>Streak</Text>
       </View>
-      <TouchableOpacity style={styles.statCard} onPress={() => navigation.navigate('LearningGoals')}>
+      <View style={styles.statCard}>
         <FontAwesome5 name="bullseye" size={20} color="#ff5f96" />
         <Text style={styles.statValue}>{learningStats.nextMilestone}</Text>
         <Text style={styles.statLabel}>Next Goal</Text>
-      </TouchableOpacity>
+      </View>
+      <View style={styles.statCard}>
+        <FontAwesome5 name="medal" size={20} color="#ff5f96" />
+        <Text style={styles.statValue}>{badges.length}</Text>
+        <Text style={styles.statLabel}>Badges</Text>
+      </View>
     </View>
   );
 
-  // Render tab selector
+  // Render the tab selector
   const renderTabSelector = () => (
     <View style={styles.tabContainer}>
       <TouchableOpacity 
@@ -224,13 +308,10 @@ function MyLearningPathScreen() {
     </View>
   );
 
-  // Render continue learning section
+  // Render the Continue Learning section
   const renderContinueLearning = () => {
-    // Get the most recently accessed or highest progress course
-    const continueCourse = enrolledCourses.length > 0 ? enrolledCourses[0] : null;
-    
+    const continueCourse = getContinueCourse();
     if (!continueCourse) return null;
-    
     return (
       <View style={styles.continueContainer}>
         <View style={styles.continueHeader}>
@@ -239,7 +320,6 @@ function MyLearningPathScreen() {
             <Text style={styles.continueLink}>Resume</Text>
           </TouchableOpacity>
         </View>
-        
         <TouchableOpacity 
           style={styles.continueCourseCard}
           onPress={() => handleCoursePress(continueCourse.id)}
@@ -249,7 +329,7 @@ function MyLearningPathScreen() {
             style={styles.continueCourseImage} 
           />
           <View style={styles.continueCourseOverlay}>
-            <Text style={styles.continueCourseTitle}>{continueCourse.title}</Text>
+            <Text style={styles.continueCourseTitle} numberOfLines={1}>{continueCourse.title}</Text>
             <View style={styles.progressContainer}>
               <View style={styles.progressBar}>
                 <View style={[styles.progressFill, { width: `${continueCourse.progress}%` }]} />
@@ -265,8 +345,8 @@ function MyLearningPathScreen() {
     );
   };
 
-  // Render course cards
-  const renderCourseCard = (course, index, isEnrolled = true) => (
+  // Render individual course cards for each tab
+  const renderCourseCard = (course, index, type = 'enrolled') => (
     <TouchableOpacity
       key={course.id}
       style={[styles.courseCard, index === 0 && styles.firstCard]}
@@ -276,17 +356,15 @@ function MyLearningPathScreen() {
       <View style={styles.courseInfo}>
         <Text style={styles.courseTitle} numberOfLines={1}>{course.title}</Text>
         <Text style={styles.courseAuthor} numberOfLines={1}>{course.author}</Text>
-        
-        {isEnrolled ? (
-          <>
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${course.progress}%` }]} />
-              </View>
-              <Text style={styles.progressText}>{course.progress}% Complete</Text>
+        {type === 'enrolled' && (
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${course.progress}%` }]} />
             </View>
-          </>
-        ) : (
+            <Text style={styles.progressText}>{course.progress}% Complete</Text>
+          </View>
+        )}
+        {type === 'recommended' && (
           <>
             <Text style={styles.courseDescription} numberOfLines={2}>{course.description}</Text>
             <View style={styles.courseMetaContainer}>
@@ -305,8 +383,13 @@ function MyLearningPathScreen() {
             </View>
           </>
         )}
+        {type === 'completed' && (
+          <View style={styles.completedBadge}>
+            <Text style={styles.completedBadgeText}>Completed</Text>
+          </View>
+        )}
       </View>
-      {!isEnrolled && (
+      {type === 'recommended' && (
         <View style={styles.enrollButton}>
           <Text style={styles.enrollButtonText}>Enroll</Text>
         </View>
@@ -314,49 +397,42 @@ function MyLearningPathScreen() {
     </TouchableOpacity>
   );
 
-  // Render course lists based on active tab
+  // Render course list based on active tab
   const renderCourseList = () => {
     if (activeTab === 'enrolled') {
-      return (
-        <>
-          {enrolledCourses.length > 0 ? (
-            enrolledCourses.map((course, index) => renderCourseCard(course, index))
-          ) : (
-            <View style={styles.emptyState}>
-              <Ionicons name="book-outline" size={48} color="#ccc" />
-              <Text style={styles.emptyStateText}>You are not enrolled in any courses yet.</Text>
-              <TouchableOpacity 
-                style={styles.emptyStateButton}
-                onPress={() => navigation.navigate('BrowseCourses')}
-              >
-                <Text style={styles.emptyStateButtonText}>Browse Courses</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </>
+      return enrolledCourses.length > 0 ? (
+        enrolledCourses.map((course, index) => renderCourseCard(course, index, 'enrolled'))
+      ) : (
+        <View style={styles.emptyState}>
+          <Ionicons name="book-outline" size={48} color="#ccc" />
+          <Text style={styles.emptyStateText}>You are not enrolled in any courses yet.</Text>
+          <TouchableOpacity 
+            style={styles.emptyStateButton}
+            onPress={() => navigation.navigate('BrowseCourses')}
+          >
+            <Text style={styles.emptyStateButtonText}>Browse Courses</Text>
+          </TouchableOpacity>
+        </View>
       );
     } else if (activeTab === 'recommended') {
-      return (
-        <>
-          {recommendedCourses.length > 0 ? (
-            recommendedCourses.map((course, index) => renderCourseCard(course, index, false))
-          ) : (
-            <View style={styles.emptyState}>
-              <Ionicons name="bulb-outline" size={48} color="#ccc" />
-              <Text style={styles.emptyStateText}>No recommended courses at the moment.</Text>
-              <TouchableOpacity 
-                style={styles.emptyStateButton}
-                onPress={() => navigation.navigate('UpdateInterests')}
-              >
-                <Text style={styles.emptyStateButtonText}>Update Interests</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </>
+      return recommendedCourses.length > 0 ? (
+        recommendedCourses.map((course, index) => renderCourseCard(course, index, 'recommended'))
+      ) : (
+        <View style={styles.emptyState}>
+          <Ionicons name="bulb-outline" size={48} color="#ccc" />
+          <Text style={styles.emptyStateText}>No recommended courses at the moment.</Text>
+          <TouchableOpacity 
+            style={styles.emptyStateButton}
+            onPress={() => navigation.navigate('UpdateInterests')}
+          >
+            <Text style={styles.emptyStateButtonText}>Update Interests</Text>
+          </TouchableOpacity>
+        </View>
       );
     } else {
-      // Completed courses tab (mock data for now)
-      return (
+      return completedCourses.length > 0 ? (
+        completedCourses.map((course, index) => renderCourseCard(course, index, 'completed'))
+      ) : (
         <View style={styles.emptyState}>
           <Ionicons name="trophy-outline" size={48} color="#ccc" />
           <Text style={styles.emptyStateText}>Complete your first course to see it here!</Text>
@@ -374,10 +450,11 @@ function MyLearningPathScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
+      {/* Header with gradient and navigation icons */}
       <LinearGradient 
-        colors={['#ff7eb3', '#ff5f96']} 
-        start={{x: 0, y: 0}} 
-        end={{x: 1, y: 1}} 
+        colors={['#ff5f96', '#ff5f96']} 
+        start={{ x: 0, y: 0 }} 
+        end={{ x: 1, y: 1 }} 
         style={styles.header}
       >
         <View style={styles.headerContent}>
@@ -417,16 +494,15 @@ function MyLearningPathScreen() {
           />
         }
       >
+        {/* Render streak reminder banner */}
+        {renderStreakReminder()}
         {/* Stats Section */}
         {renderStatsCard()}
-        
         {/* Continue Learning Section */}
         {enrolledCourses.length > 0 && renderContinueLearning()}
-        
-        {/* Tab Navigation */}
+        {/* Tab Selector */}
         {renderTabSelector()}
-        
-        {/* Course Lists */}
+        {/* Course List */}
         <View style={styles.coursesContainer}>
           {renderCourseList()}
         </View>
@@ -443,20 +519,37 @@ function MyLearningPathScreen() {
   );
 }
 
+export default MyLearningPathScreen;
+
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
     backgroundColor: '#f8f9fc' 
   },
+  center: { 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  loadingText: {
+    marginTop: 20, 
+    color: '#666', 
+    fontWeight: '500'
+  },
   header: { 
     paddingTop: Platform.OS === 'ios' ? 50 : StatusBar.currentHeight + 10,
     paddingBottom: 20,
+    height: 150,
     paddingHorizontal: 20, 
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
   },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: 25,
   },
   headerTitle: { 
     fontSize: 24, 
@@ -503,21 +596,38 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   
+  // Streak Reminder Banner
+  streakReminder: {
+    backgroundColor: '#ff5f96',
+    marginHorizontal: 20,
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  streakReminderText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  
   // Stats Section
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    marginTop: -20,
+    marginTop: 26,
     marginBottom: 16,
   },
   statCard: {
     backgroundColor: 'white',
     borderRadius: 12,
     paddingVertical: 12,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     alignItems: 'center',
-    width: (width - 60) / 4,
+    width: (width - 80) / 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -538,7 +648,6 @@ const styles = StyleSheet.create({
   
   // Continue Learning Section
   continueContainer: {
-    marginTop: 16,
     marginHorizontal: 20,
     marginBottom: 16,
   },
@@ -637,6 +746,7 @@ const styles = StyleSheet.create({
   // Course Cards
   coursesContainer: {
     paddingHorizontal: 20,
+    marginBottom: 20,
   },
   courseCard: {
     backgroundColor: 'white',
@@ -724,6 +834,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
+  completedBadge: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    marginTop: 8,
+    alignSelf: 'flex-start'
+  },
+  completedBadgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold'
+  },
   
   // Empty States
   emptyState: {
@@ -769,5 +892,3 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
 });
-
-export default MyLearningPathScreen;
