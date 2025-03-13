@@ -790,7 +790,7 @@ function SkillDevelopmentScreen({ navigation }) {
             if (category.name === 'Budget Tools') {
               navigation.navigate('BudgetTool');
             } else if (category.name === 'My Learning Path') {
-              navigation.navigate('LearningPath', { userId: currentUser?.uid });
+              navigation.navigate('MyLearningPath', { userId: currentUser?.uid });
             } else {
               Alert.alert(category.name, `You selected: ${category.name}`);
             }

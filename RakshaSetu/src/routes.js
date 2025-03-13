@@ -31,6 +31,7 @@ import InAppChatScreen from "./screens/InAppChatScreen";
 import GeminiChatScreen from "./screens/GeminiChatScreen";
 import BudgetToolScreen from "./screens/BudgetToolScreen";
 import FinancialNews from "./screens/FinancialNews";
+import MyLearningPathScreen from "./screens/MyLearningPathScreen";  
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -51,6 +52,7 @@ function HomeStack() {
       <Stack.Screen name="GenerateReport" component={GenerateReportScreen} />
       <Stack.Screen name="TrackMe" component={TrackMeScreen} />
       <Stack.Screen name="SkillDevelopment" component={SkillDevelopmentScreen} />
+      <Stack.Screen name="MyLearningPath" component={MyLearningPathScreen} />
       <Stack.Screen name="BudgetTool" component={BudgetToolScreen} />
       <Stack.Screen name="FinancialNews" component={FinancialNews} />
     </Stack.Navigator>
