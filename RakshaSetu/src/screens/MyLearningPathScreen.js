@@ -261,11 +261,11 @@ function MyLearningPathScreen() {
         <Text style={styles.statValue}>{learningStats.totalHours}h</Text>
         <Text style={styles.statLabel}>Learning</Text>
       </View>
-      <View style={styles.statCard}>
+      {/* <View style={styles.statCard}>
         <FontAwesome5 name="award" size={20} color="#ff5f96" />
         <Text style={styles.statValue}>{completedCourses.length}</Text>
         <Text style={styles.statLabel}>Completed</Text>
-      </View>
+      </View> */}
       <View style={styles.statCard}>
         <FontAwesome5 name="fire" size={20} color="#ff5f96" />
         <Text style={styles.statValue}>{learningStats.streakDays}d</Text>
@@ -623,16 +623,16 @@ const styles = StyleSheet.create({
   },
   statCard: {
     backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: 15,
     paddingVertical: 12,
     paddingHorizontal: 8,
     alignItems: 'center',
-    width: (width - 80) / 5,
+    width: (width - 5) / 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 5,
-    elevation: 2,
+    elevation: 5,
   },
   statValue: {
     fontSize: 16,
