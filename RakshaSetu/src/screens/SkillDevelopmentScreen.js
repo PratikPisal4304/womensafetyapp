@@ -62,38 +62,88 @@ function useDebounce(value, delay) {
 // Start with an empty modules array.
 const SAMPLE_MODULES = [];
 
-/** Helper to fetch more short videos from YouTube */
-const fetchMoreVideos = async (searchQuery, pageToken) => {
-  const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoDuration=short&q=${encodeURIComponent(searchQuery)}&key=${YOUTUBE_API_KEY}&maxResults=5&pageToken=${pageToken}`;
+/** Helper to fetch additional videos from a playlist using YouTube's playlistItems endpoint */
+const fetchMorePlaylistItems = async (playlistId, pageToken) => {
+  const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${playlistId}&key=${YOUTUBE_API_KEY}&maxResults=5&pageToken=${pageToken}`;
   try {
     const response = await fetch(url);
     const data = await response.json();
     if (data.items) {
-      const newVideos = data.items.map((ytItem) => ({
-        id: ytItem.id.videoId,
-        title: ytItem.snippet.title,
-        videoUrl: `https://www.youtube.com/watch?v=${ytItem.id.videoId}`,
+      const newVideos = data.items.map((item) => ({
+        id: item.snippet.resourceId.videoId,
+        title: item.snippet.title,
+        videoUrl: `https://www.youtube.com/watch?v=${item.snippet.resourceId.videoId}`,
         duration: 'N/A'
       }));
       return { videos: newVideos, nextPageToken: data.nextPageToken || null };
     }
   } catch (error) {
-    console.error('Error in fetchMoreVideos:', error);
+    console.error('Error in fetchMorePlaylistItems:', error);
   }
   return { videos: [], nextPageToken: null };
 };
 
-/** Helper to ensure each module has at least 4 lectures */
-async function ensureMinimumLectures(module, minCount = 4) {
-  while (module.videos.length < minCount && module.nextPageToken) {
-    const { videos: moreVideos, nextPageToken } = await fetchMoreVideos(module.searchQueryUsed, module.nextPageToken);
-    if (moreVideos.length === 0) break;
-    module.videos = [...module.videos, ...moreVideos];
-    module.duration = `${module.videos.length} lectures`;
-    module.nextPageToken = nextPageToken;
+/** Fetch finance playlists and attach a few playlist items (lectures) to each module */
+const fetchYoutubeModules = async (setMicroLearningModules) => {
+  // You can adjust or add queries as needed.
+  const queries = [
+    { query: 'finance playlists', title: 'Finance Playlists', tags: ['Finance', 'Playlists'] },
+    { query: 'budgeting playlists', title: 'Budgeting Playlists', tags: ['Finance', 'Budgeting'] },
+    { query: 'investment playlists', title: 'Investment Playlists', tags: ['Investing'] },
+    { query: 'credit management playlists', title: 'Credit Management Playlists', tags: ['Finance', 'Credit'] }
+  ];
+  const modules = [];
+  for (const item of queries) {
+    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=playlist&q=${encodeURIComponent(item.query)}&key=${YOUTUBE_API_KEY}&maxResults=5`;
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+      if (data.items) {
+        // Map each playlist to a module
+        const playlists = data.items.map((ytItem) => ({
+          id: ytItem.id.playlistId,
+          title: ytItem.snippet.title,
+          playlistUrl: `https://www.youtube.com/playlist?list=${ytItem.id.playlistId}`,
+          image: { uri: ytItem.snippet.thumbnails.high.url },
+          videos: [],
+          tags: item.tags,
+          duration: 'Playlist',
+          rating: 0,
+          students: 0,
+          completion: '0/0 lectures',
+          completionPercent: 0,
+          searchQueryUsed: item.query,
+          nextPageToken: data.nextPageToken ? data.nextPageToken : null
+        }));
+        // For each playlist, fetch the first few playlist items
+        for (let playlist of playlists) {
+          const playlistItemsUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${playlist.id}&key=${YOUTUBE_API_KEY}&maxResults=4`;
+          try {
+            const playlistItemsResponse = await fetch(playlistItemsUrl);
+            const playlistItemsData = await playlistItemsResponse.json();
+            if (playlistItemsData.items) {
+              const videos = playlistItemsData.items.map((item) => ({
+                id: item.snippet.resourceId.videoId,
+                title: item.snippet.title,
+                videoUrl: `https://www.youtube.com/watch?v=${item.snippet.resourceId.videoId}`,
+                duration: 'N/A'
+              }));
+              playlist.videos = videos;
+              playlist.duration = `${videos.length} lectures`;
+            }
+          } catch (error) {
+            console.error('Error fetching playlist items:', error);
+          }
+        }
+        modules.push(...playlists);
+      }
+    } catch (error) {
+      console.error(`Error fetching YouTube data for query ${item.query}:`, error);
+    }
   }
-  return module;
-}
+  modules.sort((a, b) => a.title.localeCompare(b.title));
+  setMicroLearningModules(modules);
+};
 
 // -----------------------
 // UI Components
@@ -363,61 +413,7 @@ function SkillDevelopmentScreen({ navigation }) {
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  // Fetch multiple YouTube modules and ensure at least 4 short lectures per module.
-  const fetchYoutubeModules = async () => {
-    const queries = [
-      { query: 'finance lectures', title: 'Finance Lectures', tags: ['Finance', 'Lectures'] },
-      { query: 'budgeting tips', title: 'Budgeting Tips', tags: ['Finance', 'Budgeting'] },
-      { query: 'investment strategies', title: 'Investment Strategies', tags: ['Investing'] },
-      { query: 'credit management', title: 'Credit Management', tags: ['Finance', 'Credit'] }
-    ];
-    const modules = [];
-    for (const item of queries) {
-      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoDuration=short&q=${encodeURIComponent(item.query)}&key=${YOUTUBE_API_KEY}&maxResults=5`;
-      try {
-        const response = await fetch(url);
-        const data = await response.json();
-        if (data.items) {
-          const videos = data.items.map((ytItem) => ({
-            id: ytItem.id.videoId,
-            title: ytItem.snippet.title,
-            videoUrl: `https://www.youtube.com/watch?v=${ytItem.id.videoId}`,
-            duration: 'N/A'
-          }));
-          let nextPageToken = data.nextPageToken ? data.nextPageToken : null;
-          // Ensure each module has at least 4 lectures.
-          while (videos.length < 4 && nextPageToken) {
-            const { videos: moreVideos, nextPageToken: newToken } = await fetchMoreVideos(item.query, nextPageToken);
-            if (moreVideos.length === 0) break;
-            videos.push(...moreVideos);
-            nextPageToken = newToken;
-          }
-          const module = {
-            id: item.query, 
-            title: item.title,
-            author: 'Various',
-            image: { uri: data.items[0].snippet.thumbnails.high.url },
-            videos,
-            tags: item.tags,
-            duration: `${videos.length} lectures`,
-            rating: 0,
-            students: 0,
-            completion: '0/0 modules',
-            completionPercent: 0,
-            searchQueryUsed: item.query,
-            nextPageToken: nextPageToken
-          };
-          modules.push(module);
-        }
-      } catch (error) {
-        console.error(`Error fetching YouTube data for query ${item.query}:`, error);
-      }
-    }
-    modules.sort((a, b) => a.title.localeCompare(b.title));
-    setMicroLearningModules(modules);
-  };
-
-  // Load more videos for a module.
+  // Load more videos (playlist items) for a module.
   const loadMoreVideosForModule = async (moduleId) => {
     const moduleIndex = microLearningModules.findIndex(m => m.id === moduleId);
     if (moduleIndex === -1) return;
@@ -426,7 +422,7 @@ function SkillDevelopmentScreen({ navigation }) {
       Alert.alert("No more videos", "There are no additional videos to load for this course.");
       return;
     }
-    const { videos: newVideos, nextPageToken } = await fetchMoreVideos(module.searchQueryUsed, module.nextPageToken);
+    const { videos: newVideos, nextPageToken } = await fetchMorePlaylistItems(module.id, module.nextPageToken);
     if (newVideos.length > 0) {
       const updatedModule = {
         ...module,
@@ -448,7 +444,7 @@ function SkillDevelopmentScreen({ navigation }) {
   // Auto-refresh modules every 10 minutes.
   useEffect(() => {
     const intervalId = setInterval(() => {
-      fetchYoutubeModules();
+      fetchYoutubeModules(setMicroLearningModules);
     }, 10 * 60 * 1000);
     return () => clearInterval(intervalId);
   }, []);
@@ -572,8 +568,9 @@ function SkillDevelopmentScreen({ navigation }) {
     return () => unsubscribe();
   }, []);
 
+  // Fetch playlists (modules) on mount.
   useEffect(() => {
-    fetchYoutubeModules();
+    fetchYoutubeModules(setMicroLearningModules);
   }, []);
 
   const onRefresh = useCallback(() => {
@@ -592,7 +589,7 @@ function SkillDevelopmentScreen({ navigation }) {
       filtered = filtered.filter(
         (module) =>
           module.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-          module.author.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+          module.author?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
           module.tags.some(tag => tag.toLowerCase().includes(debouncedSearchQuery.toLowerCase()))
       );
     }
@@ -851,7 +848,7 @@ function SkillDevelopmentScreen({ navigation }) {
               </View>
             </View>
             <Text style={styles.courseDetailDescription}>
-              This course includes multiple short video lectures to enhance your learning experience.
+              This course includes a playlist of curated video lectures to enhance your learning experience.
             </Text>
             <View style={styles.progressBarContainer}>
               <Text style={styles.progressLabel}>Course Progress: 0%</Text>
