@@ -106,7 +106,7 @@ RakshaSetu/
    - **DO NOT** commit this file to GitHub. Add it to `.gitignore`.
 
 4. **Setup Firebase**
-   - Create a Firebase project and enable Firestore, Auth, and FCM.
+   - Create a Firebase project and enable Firestore, Auth.
 
 5. **Run the app**
    ```sh
