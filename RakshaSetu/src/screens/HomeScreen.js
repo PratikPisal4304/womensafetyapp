@@ -300,9 +300,6 @@ const HomeScreen = ({ navigation }) => {
             <Text style={styles.username}>{username}</Text>
           </View>
           <View style={styles.headerIcons}>
-            <TouchableOpacity>
-              <Ionicons name="mic-outline" size={24} color="black" />
-            </TouchableOpacity>
             <TouchableOpacity onPress={() => setNotificationModalVisible(true)}>
               <Ionicons name="notifications-outline" size={24} color="black" />
             </TouchableOpacity>
