@@ -85,9 +85,23 @@ RakshaSetu/
 3. **Setup Environment Variables**
    - Create a `.env` file in the root directory and add your API keys securely:
    ```sh
+   OPENAI_API_KEY=your-openai-api-key
+   GEMINI_API_KEY=your-gemini-api-key
    GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+   YOUTUBE_API_KEY=your-youtube-api-key
+   
+   EXPO_CLIENT_ID=your-expo-client-id
+   IOS_CLIENT_ID=your-ios-client-id
+   ANDROID_CLIENT_ID=your-android-client-id
+   WEB_CLIENT_ID=your-web-client-id
+   
    FIREBASE_API_KEY=your-firebase-api-key
-   RAZORPAY_KEY=your-razorpay-key
+   FIREBASE_AUTH_DOMAIN=your-firebase-auth-domain
+   FIREBASE_PROJECT_ID=your-firebase-project-id
+   FIREBASE_STORAGE_BUCKET=your-firebase-storage-bucket
+   FIREBASE_MESSAGING_SENDER_ID=your-firebase-messaging-sender-id
+   FIREBASE_APP_ID=your-firebase-app-id
+   FIREBASE_MEASUREMENT_ID=your-firebase-measurement-id
    ```
    - **DO NOT** commit this file to GitHub. Add it to `.gitignore`.
 
