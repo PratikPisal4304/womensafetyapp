@@ -1,6 +1,6 @@
 # RakshaSetu
 
-**RakshaSetu** is a comprehensive women's safety mobile application designed to provide emergency assistance, location tracking, financial literacy, real-time alerts, and a **community platform** for sharing experiences and support. Built with **React Native (Expo)** and powered by **Firebase**, this app ensures quick and reliable communication during emergencies.
+**RakshaSetu** is an innovative women's safety mobile application, designed to provide comprehensive security, assistance, and empowerment through cutting-edge technology. With a mission to ensure safety and financial independence for women, RakshaSetu offers real-time emergency alerts, location tracking, AI-powered assistance, financial literacy, and a strong **community platform** for engagement and support. Built with **React Native (Expo)** and powered by **Firebase**, the app ensures seamless and reliable communication, equipping users with the tools they need to feel secure at all times.
 
 ## 🚀 Key Features
 
@@ -106,7 +106,7 @@ RakshaSetu/
    - **DO NOT** commit this file to GitHub. Add it to `.gitignore`.
 
 4. **Setup Firebase**
-   - Create a Firebase project and enable Firestore, Auth.
+   - Create a Firebase project and enable Firestore, Auth and Storage.
 
 5. **Run the app**
    ```sh
