@@ -90,7 +90,7 @@ function FloatingTabBar({ state, descriptors, navigation }) {
 
   if (currentRouteName === "Home") {
     const childRoute = getFocusedRouteNameFromRoute(state.routes[state.index]) ?? "HomeMain";
-    if (childRoute === "FakeCall" || childRoute === "AddFriends" || childRoute === "GenerateReport" || childRoute === "JobMarketInsights") {
+    if (childRoute === "FakeCall" || childRoute === "AddFriends" || childRoute === "GenerateReport" || childRoute === "JobMarketInsights" || childRoute === "BudgetTool" || childRoute === "FinancialNews" || childRoute === "MyLearningPath") {
       hideTabBar = true;
     }
   } else if (currentRouteName === "Profile") {
