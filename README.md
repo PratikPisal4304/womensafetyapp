@@ -113,7 +113,7 @@ RakshaSetu/
    npm start
    ```
 
-## 📲 Screenshots
+## 📂 Additional Resources
 - 📊 [RakshaSetu Dashboard Presentation](RakshaSetu/docs/RakshaSetu-Presentation.pptx)
 
 ## 🤝 Contributing
