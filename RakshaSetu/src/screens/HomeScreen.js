@@ -379,6 +379,24 @@ const HomeScreen = ({ navigation }) => {
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
 
+        {/* Job Market Insights Section */}
+        <TouchableOpacity 
+          style={styles.jobMarketSection} 
+          onPress={() => navigation.navigate('JobMarketInsights')}
+        >
+          <View style={styles.jobMarketContent}>
+            <Image
+              source={require('../../assets/job.png')}
+              style={styles.jobMarketIcon}
+            />
+            <View>
+              <Text style={styles.jobMarketTitle}>{t('home.jobMarketInsightsTitle')}</Text>
+              <Text style={styles.jobMarketSubtitle}>{t('home.jobMarketInsightsSubtitle')}</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="black" />
+        </TouchableOpacity>
+
         {/* Journey Section */}
         <TouchableOpacity style={styles.journeySection} onPress={() => navigation.navigate('TrackMe')}>
           <View style={styles.journeyContent}>
@@ -394,23 +412,6 @@ const HomeScreen = ({ navigation }) => {
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
 
-        {/* Job Market Insights Section */}
-        <TouchableOpacity 
-          style={styles.jobMarketSection} 
-          onPress={() => navigation.navigate('JobMarketInsights')}
-        >
-          <View style={styles.jobMarketContent}>
-            <Image
-              source={require('../../assets/icon.png')}
-              style={styles.jobMarketIcon}
-            />
-            <View>
-              <Text style={styles.jobMarketTitle}>{t('home.jobMarketInsightsTitle')}</Text>
-              <Text style={styles.jobMarketSubtitle}>{t('home.jobMarketInsightsSubtitle')}</Text>
-            </View>
-          </View>
-          <Ionicons name="chevron-forward" size={24} color="black" />
-        </TouchableOpacity>
 
         {/* Emergency Buttons */}
         <TouchableOpacity style={styles.emergencyButton} onPress={openNearbyPoliceStations}>
