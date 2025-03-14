@@ -114,7 +114,7 @@ RakshaSetu/
    ```
 
 ## 📲 Screenshots
-- 📊 [RakshaSetu Presentation](C:\Users\pisal\OneDrive\Documents)
+- 📊 [RakshaSetu Dashboard PPT](https://docs.google.com/presentation/d/1JVBv_sYMc7g_SLNdXrgOMCZ9ZCAkhIYO/edit?usp=drive_link&ouid=114818407397273759706&rtpof=true&sd=true)
 
 ## 🤝 Contributing
 We welcome contributions! 🚀 If you’d like to contribute, please:
