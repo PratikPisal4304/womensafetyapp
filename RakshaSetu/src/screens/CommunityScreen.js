@@ -17,7 +17,7 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialIcons, Ionicons } from '@expo/vector-icons';
+import { MaterialIcons, Ionicons, FontAwesome } from '@expo/vector-icons';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import {
   collection,
@@ -618,7 +618,7 @@ export default function CommunityScreen() {
         style={styles.floatingButton}
         onPress={() => navigation.navigate("GeminiChat")}
       >
-        <Ionicons name="sparkles" size={28} color="#fff" />
+        <FontAwesome name="gavel" size={28} color="#fff" />
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.chatfloatingButton}
