@@ -146,7 +146,7 @@ function SignUpScreen({ navigation }) {
             <Text style={styles.headerSubtitle}>{t('signup.headerSubtitle')}</Text>
             <TouchableOpacity style={styles.languageContainer} onPress={handleLanguagePress}>
               <Image
-                source={require('../../assets/adaptive-icon.png')}
+                source={require('../../assets/languages.png')}
                 style={styles.flagIcon}
               />
               <Text style={styles.languageText}>{selectedLanguage}</Text>

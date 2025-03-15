@@ -20,9 +20,8 @@ import GenerateReportScreen from "./screens/GenerateReportScreen";
 import HomeScreen from "./screens/HomeScreen";
 import InAppChatScreen from "./screens/InAppChatScreen";
 import JobMarketInsightsScreen from "./screens/JobMarketInsightsScreen";
-import LiveLocationScreen from './screens/LiveLocationScreen';
 import LoginScreen from "./screens/LoginScreen";
-import MyLearningPathScreen from "./screens/MyLearningPathScreen";
+import MyLearniningPath from "./screens/MyLearningPathScreen";
 import MyPostsScreen from "./screens/MyPostsScreen";
 import MyReportsScreen from "./screens/MyReportsScreen";
 import OTPVerificationScreen from "./screens/OTPVerificationScreen";
@@ -52,12 +51,11 @@ function HomeStack() {
       <Stack.Screen name="AddFriends" component={AddFriendsScreen} />
       <Stack.Screen name="GenerateReport" component={GenerateReportScreen} />
       <Stack.Screen name="TrackMe" component={TrackMeScreen} />
+      <Stack.Screen name="JobMarketInsights" component={JobMarketInsightsScreen} />
       <Stack.Screen name="SkillDevelopment" component={SkillDevelopmentScreen} />
-      <Stack.Screen name="MyLearningPath" component={MyLearningPathScreen} />
       <Stack.Screen name="BudgetTool" component={BudgetToolScreen} />
       <Stack.Screen name="FinancialNews" component={FinancialNews} />
-      <Stack.Screen name="JobMarketInsights" component={JobMarketInsightsScreen} />
-      <Stack.Screen name="LiveLocationScreen" component={LiveLocationScreen} options={{ title: 'Live Location' }} />
+      <Stack.Screen name="MyLearningPath" component={MyLearniningPath} />
     </Stack.Navigator>
   );
 }
@@ -92,7 +90,7 @@ function FloatingTabBar({ state, descriptors, navigation }) {
 
   if (currentRouteName === "Home") {
     const childRoute = getFocusedRouteNameFromRoute(state.routes[state.index]) ?? "HomeMain";
-    if (childRoute === "FakeCall" || childRoute === "AddFriends" || childRoute === "GenerateReport" || childRoute === "MyLearningPath") {
+    if (childRoute === "FakeCall" || childRoute === "AddFriends" || childRoute === "GenerateReport" || childRoute === "JobMarketInsights" || childRoute === "BudgetTool" || childRoute === "FinancialNews" || childRoute === "MyLearningPath") {
       hideTabBar = true;
     }
   } else if (currentRouteName === "Profile") {

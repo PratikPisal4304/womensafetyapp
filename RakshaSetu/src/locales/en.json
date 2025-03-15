@@ -42,6 +42,12 @@
         "userCreated": "Sign Up",
         "userCreatedMessage": "User created successfully:"
       },
+      "notifications": {
+        "header": "Notifications",
+        "empty": "No new notifications",
+        "clearAll": "Clear All",
+        "dismiss": "Dismiss"
+      },
     "home": {
       "greeting": "Hey there👋,",
       "fakeCall": "Fake call",
@@ -56,6 +62,8 @@
       "generateReportSubtitle": "Generate File Incident Report using AI",
       "journeyTitle": "Start a journey",
       "journeySubtitle": "Enter your destination, and the app\nwill track your route in real-time.",
+      "jobMarketInsightsTitle": "Job Market Insights",
+      "jobMarketInsightsSubtitle": "Gain valuable insights and trends from \nthe job market.",
       "policeNearMe": "Police station near me",
       "hospitalNearMe": "Hospital near me",
       "pharmacyNearMe": "Pharmacy near me"

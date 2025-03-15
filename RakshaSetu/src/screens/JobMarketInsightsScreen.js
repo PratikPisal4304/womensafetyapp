@@ -1,875 +1,938 @@
 // JobMarketInsightsScreen.js
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  StyleSheet, 
+  View, 
+  Text, 
+  ScrollView, 
+  TouchableOpacity, 
+  TouchableWithoutFeedback,
   ActivityIndicator,
-  Dimensions,
+  SafeAreaView,
   Image,
-  FlatList,
-  RefreshControl
+  Dimensions,
+  RefreshControl,
+  Modal,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
-import { collection, query, getDocs, orderBy, limit, where } from 'firebase/firestore';
-import { LineChart, BarChart } from 'react-native-chart-kit';
-import { db, auth } from '../../config/firebaseConfig';
-import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BarChart, LineChart } from 'react-native-chart-kit';
 
-const PINK = '#ff5f96';
-const WIDTH = Dimensions.get('window').width;
+const screenWidth = Dimensions.get('window').width;
 
-const JobMarketInsightsScreen = ({ navigation }) => {
-  const { t } = useTranslation();
-  const [loading, setLoading] = useState(true);
+// Mock data - In a real app, this would come from an API
+const mockJobData = {
+  topSectors: [
+    { id: 1, name: 'Information Technology', growth: '+12%', jobs: 45000, icon: 'laptop-outline' },
+    { id: 2, name: 'Healthcare', growth: '+8%', jobs: 32000, icon: 'medical-outline' },
+    { id: 3, name: 'Education', growth: '+5%', jobs: 28000, icon: 'school-outline' },
+    { id: 4, name: 'Finance', growth: '+7%', jobs: 25000, icon: 'cash-outline' },
+    { id: 5, name: 'E-commerce', growth: '+15%', jobs: 20000, icon: 'cart-outline' },
+  ],
+  salaryTrends: {
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    datasets: [
+      {
+        data: [30000, 32000, 35000, 39000, 42000, 45000],
+        color: (opacity = 1) => `rgba(255,95,150, ${opacity})`,
+        strokeWidth: 2
+      }
+    ],
+  },
+  genderPayGap: {
+    labels: ['IT', 'Healthcare', 'Education', 'Finance', 'Retail'],
+    datasets: [
+      {
+        data: [15, 12, 8, 18, 10],
+      }
+    ]
+  },
+  featuredJobs: [
+    { id: 1, title: 'Senior Software Developer', company: 'TechSolutions India', location: 'Bangalore', remote: true, salary: '₹18-25L' },
+    { id: 2, title: 'HR Manager', company: 'Global Services Ltd', location: 'Mumbai', remote: false, salary: '₹12-15L' },
+    { id: 3, title: 'Content Strategist', company: 'MediaMinds', location: 'Delhi NCR', remote: true, salary: '₹8-12L' },
+    { id: 4, title: 'Finance Analyst', company: 'Finance First', location: 'Hyderabad', remote: false, salary: '₹10-14L' },
+  ],
+  skills: [
+    { id: 1, name: 'Digital Marketing', demand: 'High' },
+    { id: 2, name: 'Data Analysis', demand: 'Very High' },
+    { id: 3, name: 'Project Management', demand: 'High' },
+    { id: 4, name: 'UI/UX Design', demand: 'Medium' },
+    { id: 5, name: 'Content Writing', demand: 'Medium' },
+  ],
+  resources: [
+    { id: 1, title: 'Women in Tech Mentorship', org: 'TechLadies India', type: 'Mentorship' },
+    { id: 2, title: 'Leadership Skills Workshop', org: 'Professional Women Network', type: 'Workshop' },
+    { id: 3, title: 'Return to Work Program', org: 'JobsForHer', type: 'Program' },
+    { id: 4, title: 'Financial Assistance for Training', org: 'Govt. Skill India', type: 'Financial Aid' },
+  ]
+};
+
+// Enhanced modal component that handles tapping outside to dismiss and provides a close button.
+const EnhancedModal = ({ visible, onClose, children }) => {
+  return (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <TouchableOpacity 
+        style={styles.modalOverlay} 
+        activeOpacity={1} 
+        onPress={onClose}
+      >
+        <TouchableWithoutFeedback>
+          <View style={styles.modalContainer}>
+            {children}
+            <TouchableOpacity style={styles.modalCloseButton} onPress={onClose}>
+              <Text style={styles.modalCloseButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableWithoutFeedback>
+      </TouchableOpacity>
+    </Modal>
+  );
+};
+
+const JobMarketInsightsScreen = () => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [jobData, setJobData] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview');
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState('safety');
-  const [locationFilter, setLocationFilter] = useState('All');
-  const [jobData, setJobData] = useState({
-    totalJobs: 0,
-    safetyJobs: 0,
-    openPositions: [],
-    trending: [],
-    salaryData: {},
-    skillDemand: {},
-    locations: []
-  });
 
-  // Fetch job market data from Firestore
-  const fetchJobData = async () => {
-    try {
-      setLoading(true);
-      
-      // This would be a real Firestore query in production
-      // For demo purposes, creating realistic mock data related to safety/security
-      
-      // Simulate fetching job statistics
-      const statData = {
-        totalJobs: 1856,
-        safetyJobs: 782,
-        locations: ['All', 'New York', 'San Francisco', 'Chicago', 'Austin', 'Remote']
-      };
-      
-      // Simulate fetching trending job roles in safety/security
-      const trendingRoles = [
-        { id: 1, title: 'Cybersecurity Analyst', growth: '+18%', category: 'safety' },
-        { id: 2, title: 'Safety Compliance Manager', growth: '+15%', category: 'safety' },
-        { id: 3, title: 'Women\'s Safety Advocate', growth: '+22%', category: 'safety' },
-        { id: 4, title: 'Emergency Response Coordinator', growth: '+12%', category: 'safety' },
-        { id: 5, title: 'Software Engineer', growth: '+14%', category: 'tech' },
-        { id: 6, title: 'UX Designer', growth: '+10%', category: 'tech' }
-      ];
-      
-      // Simulate fetching salary data
-      const salaryTrends = {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-        datasets: [
-          {
-            data: [72000, 74500, 76000, 78000, 80500, 82000],
-            color: () => PINK,
-            strokeWidth: 2
-          }
-        ]
-      };
-      
-      // Simulate fetching skill demand data
-      const skillData = {
-        labels: ['Risk Assessment', 'Crisis Management', 'Self-Defense', 'Compliance', 'First Aid'],
-        datasets: [
-          {
-            data: [85, 75, 60, 82, 70],
-            colors: [
-              (opacity = 1) => `rgba(255, 95, 150, ${opacity})`,
-              (opacity = 1) => `rgba(245, 85, 140, ${opacity})`,
-              (opacity = 1) => `rgba(235, 75, 130, ${opacity})`,
-              (opacity = 1) => `rgba(225, 65, 120, ${opacity})`,
-              (opacity = 1) => `rgba(215, 55, 110, ${opacity})`
-            ]
-          }
-        ]
-      };
-      
-      // Simulate fetching open positions
-      const positions = [
-        {
-          id: 'job1',
-          title: 'Personal Safety Consultant',
-          company: 'SecureHer Inc.',
-          location: 'New York',
-          salary: '$75,000 - $95,000',
-          posted: '2 days ago',
-          category: 'safety',
-          description: 'Design and implement personal safety programs for individuals and organizations.',
-          skills: ['Risk Assessment', 'Self-Defense Training', 'Crisis Management'],
-          logo: require('../../assets/company1.png')
-        },
-        {
-          id: 'job2',
-          title: 'Women\'s Safety Program Director',
-          company: 'SafeSpace Foundation',
-          location: 'San Francisco',
-          salary: '$90,000 - $110,000',
-          posted: '1 week ago',
-          category: 'safety',
-          description: 'Lead initiatives to improve women\'s safety in urban environments.',
-          skills: ['Program Management', 'Community Outreach', 'Policy Development'],
-          logo: require('../../assets/company2.png')
-        },
-        {
-          id: 'job3',
-          title: 'Safety App Developer',
-          company: 'GuardTech Solutions',
-          location: 'Remote',
-          salary: '$105,000 - $125,000',
-          posted: '3 days ago',
-          category: 'safety',
-          description: 'Build mobile applications focused on personal safety and emergency response.',
-          skills: ['React Native', 'Firebase', 'Geolocation APIs'],
-          logo: require('../../assets/company3.png')
-        },
-        {
-          id: 'job4',
-          title: 'UX Designer',
-          company: 'TechCorp',
-          location: 'Austin',
-          salary: '$85,000 - $105,000',
-          posted: '5 days ago',
-          category: 'tech',
-          description: 'Design user interfaces for web and mobile applications.',
-          skills: ['UI/UX', 'Figma', 'User Research'],
-          logo: require('../../assets/icon.png')
-        }
-      ];
-      
-      setJobData({
-        totalJobs: statData.totalJobs,
-        safetyJobs: statData.safetyJobs,
-        openPositions: positions,
-        trending: trendingRoles,
-        salaryData: salaryTrends,
-        skillDemand: skillData,
-        locations: statData.locations
-      });
-      
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching job data:', error);
-      setLoading(false);
+  // Modal state
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalType, setModalType] = useState('');
+  const [modalData, setModalData] = useState(null);
+
+  // Dummy notifications data
+  const notificationsData = [
+    { id: 1, message: 'Your application for Senior Software Developer has been viewed.' },
+    { id: 2, message: 'New job posting in Information Technology.' },
+    { id: 3, message: 'Reminder: Complete your profile for better matches.' },
+  ];
+
+  useEffect(() => {
+    // Simulate an API call with a 1.5s delay
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        setJobData(mockJobData);
+      } catch (error) {
+        console.error('Error fetching job market data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    // Simulate a refresh delay
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1500);
+  }, []);
+
+  const chartConfig = {
+    backgroundGradientFrom: "#fff",
+    backgroundGradientTo: "#fff",
+    color: (opacity = 1) => `rgba(255,95,150, ${opacity})`,
+    strokeWidth: 2,
+    barPercentage: 0.5,
+    useShadowColorFromDataset: false
+  };
+
+  // Modal open and close functions
+  const openModal = (type, data) => {
+    setModalType(type);
+    setModalData(data);
+    setModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+    setModalType('');
+    setModalData(null);
+  };
+
+  // Additional action for notifications modal
+  const handleMarkAllAsRead = () => {
+    alert("All notifications marked as read!");
+    closeModal();
+  };
+
+  // Render modal content based on type
+  const renderModalContent = () => {
+    switch(modalType) {
+      case 'notifications':
+        return (
+          <View>
+            <Text style={styles.modalTitle}>Notifications</Text>
+            {modalData.map(notification => (
+              <Text key={notification.id} style={styles.modalText}>• {notification.message}</Text>
+            ))}
+            <TouchableOpacity style={styles.markAllButton} onPress={handleMarkAllAsRead}>
+              <Text style={styles.markAllButtonText}>Mark All as Read</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      case 'sector':
+        return (
+          <View>
+            <Text style={styles.modalTitle}>{modalData.name}</Text>
+            <Text style={styles.modalText}>Growth: {modalData.growth}</Text>
+            <Text style={styles.modalText}>Number of Jobs: {modalData.jobs}</Text>
+            <Text style={styles.modalText}>Explore more opportunities in the {modalData.name} sector.</Text>
+          </View>
+        );
+      case 'job':
+        return (
+          <View>
+            <Text style={styles.modalTitle}>{modalData.title}</Text>
+            <Text style={styles.modalSubtitle}>{modalData.company} - {modalData.location}</Text>
+            <Text style={styles.modalText}>Salary Range: {modalData.salary}</Text>
+            <Text style={styles.modalText}>Work Mode: {modalData.remote ? 'Remote' : 'On-site'}</Text>
+            <Text style={styles.modalText}>Detailed Description: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero.</Text>
+          </View>
+        );
+      case 'skill':
+        return (
+          <View>
+            <Text style={styles.modalTitle}>{modalData.name}</Text>
+            <Text style={styles.modalText}>Demand Level: {modalData.demand}</Text>
+            <Text style={styles.modalText}>Enhance your career by developing this skill. Explore courses and tutorials to master {modalData.name}.</Text>
+          </View>
+        );
+      case 'resource':
+        return (
+          <View>
+            <Text style={styles.modalTitle}>{modalData.title}</Text>
+            <Text style={styles.modalSubtitle}>{modalData.org}</Text>
+            <Text style={styles.modalText}>Type: {modalData.type}</Text>
+            <Text style={styles.modalText}>Detailed Information: This program offers extensive support to help you advance in your career. Check out eligibility criteria and application details.</Text>
+          </View>
+        );
+      case 'govt':
+        return (
+          <View>
+            <Text style={styles.modalTitle}>{modalData.title}</Text>
+            <Image source={{ uri: modalData.image }} style={styles.modalImage} />
+            <Text style={styles.modalText}>{modalData.description}</Text>
+          </View>
+        );
+      default:
+        return null;
     }
   };
 
-  useEffect(() => {
-    fetchJobData();
-  }, []);
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#ff5f96" />
+        <Text style={styles.loadingText}>Loading job insights...</Text>
+      </View>
+    );
+  }
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchJobData();
-    setRefreshing(false);
-  };
-
-  // Filter jobs based on selected category
-  const filteredJobs = jobData.openPositions.filter(job => {
-    if (selectedFilter === 'all') return true;
-    if (locationFilter !== 'All' && job.location !== locationFilter) return false;
-    return job.category === selectedFilter;
-  });
-
-  // Filter trending roles based on selected category
-  const filteredTrending = jobData.trending.filter(job => {
-    if (selectedFilter === 'all') return true;
-    return job.category === selectedFilter;
-  });
-
-  const renderJobItem = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.jobCard}
-      onPress={() => navigation.navigate('JobDetails', { job: item })}
+  // Overview Tab (with Header & Notification Panel)
+  const renderOverviewTab = () => (
+    <ScrollView 
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <View style={styles.jobCardHeader}>
-        <Image 
-          source={item.logo || require('../../assets/icon.png')} 
-          style={styles.companyLogo} 
-        />
-        <View style={styles.jobTitleContainer}>
-          <Text style={styles.jobTitle}>{item.title}</Text>
-          <Text style={styles.companyName}>{item.company}</Text>
-          <View style={styles.locationContainer}>
-            <Ionicons name="location-outline" size={14} color="#666" />
-            <Text style={styles.locationText}>{item.location}</Text>
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={['#ff5f96', '#ff85b8']}
+          style={styles.headerGradient}
+        >
+          {/* Notification Panel */}
+          <TouchableOpacity 
+            style={styles.notificationPanel} 
+            onPress={() => openModal('notifications', notificationsData)}
+          >
+            <Ionicons name="notifications-outline" size={28} color="#fff" />
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>3</Text>
+            </View>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Job Market Insights</Text>
+          <Text style={styles.headerSubtitle}>For Indian Women Professionals</Text>
+          
+          <View style={styles.statsContainer}>
+            <View style={styles.statBox}>
+              <Text style={styles.statNumber}>4.2M</Text>
+              <Text style={styles.statLabel}>Job Openings</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statNumber}>+8.3%</Text>
+              <Text style={styles.statLabel}>Growth Rate</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statNumber}>28%</Text>
+              <Text style={styles.statLabel}>Women in Workforce</Text>
+            </View>
+          </View>
+        </LinearGradient>
+      </View>
+
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>Top Sectors Hiring Women</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {jobData.topSectors.map(sector => (
+            <TouchableOpacity key={sector.id} style={styles.sectorCard} onPress={() => openModal('sector', sector)}>
+              <View style={styles.sectorIconContainer}>
+                <Ionicons name={sector.icon} size={28} color="#ff5f96" />
+              </View>
+              <Text style={styles.sectorName}>{sector.name}</Text>
+              <Text style={styles.sectorGrowth}>{sector.growth} growth</Text>
+              <Text style={styles.sectorJobs}>{(sector.jobs/1000).toFixed(1)}K jobs</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>Average Salary Trends</Text>
+        <View style={styles.chartContainer}>
+          <LineChart
+            data={jobData.salaryTrends}
+            width={screenWidth - 40}
+            height={220}
+            chartConfig={chartConfig}
+            bezier
+            style={styles.chart}
+          />
+          <Text style={styles.chartCaption}>Monthly trends for entry-level positions (₹)</Text>
+        </View>
+      </View>
+
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>Gender Pay Gap by Sector</Text>
+        <Text style={styles.sectionSubtitle}>Pay difference percentage, 2024</Text>
+        <View style={styles.chartContainer}>
+          <BarChart
+            data={jobData.genderPayGap}
+            width={screenWidth - 40}
+            height={220}
+            chartConfig={{
+              ...chartConfig,
+              color: (opacity = 1) => `rgba(255,95,150, ${opacity})`,
+            }}
+            style={styles.chart}
+          />
+        </View>
+      </View>
+
+      <View style={styles.sectionContainer}>
+        <View style={styles.rowBetween}>
+          <Text style={styles.sectionTitle}>Featured Jobs</Text>
+          <TouchableOpacity onPress={() => alert('Viewing All Jobs')}>
+            <Text style={styles.viewAllButton}>View All</Text>
+          </TouchableOpacity>
+        </View>
+        {jobData.featuredJobs.map(job => (
+          <TouchableOpacity key={job.id} style={styles.jobCard} onPress={() => openModal('job', job)}>
+            <View style={styles.jobCardHeader}>
+              <Text style={styles.jobTitle}>{job.title}</Text>
+              <Text style={styles.jobSalary}>{job.salary}</Text>
+            </View>
+            <Text style={styles.companyName}>{job.company}</Text>
+            <View style={styles.jobDetails}>
+              <View style={styles.jobDetailItem}>
+                <Ionicons name="location-outline" size={16} color="#666" />
+                <Text style={styles.jobDetailText}>{job.location}</Text>
+              </View>
+              <View style={styles.jobBadge}>
+                <Text style={styles.jobBadgeText}>{job.remote ? 'Remote' : 'On-site'}</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </ScrollView>
+  );
+
+  // Resources Tab
+  const renderResourcesTab = () => (
+    <ScrollView 
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    >
+      <View style={styles.tabHeaderContainer}>
+        <Text style={styles.tabHeaderTitle}>Resources & Support</Text>
+        <Text style={styles.tabHeaderSubtitle}>Programs and organizations helping Indian women advance their careers</Text>
+      </View>
+
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>In-Demand Skills</Text>
+        <Text style={styles.sectionSubtitle}>Skills with highest growth potential in 2024</Text>
+        {jobData.skills.map(skill => (
+          <View key={skill.id} style={styles.skillItem}>
+            <View style={styles.skillInfo}>
+              <Text style={styles.skillName}>{skill.name}</Text>
+              <View style={[
+                styles.demandBadge, 
+                skill.demand === 'Very High' ? styles.veryHighDemand : 
+                skill.demand === 'High' ? styles.highDemand : 
+                styles.mediumDemand
+              ]}>
+                <Text style={styles.demandBadgeText}>{skill.demand}</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.learnButton} onPress={() => openModal('skill', skill)}>
+              <Text style={styles.learnButtonText}>Learn</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>Support Programs</Text>
+        {jobData.resources.map(resource => (
+          <TouchableOpacity key={resource.id} style={styles.resourceCard} onPress={() => openModal('resource', resource)}>
+            <View style={styles.resourceContent}>
+              <Text style={styles.resourceTitle}>{resource.title}</Text>
+              <Text style={styles.resourceOrg}>{resource.org}</Text>
+            </View>
+            <View style={styles.resourceTypeBadge}>
+              <Text style={styles.resourceTypeText}>{resource.type}</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>Government Initiatives</Text>
+        <View style={styles.govtCard}>
+          <Image 
+            source={{ uri: 'https://via.placeholder.com/80' }} 
+            style={styles.govtLogo}
+          />
+          <View style={styles.govtCardContent}>
+            <Text style={styles.govtCardTitle}>MUDRA Loan Scheme</Text>
+            <Text style={styles.govtCardDesc}>Low-interest loans up to ₹10L for women entrepreneurs</Text>
+            <TouchableOpacity style={styles.govtCardButton} onPress={() => openModal('govt', { title: 'MUDRA Loan Scheme', description: 'Low-interest loans up to ₹10L for women entrepreneurs. Detailed info about eligibility, process, and benefits.', image: 'https://via.placeholder.com/80' })}>
+              <Text style={styles.govtCardButtonText}>Apply Now</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        <View style={styles.govtCard}>
+          <Image 
+            source={{ uri: 'https://via.placeholder.com/80' }} 
+            style={styles.govtLogo}
+          />
+          <View style={styles.govtCardContent}>
+            <Text style={styles.govtCardTitle}>Skill India Mission</Text>
+            <Text style={styles.govtCardDesc}>Free skill development courses for women returning to workforce</Text>
+            <TouchableOpacity style={styles.govtCardButton} onPress={() => openModal('govt', { title: 'Skill India Mission', description: 'Free skill development courses for women returning to workforce. Detailed info about eligibility, process, and benefits.', image: 'https://via.placeholder.com/80' })}>
+              <Text style={styles.govtCardButtonText}>Check Eligibility</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
-      
-      <View style={styles.jobCardBody}>
-        <Text style={styles.jobDescription} numberOfLines={2}>
-          {item.description}
-        </Text>
-        
-        <View style={styles.skillsContainer}>
-          {item.skills.map((skill, index) => (
-            <View key={index} style={styles.skillBadge}>
-              <Text style={styles.skillText}>{skill}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-      
-      <View style={styles.jobCardFooter}>
-        <Text style={styles.salaryText}>{item.salary}</Text>
-        <View style={styles.postedContainer}>
-          <MaterialIcons name="access-time" size={14} color="#666" />
-          <Text style={styles.postedText}>{item.posted}</Text>
-        </View>
-      </View>
-      
-      <TouchableOpacity style={styles.applyButton}>
-        <Text style={styles.applyButtonText}>{t('jobs.apply') || 'Apply Now'}</Text>
-      </TouchableOpacity>
-    </TouchableOpacity>
+    </ScrollView>
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        {activeTab === 'overview' ? renderOverviewTab() : renderResourcesTab()}
+      </View>
+      <View style={styles.tabBar}>
+        <TouchableOpacity 
+          style={[styles.tabButton, activeTab === 'overview' && styles.activeTabButton]} 
+          onPress={() => setActiveTab('overview')}
+        >
+          <Ionicons 
+            name={activeTab === 'overview' ? "stats-chart" : "stats-chart-outline"} 
+            size={24} 
+            color={activeTab === 'overview' ? "#ff5f96" : "#666"} 
+          />
+          <Text style={[styles.tabLabel, activeTab === 'overview' && styles.activeTabLabel]}>Overview</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('jobs.marketInsights') || 'Job Market Insights'}</Text>
-        <TouchableOpacity onPress={() => {}}>
-          <Ionicons name="options-outline" size={24} color="#000" />
+        <TouchableOpacity 
+          style={[styles.tabButton, activeTab === 'resources' && styles.activeTabButton]} 
+          onPress={() => setActiveTab('resources')}
+        >
+          <Ionicons 
+            name={activeTab === 'resources' ? "briefcase" : "briefcase-outline"} 
+            size={24} 
+            color={activeTab === 'resources' ? "#ff5f96" : "#666"} 
+          />
+          <Text style={[styles.tabLabel, activeTab === 'resources' && styles.activeTabLabel]}>Resources</Text>
         </TouchableOpacity>
       </View>
-      
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[PINK]} />
-        }
-      >
-        {loading ? (
-          <ActivityIndicator size="large" color={PINK} style={styles.loader} />
-        ) : (
-          <>
-            {/* Stats Overview */}
-            <View style={styles.statsContainer}>
-              <View style={styles.statCard}>
-                <Text style={styles.statValue}>{jobData.totalJobs.toLocaleString()}</Text>
-                <Text style={styles.statLabel}>{t('jobs.totalJobs') || 'Total Jobs'}</Text>
-              </View>
-              <View style={[styles.statCard, styles.highlightStatCard]}>
-                <Text style={styles.highlightStatValue}>{jobData.safetyJobs.toLocaleString()}</Text>
-                <Text style={styles.highlightStatLabel}>{t('jobs.safetyJobs') || 'Safety & Security'}</Text>
-              </View>
-              <View style={styles.statCard}>
-                <Text style={styles.statValue}>{Math.round((jobData.safetyJobs/jobData.totalJobs)*100)}%</Text>
-                <Text style={styles.statLabel}>{t('jobs.growth') || 'Growth'}</Text>
-              </View>
-            </View>
-            
-            {/* Category Filters */}
-            <View style={styles.filterContainer}>
-              <Text style={styles.sectionTitle}>{t('jobs.categories') || 'Categories'}</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-                <TouchableOpacity 
-                  style={[styles.filterButton, selectedFilter === 'all' && styles.activeFilterButton]}
-                  onPress={() => setSelectedFilter('all')}
-                >
-                  <Text style={[styles.filterText, selectedFilter === 'all' && styles.activeFilterText]}>
-                    {t('jobs.allJobs') || 'All Jobs'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.filterButton, selectedFilter === 'safety' && styles.activeFilterButton]}
-                  onPress={() => setSelectedFilter('safety')}
-                >
-                  <Text style={[styles.filterText, selectedFilter === 'safety' && styles.activeFilterText]}>
-                    {t('jobs.safetyJobs') || 'Safety & Security'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.filterButton, selectedFilter === 'tech' && styles.activeFilterButton]}
-                  onPress={() => setSelectedFilter('tech')}
-                >
-                  <Text style={[styles.filterText, selectedFilter === 'tech' && styles.activeFilterText]}>
-                    {t('jobs.techJobs') || 'Technology'}
-                  </Text>
-                </TouchableOpacity>
-              </ScrollView>
-            </View>
-            
-            {/* Location Filters */}
-            <View style={styles.locationFilterContainer}>
-              <Text style={styles.sectionTitle}>{t('jobs.location') || 'Location'}</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-                {jobData.locations.map((location, index) => (
-                  <TouchableOpacity 
-                    key={index}
-                    style={[styles.locationFilterChip, locationFilter === location && styles.activeLocationChip]}
-                    onPress={() => setLocationFilter(location)}
-                  >
-                    <Text style={[styles.locationFilterText, locationFilter === location && styles.activeLocationText]}>
-                      {location}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-            
-            {/* Salary Trends */}
-            <View style={styles.chartContainer}>
-              <Text style={styles.sectionTitle}>{t('jobs.salaryTrends') || 'Salary Trends'}</Text>
-              <Text style={styles.subtitle}>
-                {selectedFilter === 'safety' 
-                  ? t('jobs.safetySalaryTrend') || 'Average salary for safety & security roles'
-                  : t('jobs.allSalaryTrend') || 'Average salary across all industries'}
-              </Text>
-              <LineChart
-                data={jobData.salaryData}
-                width={WIDTH - 40}
-                height={180}
-                chartConfig={{
-                  backgroundColor: '#fff',
-                  backgroundGradientFrom: '#fff',
-                  backgroundGradientTo: '#fff',
-                  decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(255, 95, 150, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                  style: {
-                    borderRadius: 16,
-                  },
-                  propsForDots: {
-                    r: '6',
-                    strokeWidth: '2',
-                    stroke: PINK,
-                  },
-                  propsForLabels: {
-                    fontSize: 12,
-                  },
-                }}
-                bezier
-                style={styles.chart}
-                formatYLabel={(value) => `$${parseInt(value/1000)}k`}
-              />
-            </View>
-            
-            {/* Trending Roles */}
-            <View style={styles.trendingContainer}>
-              <Text style={styles.sectionTitle}>{t('jobs.trendingRoles') || 'Trending Roles'}</Text>
-              <Text style={styles.subtitle}>
-                {selectedFilter === 'safety' 
-                  ? t('jobs.trendingSafetyRoles') || 'Fastest growing roles in safety & security'
-                  : t('jobs.trendingAllRoles') || 'Fastest growing roles across industries'}
-              </Text>
-              
-              {filteredTrending.map((role, index) => (
-                <View key={role.id} style={styles.trendingItem}>
-                  <View style={styles.trendingInfo}>
-                    <Text style={styles.trendingRank}>{index + 1}</Text>
-                    <Text style={styles.trendingTitle}>{role.title}</Text>
-                  </View>
-                  <Text style={styles.trendingGrowth}>{role.growth}</Text>
-                </View>
-              ))}
-            </View>
-            
-            {/* In-Demand Skills */}
-            <View style={styles.chartContainer}>
-              <Text style={styles.sectionTitle}>{t('jobs.skillDemand') || 'In-Demand Skills'}</Text>
-              <Text style={styles.subtitle}>
-                {selectedFilter === 'safety' 
-                  ? t('jobs.safetySkills') || 'Top skills requested for safety & security roles'
-                  : t('jobs.allSkills') || 'Top skills across industries'}
-              </Text>
-              <BarChart
-                data={jobData.skillDemand}
-                width={WIDTH - 40}
-                height={220}
-                chartConfig={{
-                  backgroundColor: '#fff',
-                  backgroundGradientFrom: '#fff',
-                  backgroundGradientTo: '#fff',
-                  decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(255, 95, 150, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                  style: {
-                    borderRadius: 16,
-                  },
-                  barPercentage: 0.7,
-                }}
-                style={styles.chart}
-                showValuesOnTopOfBars={true}
-                fromZero={true}
-                withInnerLines={false}
-              />
-            </View>
-            
-            {/* Open Positions */}
-            <View style={styles.openPositionsContainer}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionTitle}>{t('jobs.openPositions') || 'Open Positions'}</Text>
-                <TouchableOpacity onPress={() => {}}>
-                  <Text style={styles.viewAllText}>{t('jobs.viewAll') || 'View All'}</Text>
-                </TouchableOpacity>
-              </View>
-              
-              <Text style={styles.subtitle}>
-                {filteredJobs.length > 0 
-                  ? `${filteredJobs.length} ${t('jobs.positionsFound') || 'positions found'}`
-                  : t('jobs.noPositions') || 'No positions found for selected filters'}
-              </Text>
-              
-              <FlatList
-                data={filteredJobs}
-                renderItem={renderJobItem}
-                keyExtractor={item => item.id}
-                horizontal={false}
-                showsVerticalScrollIndicator={false}
-                scrollEnabled={false}
-                ListEmptyComponent={
-                  <View style={styles.emptyStateContainer}>
-                    <FontAwesome5 name="briefcase" size={40} color="#DDD" />
-                    <Text style={styles.emptyStateText}>
-                      {t('jobs.noJobs') || 'No jobs found for current filters'}
-                    </Text>
-                    <TouchableOpacity 
-                      style={styles.resetFiltersButton}
-                      onPress={() => {
-                        setSelectedFilter('all');
-                        setLocationFilter('All');
-                      }}
-                    >
-                      <Text style={styles.resetFiltersText}>
-                        {t('jobs.resetFilters') || 'Reset Filters'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                }
-              />
-            </View>
-            
-            {/* Career Resources Section */}
-            <View style={styles.resourcesContainer}>
-              <Text style={styles.sectionTitle}>{t('jobs.careerResources') || 'Safety Career Resources'}</Text>
-              <View style={styles.resourceCard}>
-                <Image 
-                  source={require('../../assets/skill.png')} 
-                  style={styles.resourceIcon} 
-                />
-                <View style={styles.resourceContent}>
-                  <Text style={styles.resourceTitle}>
-                    {t('jobs.safetyTraining') || 'Safety Training Certification'}
-                  </Text>
-                  <Text style={styles.resourceDescription}>
-                    {t('jobs.trainingDesc') || 'Get certified in essential safety skills to boost your career.'}
-                  </Text>
-                  <TouchableOpacity style={styles.resourceButton}>
-                    <Text style={styles.resourceButtonText}>
-                      {t('jobs.learnMore') || 'Learn More'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-              
-              <TouchableOpacity style={styles.careerAdviceButton}>
-                <Ionicons name="chatbubble-ellipses-outline" size={20} color="#FFF" />
-                <Text style={styles.careerAdviceText}>
-                  {t('jobs.careerAdvice') || 'Get Personalized Career Advice'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-      </ScrollView>
+      {/* Enhanced Modal */}
+      <EnhancedModal visible={modalVisible} onClose={closeModal}>
+        {renderModalContent()}
+      </EnhancedModal>
     </SafeAreaView>
   );
 };
 
-export default JobMarketInsightsScreen;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: '#f8f8f8',
   },
-  header: {
-    flexDirection: 'row',
+  content: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    backgroundColor: '#f8f8f8',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#ff5f96",
+  },
+  headerContainer: {
+    marginBottom: 20,
+  },
+  headerGradient: {
+    paddingTop: 40,
+    paddingBottom: 30,
     paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
+  },
+  notificationPanel: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: 'red',
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  notificationBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#fff',
+    marginTop: 10,
   },
-  scrollContent: {
-    paddingBottom: 30,
-  },
-  loader: {
-    marginTop: 50,
+  headerSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 5,
   },
   statsContainer: {
     flexDirection: 'row',
+    marginTop: 25,
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginTop: 20,
   },
-  statCard: {
-    backgroundColor: '#F8F8F8',
+  statBox: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 12,
     padding: 15,
     width: '30%',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
-  highlightStatCard: {
-    backgroundColor: PINK + '15',
-  },
-  statValue: {
-    fontSize: 18,
+  statNumber: {
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
-  },
-  highlightStatValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: PINK,
-    marginBottom: 5,
+    color: '#fff',
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 5,
     textAlign: 'center',
   },
-  highlightStatLabel: {
-    fontSize: 12,
-    color: PINK,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  filterContainer: {
-    marginTop: 25,
-    paddingHorizontal: 20,
-  },
-  locationFilterContainer: {
-    marginTop: 20,
+  sectionContainer: {
+    marginBottom: 25,
     paddingHorizontal: 20,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
+    marginBottom: 15,
     color: '#333',
-    marginBottom: 10,
   },
-  subtitle: {
+  sectionSubtitle: {
     fontSize: 14,
     color: '#666',
     marginBottom: 15,
+    marginTop: -10,
   },
-  filterScroll: {
-    flexDirection: 'row',
-    marginBottom: 10,
-  },
-  filterButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 20,
-    marginRight: 10,
-  },
-  activeFilterButton: {
-    backgroundColor: PINK,
-  },
-  filterText: {
-    fontSize: 14,
-    color: '#333',
-  },
-  activeFilterText: {
-    color: '#FFF',
-    fontWeight: '500',
-  },
-  locationFilterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 16,
-    marginRight: 8,
-  },
-  activeLocationChip: {
-    backgroundColor: PINK + '20',
-    borderWidth: 1,
-    borderColor: PINK,
-  },
-  locationFilterText: {
-    fontSize: 13,
-    color: '#333',
-  },
-  activeLocationText: {
-    color: PINK,
-    fontWeight: '500',
-  },
-  chartContainer: {
-    marginTop: 25,
-    padding: 20,
-  },
-  chart: {
-    marginTop: 10,
+  sectorCard: {
+    backgroundColor: '#fff',
     borderRadius: 12,
-  },
-  trendingContainer: {
-    marginTop: 25,
-    paddingHorizontal: 20,
-  },
-  trendingItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
     padding: 15,
-    borderRadius: 12,
-    marginBottom: 10,
+    marginRight: 15,
+    width: 150,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  trendingInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  sectorIconContainer: {
+    backgroundColor: 'rgba(255,95,150,0.1)',
+    padding: 10,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+    marginBottom: 10,
   },
-  trendingRank: {
-    width: 25,
-    height: 25,
-    borderRadius: 12.5,
-    backgroundColor: PINK,
-    color: '#FFF',
-    textAlign: 'center',
-    lineHeight: 25,
+  sectorName: {
+    fontSize: 16,
     fontWeight: 'bold',
-    marginRight: 10,
-  },
-  trendingTitle: {
-    fontSize: 15,
     color: '#333',
-    fontWeight: '500',
   },
-  trendingGrowth: {
+  sectorGrowth: {
     fontSize: 14,
     color: '#4CAF50',
-    fontWeight: 'bold',
-  },
-  openPositionsContainer: {
-    marginTop: 25,
-    paddingHorizontal: 20,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  viewAllText: {
-    color: PINK,
-    fontSize: 14,
+    marginTop: 5,
     fontWeight: '500',
   },
-  jobCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    marginVertical: 10,
+  sectorJobs: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 5,
+  },
+  chartContainer: {
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
     padding: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    borderLeftWidth: 3,
-    borderLeftColor: PINK,
+  },
+  chart: {
+    borderRadius: 12,
+    marginVertical: 8,
+  },
+  chartCaption: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 5,
+    textAlign: 'center',
+  },
+  rowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  viewAllButton: {
+    color: "#ff5f96",
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  jobCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   jobCardHeader: {
     flexDirection: 'row',
-    marginBottom: 12,
-  },
-  companyLogo: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#F5F5F5',
-    marginRight: 12,
-  },
-  jobTitleContainer: {
-    flex: 1,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   jobTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 3,
+    flex: 1,
+  },
+  jobSalary: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: "#ff5f96",
   },
   companyName: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 3,
-  },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  locationText: {
-    fontSize: 13,
-    color: '#666',
-    marginLeft: 4,
-  },
-  jobCardBody: {
-    marginBottom: 12,
-  },
-  jobDescription: {
-    fontSize: 14,
-    color: '#555',
-    lineHeight: 20,
     marginBottom: 10,
   },
-  skillsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  skillBadge: {
-    backgroundColor: PINK + '15',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  skillText: {
-    fontSize: 12,
-    color: PINK,
-  },
-  jobCardFooter: {
+  jobDetails: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
   },
-  salaryText: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  postedContainer: {
+  jobDetailItem: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  postedText: {
-    fontSize: 13,
-    color: '#666',
-    marginLeft: 4,
-  },
-  applyButton: {
-    backgroundColor: PINK,
-    paddingVertical: 10,
-    borderRadius: 25,
-    alignItems: 'center',
-  },
-  applyButtonText: {
-    color: '#FFF',
+  jobDetailText: {
     fontSize: 14,
-    fontWeight: '600',
-  },
-  emptyStateContainer: {
-    alignItems: 'center',
-    padding: 30,
-  },
-  emptyStateText: {
-    fontSize: 16,
     color: '#666',
-    textAlign: 'center',
-    marginTop: 10,
-    marginBottom: 15,
+    marginLeft: 5,
   },
-  resetFiltersButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: PINK + '15',
-    borderRadius: 20,
+  jobBadge: {
+    backgroundColor: 'rgba(255,95,150,0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 15,
   },
-  resetFiltersText: {
-    color: PINK,
+  jobBadgeText: {
+    fontSize: 12,
+    color: "#ff5f96",
     fontWeight: '500',
   },
-  resourcesContainer: {
-    marginTop: 25,
+  tabBar: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    backgroundColor: '#fff',
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeTabButton: {
+    borderTopWidth: 3,
+    borderTopColor: "#ff5f96",
+  },
+  tabLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 3,
+  },
+  activeTabLabel: {
+    color: "#ff5f96",
+    fontWeight: '500',
+  },
+  tabHeaderContainer: {
+    backgroundColor: "#ff5f96",
+    paddingVertical: 30,
     paddingHorizontal: 20,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
     marginBottom: 20,
+  },
+  tabHeaderTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  tabHeaderSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 5,
+    lineHeight: 20,
+  },
+  skillItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  skillInfo: {
+    flex: 1,
+  },
+  skillName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 5,
+  },
+  demandBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  veryHighDemand: {
+    backgroundColor: 'rgba(220,36,48,0.1)',
+  },
+  highDemand: {
+    backgroundColor: 'rgba(255,152,0,0.1)',
+  },
+  mediumDemand: {
+    backgroundColor: 'rgba(3,169,244,0.1)',
+  },
+  demandBadgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  learnButton: {
+    backgroundColor: 'rgba(255,95,150,0.1)',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  learnButtonText: {
+    color: "#ff5f96",
+    fontWeight: '500',
+    fontSize: 14,
   },
   resourceCard: {
     flexDirection: 'row',
-    backgroundColor: '#FFF',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
     padding: 15,
-    borderRadius: 16,
+    borderRadius: 12,
+    marginBottom: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    marginBottom: 15,
-  },
-  resourceIcon: {
-    width: 50,
-    height: 50,
-    marginRight: 15,
+    shadowRadius: 2,
+    elevation: 2,
   },
   resourceContent: {
     flex: 1,
   },
   resourceTitle: {
     fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 5,
+  },
+  resourceOrg: {
+    fontSize: 14,
+    color: '#666',
+  },
+  resourceTypeBadge: {
+    backgroundColor: 'rgba(33,150,243,0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 15,
+  },
+  resourceTypeText: {
+    fontSize: 12,
+    color: '#2196F3',
+    fontWeight: '500',
+  },
+  govtCard: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  govtLogo: {
+    width: 80,
+    height: 80,
+    borderRadius: 10,
+    marginRight: 15,
+  },
+  govtCardContent: {
+    flex: 1,
+  },
+  govtCardTitle: {
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 5,
   },
-  resourceDescription: {
+  govtCardDesc: {
     fontSize: 14,
     color: '#666',
     marginBottom: 10,
+    lineHeight: 20,
   },
-  resourceButton: {
-    backgroundColor: PINK,
+  govtCardButton: {
+    backgroundColor: "#ff5f96",
+    paddingHorizontal: 15,
     paddingVertical: 8,
-    paddingHorizontal: 16,
     borderRadius: 20,
     alignSelf: 'flex-start',
   },
-  resourceButtonText: {
-    color: '#FFF',
+  govtCardButtonText: {
+    color: '#fff',
+    fontWeight: '500',
     fontSize: 14,
-    fontWeight: '600',
   },
-  careerAdviceButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  // Enhanced Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
-    backgroundColor: PINK,
-    paddingVertical: 12,
-    borderRadius: 25,
-    marginTop: 15,
+    alignItems: 'center',
   },
-  careerAdviceText: {
-    color: '#FFF',
+  modalContainer: {
+    width: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+  },
+  modalCloseButton: {
+    alignSelf: 'flex-end',
+    marginTop: 10,
+  },
+  modalCloseButtonText: {
+    fontSize: 16,
+    color: '#ff5f96',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 10,
+  },
+  modalText: {
     fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
+    color: '#444',
+    marginBottom: 10,
+  },
+  modalImage: {
+    width: '100%',
+    height: 150,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  markAllButton: {
+    backgroundColor: "#ff5f96",
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    marginTop: 10,
+  },
+  markAllButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
+
+export default JobMarketInsightsScreen;
