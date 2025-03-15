@@ -9,12 +9,10 @@ import {
   TouchableWithoutFeedback,
   ActivityIndicator,
   SafeAreaView,
-  Image,
-  Dimensions,
+  TextInput,
   RefreshControl,
   Modal,
   Alert,
-  TextInput,
   Share
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,11 +30,6 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../config/firebaseConfig'; // Adjust path as needed
 
-import { BarChart, LineChart } from 'react-native-chart-kit';
-
-const screenWidth = Dimensions.get('window').width;
-
-// Enhanced modal component that handles tapping outside to dismiss and provides a close button.
 const EnhancedModal = ({ visible, onClose, children }) => {
   return (
     <Modal
@@ -63,11 +56,8 @@ const EnhancedModal = ({ visible, onClose, children }) => {
   );
 };
 
-const JobMarketInsightsScreen = () => {
+const JobMarketScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
-
-  // Top Sectors (live from Firestore)
-  const [topSectors, setTopSectors] = useState([]);
 
   // Job Listings (live from Firestore)
   const [jobs, setJobs] = useState([]);
@@ -93,39 +83,7 @@ const JobMarketInsightsScreen = () => {
   const [modalType, setModalType] = useState('');
   const [modalData, setModalData] = useState(null);
 
-  // Chart Data (could also come from Firestore, but let's keep it mock for example)
-  const salaryTrends = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-    datasets: [
-      {
-        data: [30000, 32000, 35000, 39000, 42000, 45000],
-        color: (opacity = 1) => `rgba(255,95,150, ${opacity})`,
-        strokeWidth: 2
-      }
-    ],
-  };
-  const genderPayGap = {
-    labels: ['IT', 'Healthcare', 'Education', 'Finance', 'Retail'],
-    datasets: [
-      {
-        data: [15, 12, 8, 18, 10],
-      }
-    ]
-  };
-
-  // 1) Fetch topSectors from Firestore
-  useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "topSectors"), (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setTopSectors(data);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  // 2) Fetch jobListings from Firestore
+  // 1) Fetch jobListings from Firestore
   useEffect(() => {
     // Optionally order by postedAt descending
     const qJobs = query(collection(db, "jobListings"), orderBy("postedAt", "desc"));
@@ -139,7 +97,7 @@ const JobMarketInsightsScreen = () => {
     return () => unsubscribe();
   }, []);
 
-  // 3) Fetch notifications from Firestore
+  // 2) Fetch notifications from Firestore
   useEffect(() => {
     const qNotifs = query(collection(db, "notifications"), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(qNotifs, (snapshot) => {
@@ -164,7 +122,7 @@ const JobMarketInsightsScreen = () => {
   // Pull to refresh
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    // If needed, re-fetch or just rely on onSnapshot real-time updates
+    // Rely on onSnapshot real-time updates
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
@@ -195,7 +153,6 @@ const JobMarketInsightsScreen = () => {
   // Mark all notifications as read in Firestore
   const handleMarkAllAsRead = async () => {
     try {
-      // For each notification doc, set isRead = true
       for (const notif of notifications) {
         if (!notif.isRead) {
           const notifRef = doc(db, "notifications", notif.id);
@@ -224,11 +181,9 @@ const JobMarketInsightsScreen = () => {
   // Open the "Apply" modal
   const handleOpenApplyModal = (job) => {
     setJobToApply(job);
-    // Reset the input fields
     setApplicantName('');
     setApplicantEmail('');
     setCoverNote('');
-    // Show the apply modal
     openModal('apply', null);
   };
 
@@ -260,12 +215,10 @@ const JobMarketInsightsScreen = () => {
 
   // Filter & search the jobs
   const filteredJobs = jobs.filter((job) => {
-    // 1) Match search query on job.title
     const matchesSearch = job.title
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
 
-    // 2) Match selected work mode
     const matchesMode =
       selectedMode === 'All' ? true : job.workMode === selectedMode;
 
@@ -301,7 +254,6 @@ const JobMarketInsightsScreen = () => {
         );
 
       case 'job':
-        // Show job details
         if (!modalData) return null;
         return (
           <View>
@@ -328,8 +280,6 @@ const JobMarketInsightsScreen = () => {
             <Text style={styles.modalText}>
               Description: {modalData.detailedDescription || 'N/A'}
             </Text>
-
-            {/* Buttons: Apply, Share */}
             <View style={{ flexDirection: 'row', marginTop: 10 }}>
               <TouchableOpacity
                 style={[styles.applyButton, { marginRight: 10 }]}
@@ -337,9 +287,8 @@ const JobMarketInsightsScreen = () => {
               >
                 <Text style={styles.applyButtonText}>Apply Now</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
-                style={[styles.shareButton]}
+                style={styles.shareButton}
                 onPress={() => handleShareJob(modalData)}
               >
                 <Text style={styles.applyButtonText}>Share</Text>
@@ -349,14 +298,12 @@ const JobMarketInsightsScreen = () => {
         );
 
       case 'apply':
-        // Show in-app application form
         return (
           <View>
             <Text style={styles.modalTitle}>Apply for Job</Text>
             <Text style={styles.modalSubtitle}>
               {jobToApply ? jobToApply.title : ''}
             </Text>
-
             <TextInput
               style={styles.input}
               placeholder="Your Name"
@@ -377,7 +324,6 @@ const JobMarketInsightsScreen = () => {
               value={coverNote}
               onChangeText={setCoverNote}
             />
-
             <TouchableOpacity
               style={styles.applyButton}
               onPress={handleSubmitApplication}
@@ -401,25 +347,23 @@ const JobMarketInsightsScreen = () => {
     );
   }
 
-  // Single "Overview" content
+  // Render header, search & filter jobs, and job listings sections
   const renderOverview = () => (
     <ScrollView
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      {/* Header / Stats */}
+      {/* Header */}
       <View style={styles.headerContainer}>
         <LinearGradient
           colors={['#ff5f96', '#ff85b8']}
           style={styles.headerGradient}
         >
-          {/* Notification Panel */}
           <TouchableOpacity 
             style={styles.notificationPanel} 
             onPress={() => openModal('notifications')}
           >
             <Ionicons name="notifications-outline" size={28} color="#fff" />
-            {/* Show unread count if any are isRead === false */}
             {notifications.some(notif => !notif.isRead) && (
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationBadgeText}>
@@ -428,19 +372,12 @@ const JobMarketInsightsScreen = () => {
               </View>
             )}
           </TouchableOpacity>
-
           <Text style={styles.headerTitle}>Job Market Insights</Text>
           <Text style={styles.headerSubtitle}>For Indian Women Professionals</Text>
-          
-          {/* Example dynamic stats: total job count, total sectors, unread notifications */}
           <View style={styles.statsContainer}>
             <View style={styles.statBox}>
               <Text style={styles.statNumber}>{jobs.length}</Text>
               <Text style={styles.statLabel}>Total Jobs</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statNumber}>{topSectors.length}</Text>
-              <Text style={styles.statLabel}>Sectors</Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statNumber}>
@@ -450,68 +387,6 @@ const JobMarketInsightsScreen = () => {
             </View>
           </View>
         </LinearGradient>
-      </View>
-
-      {/* Top Sectors from Firestore */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Top Sectors Hiring Women</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {topSectors.map((sector) => (
-            <TouchableOpacity
-              key={sector.id}
-              style={styles.sectorCard}
-              onPress={() => openModal('sector', sector)}
-            >
-              <View style={styles.sectorIconContainer}>
-                <Ionicons name={sector.icon || 'briefcase-outline'} size={28} color="#ff5f96" />
-              </View>
-              <Text style={styles.sectorName}>{sector.name}</Text>
-              <Text style={styles.sectorGrowth}>{sector.growth} growth</Text>
-              <Text style={styles.sectorJobs}>{(sector.jobs / 1000).toFixed(1)}K jobs</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Salary Trends (mock data) */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Average Salary Trends</Text>
-        <View style={styles.chartContainer}>
-          <LineChart
-            data={salaryTrends}
-            width={screenWidth - 40}
-            height={220}
-            chartConfig={{
-              backgroundGradientFrom: '#fff',
-              backgroundGradientTo: '#fff',
-              color: (opacity = 1) => `rgba(255,95,150, ${opacity})`,
-              strokeWidth: 2,
-            }}
-            bezier
-            style={styles.chart}
-          />
-          <Text style={styles.chartCaption}>Monthly trends for entry-level positions (₹)</Text>
-        </View>
-      </View>
-
-      {/* Gender Pay Gap (mock data) */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Gender Pay Gap by Sector</Text>
-        <Text style={styles.sectionSubtitle}>Pay difference percentage, 2024</Text>
-        <View style={styles.chartContainer}>
-          <BarChart
-            data={genderPayGap}
-            width={screenWidth - 40}
-            height={220}
-            chartConfig={{
-              backgroundGradientFrom: '#fff',
-              backgroundGradientTo: '#fff',
-              color: (opacity = 1) => `rgba(255,95,150, ${opacity})`,
-              strokeWidth: 2,
-            }}
-            style={styles.chart}
-          />
-        </View>
       </View>
 
       {/* Search & Filter UI */}
@@ -605,8 +480,6 @@ const JobMarketInsightsScreen = () => {
       <View style={styles.content}>
         {renderOverview()}
       </View>
-
-      {/* Enhanced Modal */}
       <EnhancedModal visible={modalVisible} onClose={closeModal}>
         {renderModalContent()}
       </EnhancedModal>
@@ -645,7 +518,6 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   notificationBadgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
-
   headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#fff', marginTop: 10 },
   headerSubtitle: { fontSize: 16, color: 'rgba(255,255,255,0.9)', marginTop: 5 },
   statsContainer: { flexDirection: 'row', marginTop: 25, justifyContent: 'space-between' },
@@ -653,7 +525,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 12,
     padding: 15,
-    width: '30%',
+    width: '45%',
     alignItems: 'center',
   },
   statNumber: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
@@ -661,48 +533,6 @@ const styles = StyleSheet.create({
 
   sectionContainer: { marginBottom: 25, paddingHorizontal: 20 },
   sectionTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 15, color: '#333' },
-  sectionSubtitle: { fontSize: 14, color: '#666', marginBottom: 15, marginTop: -10 },
-  sectorCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 15,
-    marginRight: 15,
-    width: 150,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  sectorIconContainer: {
-    backgroundColor: 'rgba(255,95,150,0.1)',
-    padding: 10,
-    borderRadius: 10,
-    alignSelf: 'flex-start',
-    marginBottom: 10,
-  },
-  sectorName: { fontSize: 16, fontWeight: 'bold', color: '#333' },
-  sectorGrowth: { fontSize: 14, color: '#4CAF50', marginTop: 5, fontWeight: '500' },
-  sectorJobs: { fontSize: 14, color: '#666', marginTop: 5 },
-
-  chartContainer: {
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  chart: { borderRadius: 12, marginVertical: 8 },
-  chartCaption: { fontSize: 12, color: '#666', marginTop: 5, textAlign: 'center' },
-
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  viewAllButton: { color: "#ff5f96", fontSize: 14, fontWeight: '500' },
-
-  // Search & Filter
   filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -739,8 +569,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#ff5f96',
     color: '#fff',
   },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  viewAllButton: { color: "#ff5f96", fontSize: 14, fontWeight: '500' },
 
-  // Jobs
   jobCard: {
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -772,7 +603,6 @@ const styles = StyleSheet.create({
   },
   jobBadgeText: { fontSize: 12, color: "#ff5f96", fontWeight: '500' },
 
-  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -800,7 +630,6 @@ const styles = StyleSheet.create({
   },
   markAllButtonText: { color: '#fff', fontSize: 14, fontWeight: '500' },
 
-  // In-app Apply
   input: {
     backgroundColor: '#f2f2f2',
     borderRadius: 12,
@@ -830,4 +659,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default JobMarketInsightsScreen;
+export default JobMarketScreen;

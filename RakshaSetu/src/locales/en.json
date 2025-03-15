@@ -62,8 +62,8 @@
       "generateReportSubtitle": "Generate File Incident Report using AI",
       "journeyTitle": "Start a journey",
       "journeySubtitle": "Enter your destination, and the app\nwill track your route in real-time.",
-      "jobMarketInsightsTitle": "Job Market Insights",
-      "jobMarketInsightsSubtitle": "Gain valuable insights and trends from \nthe job market.",
+      "jobMarket": "Job Market",
+      "searchJobListings": "Search job listings",
       "policeNearMe": "Police station near me",
       "hospitalNearMe": "Hospital near me",
       "pharmacyNearMe": "Pharmacy near me"

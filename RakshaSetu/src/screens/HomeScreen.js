@@ -485,8 +485,8 @@ const HomeScreen = ({ navigation }) => {
               style={styles.jobMarketIcon}
             />
             <View>
-              <Text style={styles.jobMarketTitle}>{t("home.jobMarketInsightsTitle")}</Text>
-              <Text style={styles.jobMarketSubtitle}>{t("home.jobMarketInsightsSubtitle")}</Text>
+              <Text style={styles.jobMarketTitle}>Job Market</Text>
+              <Text style={styles.jobMarketSubtitle}>Search job listings</Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={24} color="black" />
