@@ -13,60 +13,28 @@ import {
   Dimensions,
   RefreshControl,
   Modal,
+  Alert,
+  TextInput,
+  Share
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+
+import {
+  collection,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  doc,
+  serverTimestamp,
+  query,
+  orderBy
+} from 'firebase/firestore';
+import { db } from '../../config/firebaseConfig'; // Adjust path as needed
+
 import { BarChart, LineChart } from 'react-native-chart-kit';
 
 const screenWidth = Dimensions.get('window').width;
-
-// Mock data - In a real app, this would come from an API
-const mockJobData = {
-  topSectors: [
-    { id: 1, name: 'Information Technology', growth: '+12%', jobs: 45000, icon: 'laptop-outline' },
-    { id: 2, name: 'Healthcare', growth: '+8%', jobs: 32000, icon: 'medical-outline' },
-    { id: 3, name: 'Education', growth: '+5%', jobs: 28000, icon: 'school-outline' },
-    { id: 4, name: 'Finance', growth: '+7%', jobs: 25000, icon: 'cash-outline' },
-    { id: 5, name: 'E-commerce', growth: '+15%', jobs: 20000, icon: 'cart-outline' },
-  ],
-  salaryTrends: {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-    datasets: [
-      {
-        data: [30000, 32000, 35000, 39000, 42000, 45000],
-        color: (opacity = 1) => `rgba(255,95,150, ${opacity})`,
-        strokeWidth: 2
-      }
-    ],
-  },
-  genderPayGap: {
-    labels: ['IT', 'Healthcare', 'Education', 'Finance', 'Retail'],
-    datasets: [
-      {
-        data: [15, 12, 8, 18, 10],
-      }
-    ]
-  },
-  featuredJobs: [
-    { id: 1, title: 'Senior Software Developer', company: 'TechSolutions India', location: 'Bangalore', remote: true, salary: '₹18-25L' },
-    { id: 2, title: 'HR Manager', company: 'Global Services Ltd', location: 'Mumbai', remote: false, salary: '₹12-15L' },
-    { id: 3, title: 'Content Strategist', company: 'MediaMinds', location: 'Delhi NCR', remote: true, salary: '₹8-12L' },
-    { id: 4, title: 'Finance Analyst', company: 'Finance First', location: 'Hyderabad', remote: false, salary: '₹10-14L' },
-  ],
-  skills: [
-    { id: 1, name: 'Digital Marketing', demand: 'High' },
-    { id: 2, name: 'Data Analysis', demand: 'Very High' },
-    { id: 3, name: 'Project Management', demand: 'High' },
-    { id: 4, name: 'UI/UX Design', demand: 'Medium' },
-    { id: 5, name: 'Content Writing', demand: 'Medium' },
-  ],
-  resources: [
-    { id: 1, title: 'Women in Tech Mentorship', org: 'TechLadies India', type: 'Mentorship' },
-    { id: 2, title: 'Leadership Skills Workshop', org: 'Professional Women Network', type: 'Workshop' },
-    { id: 3, title: 'Return to Work Program', org: 'JobsForHer', type: 'Program' },
-    { id: 4, title: 'Financial Assistance for Training', org: 'Govt. Skill India', type: 'Financial Aid' },
-  ]
-};
 
 // Enhanced modal component that handles tapping outside to dismiss and provides a close button.
 const EnhancedModal = ({ visible, onClose, children }) => {
@@ -97,57 +65,121 @@ const EnhancedModal = ({ visible, onClose, children }) => {
 
 const JobMarketInsightsScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const [jobData, setJobData] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview');
+
+  // Top Sectors (live from Firestore)
+  const [topSectors, setTopSectors] = useState([]);
+
+  // Job Listings (live from Firestore)
+  const [jobs, setJobs] = useState([]);
+
+  // Notifications (live from Firestore)
+  const [notifications, setNotifications] = useState([]);
+
+  // Searching & Filtering
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedMode, setSelectedMode] = useState('All'); // "All", "Remote", "On-Site", "Hybrid"
+
+  // For the apply modal (in-app application)
+  const [applicantName, setApplicantName] = useState('');
+  const [applicantEmail, setApplicantEmail] = useState('');
+  const [coverNote, setCoverNote] = useState('');
+  const [jobToApply, setJobToApply] = useState(null);
+
+  // Pull-to-refresh
   const [refreshing, setRefreshing] = useState(false);
 
-  // Modal state
+  // Modals
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState('');
   const [modalData, setModalData] = useState(null);
 
-  // Dummy notifications data
-  const notificationsData = [
-    { id: 1, message: 'Your application for Senior Software Developer has been viewed.' },
-    { id: 2, message: 'New job posting in Information Technology.' },
-    { id: 3, message: 'Reminder: Complete your profile for better matches.' },
-  ];
-
-  useEffect(() => {
-    // Simulate an API call with a 1.5s delay
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        setJobData(mockJobData);
-      } catch (error) {
-        console.error('Error fetching job market data:', error);
-      } finally {
-        setIsLoading(false);
+  // Chart Data (could also come from Firestore, but let's keep it mock for example)
+  const salaryTrends = {
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    datasets: [
+      {
+        data: [30000, 32000, 35000, 39000, 42000, 45000],
+        color: (opacity = 1) => `rgba(255,95,150, ${opacity})`,
+        strokeWidth: 2
       }
-    };
-
-    fetchData();
-  }, []);
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    // Simulate a refresh delay
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1500);
-  }, []);
-
-  const chartConfig = {
-    backgroundGradientFrom: "#fff",
-    backgroundGradientTo: "#fff",
-    color: (opacity = 1) => `rgba(255,95,150, ${opacity})`,
-    strokeWidth: 2,
-    barPercentage: 0.5,
-    useShadowColorFromDataset: false
+    ],
+  };
+  const genderPayGap = {
+    labels: ['IT', 'Healthcare', 'Education', 'Finance', 'Retail'],
+    datasets: [
+      {
+        data: [15, 12, 8, 18, 10],
+      }
+    ]
   };
 
-  // Modal open and close functions
+  // 1) Fetch topSectors from Firestore
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "topSectors"), (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setTopSectors(data);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 2) Fetch jobListings from Firestore
+  useEffect(() => {
+    // Optionally order by postedAt descending
+    const qJobs = query(collection(db, "jobListings"), orderBy("postedAt", "desc"));
+    const unsubscribe = onSnapshot(qJobs, (snapshot) => {
+      const fetchedJobs = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setJobs(fetchedJobs);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 3) Fetch notifications from Firestore
+  useEffect(() => {
+    const qNotifs = query(collection(db, "notifications"), orderBy("createdAt", "desc"));
+    const unsubscribe = onSnapshot(qNotifs, (snapshot) => {
+      const notifs = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setNotifications(notifs);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Simulate loading delay for the entire screen
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Pull to refresh
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    // If needed, re-fetch or just rely on onSnapshot real-time updates
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  }, []);
+
+  // Format Firestore timestamp to a string
+  const formatTimestamp = (ts) => {
+    if (!ts) return null;
+    if (ts.toDate) {
+      return ts.toDate().toLocaleDateString();
+    }
+    return String(ts);
+  };
+
+  // Modal helpers
   const openModal = (type, data) => {
     setModalType(type);
     setModalData(data);
@@ -160,71 +192,201 @@ const JobMarketInsightsScreen = () => {
     setModalData(null);
   };
 
-  // Additional action for notifications modal
-  const handleMarkAllAsRead = () => {
-    alert("All notifications marked as read!");
+  // Mark all notifications as read in Firestore
+  const handleMarkAllAsRead = async () => {
+    try {
+      // For each notification doc, set isRead = true
+      for (const notif of notifications) {
+        if (!notif.isRead) {
+          const notifRef = doc(db, "notifications", notif.id);
+          await updateDoc(notifRef, { isRead: true });
+        }
+      }
+      Alert.alert("All notifications marked as read!");
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Failed to mark notifications as read.");
+    }
     closeModal();
   };
 
-  // Render modal content based on type
+  // Share a job
+  const handleShareJob = async (job) => {
+    try {
+      await Share.share({
+        message: `Check out this job: ${job.title}\nLocation: ${job.companyLocation}\nSalary Range: ${job.salaryRange}`,
+      });
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  // Open the "Apply" modal
+  const handleOpenApplyModal = (job) => {
+    setJobToApply(job);
+    // Reset the input fields
+    setApplicantName('');
+    setApplicantEmail('');
+    setCoverNote('');
+    // Show the apply modal
+    openModal('apply', null);
+  };
+
+  // Submit the application to Firestore
+  const handleSubmitApplication = async () => {
+    if (!applicantName || !applicantEmail) {
+      Alert.alert("Missing Info", "Please enter your name and email.");
+      return;
+    }
+    if (!jobToApply) {
+      Alert.alert("Error", "No job selected.");
+      return;
+    }
+    try {
+      await addDoc(collection(db, "jobApplications"), {
+        jobId: jobToApply.id,
+        applicantName,
+        applicantEmail,
+        coverNote,
+        appliedAt: serverTimestamp(),
+      });
+      Alert.alert("Success", "Application submitted!");
+      closeModal();
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Failed to submit application. Please try again.");
+    }
+  };
+
+  // Filter & search the jobs
+  const filteredJobs = jobs.filter((job) => {
+    // 1) Match search query on job.title
+    const matchesSearch = job.title
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+
+    // 2) Match selected work mode
+    const matchesMode =
+      selectedMode === 'All' ? true : job.workMode === selectedMode;
+
+    return matchesSearch && matchesMode;
+  });
+
+  // Render modal content
   const renderModalContent = () => {
     switch(modalType) {
       case 'notifications':
         return (
           <View>
             <Text style={styles.modalTitle}>Notifications</Text>
-            {modalData.map(notification => (
-              <Text key={notification.id} style={styles.modalText}>• {notification.message}</Text>
-            ))}
+            {notifications.length === 0 ? (
+              <Text style={styles.modalText}>No notifications found.</Text>
+            ) : (
+              notifications.map((notif) => (
+                <Text
+                  key={notif.id}
+                  style={[
+                    styles.modalText,
+                    { fontWeight: notif.isRead ? 'normal' : 'bold' }
+                  ]}
+                >
+                  • {notif.message}
+                </Text>
+              ))
+            )}
             <TouchableOpacity style={styles.markAllButton} onPress={handleMarkAllAsRead}>
               <Text style={styles.markAllButtonText}>Mark All as Read</Text>
             </TouchableOpacity>
           </View>
         );
-      case 'sector':
-        return (
-          <View>
-            <Text style={styles.modalTitle}>{modalData.name}</Text>
-            <Text style={styles.modalText}>Growth: {modalData.growth}</Text>
-            <Text style={styles.modalText}>Number of Jobs: {modalData.jobs}</Text>
-            <Text style={styles.modalText}>Explore more opportunities in the {modalData.name} sector.</Text>
-          </View>
-        );
+
       case 'job':
+        // Show job details
+        if (!modalData) return null;
         return (
           <View>
             <Text style={styles.modalTitle}>{modalData.title}</Text>
-            <Text style={styles.modalSubtitle}>{modalData.company} - {modalData.location}</Text>
-            <Text style={styles.modalText}>Salary Range: {modalData.salary}</Text>
-            <Text style={styles.modalText}>Work Mode: {modalData.remote ? 'Remote' : 'On-site'}</Text>
-            <Text style={styles.modalText}>Detailed Description: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero.</Text>
+            <Text style={styles.modalSubtitle}>
+              {modalData.companyLocation}
+            </Text>
+            <Text style={styles.modalText}>
+              Salary Range: {modalData.salaryRange || 'N/A'}
+            </Text>
+            <Text style={styles.modalText}>
+              Work Mode: {modalData.workMode || 'N/A'}
+            </Text>
+            {modalData.applyBefore && (
+              <Text style={styles.modalText}>
+                Apply Before: {modalData.applyBefore}
+              </Text>
+            )}
+            {modalData.postedAt && (
+              <Text style={styles.modalText}>
+                Posted At: {formatTimestamp(modalData.postedAt)}
+              </Text>
+            )}
+            <Text style={styles.modalText}>
+              Description: {modalData.detailedDescription || 'N/A'}
+            </Text>
+
+            {/* Buttons: Apply, Share */}
+            <View style={{ flexDirection: 'row', marginTop: 10 }}>
+              <TouchableOpacity
+                style={[styles.applyButton, { marginRight: 10 }]}
+                onPress={() => handleOpenApplyModal(modalData)}
+              >
+                <Text style={styles.applyButtonText}>Apply Now</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.shareButton]}
+                onPress={() => handleShareJob(modalData)}
+              >
+                <Text style={styles.applyButtonText}>Share</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         );
-      case 'skill':
+
+      case 'apply':
+        // Show in-app application form
         return (
           <View>
-            <Text style={styles.modalTitle}>{modalData.name}</Text>
-            <Text style={styles.modalText}>Demand Level: {modalData.demand}</Text>
-            <Text style={styles.modalText}>Enhance your career by developing this skill. Explore courses and tutorials to master {modalData.name}.</Text>
+            <Text style={styles.modalTitle}>Apply for Job</Text>
+            <Text style={styles.modalSubtitle}>
+              {jobToApply ? jobToApply.title : ''}
+            </Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Your Name"
+              value={applicantName}
+              onChangeText={setApplicantName}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Your Email"
+              keyboardType="email-address"
+              value={applicantEmail}
+              onChangeText={setApplicantEmail}
+            />
+            <TextInput
+              style={[styles.input, { height: 80 }]}
+              multiline
+              placeholder="Cover Note (optional)"
+              value={coverNote}
+              onChangeText={setCoverNote}
+            />
+
+            <TouchableOpacity
+              style={styles.applyButton}
+              onPress={handleSubmitApplication}
+            >
+              <Text style={styles.applyButtonText}>Submit Application</Text>
+            </TouchableOpacity>
           </View>
         );
-      case 'resource':
-        return (
-          <View>
-            <Text style={styles.modalTitle}>{modalData.title}</Text>
-            <Text style={styles.modalSubtitle}>{modalData.org}</Text>
-            <Text style={styles.modalText}>Type: {modalData.type}</Text>
-            <Text style={styles.modalText}>Detailed Information: This program offers extensive support to help you advance in your career. Check out eligibility criteria and application details.</Text>
-          </View>
-        );
-      case 'govt':
-        return (
-          <View>
-            <Text style={styles.modalTitle}>{modalData.title}</Text>
-            <Image source={{ uri: modalData.image }} style={styles.modalImage} />
-            <Text style={styles.modalText}>{modalData.description}</Text>
-          </View>
-        );
+
       default:
         return null;
     }
@@ -234,17 +396,18 @@ const JobMarketInsightsScreen = () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#ff5f96" />
-        <Text style={styles.loadingText}>Loading job insights...</Text>
+        <Text style={styles.loadingText}>Loading data...</Text>
       </View>
     );
   }
 
-  // Overview Tab (with Header & Notification Panel)
-  const renderOverviewTab = () => (
-    <ScrollView 
+  // Single "Overview" content
+  const renderOverview = () => (
+    <ScrollView
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
+      {/* Header / Stats */}
       <View style={styles.headerContainer}>
         <LinearGradient
           colors={['#ff5f96', '#ff85b8']}
@@ -253,57 +416,77 @@ const JobMarketInsightsScreen = () => {
           {/* Notification Panel */}
           <TouchableOpacity 
             style={styles.notificationPanel} 
-            onPress={() => openModal('notifications', notificationsData)}
+            onPress={() => openModal('notifications')}
           >
             <Ionicons name="notifications-outline" size={28} color="#fff" />
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>3</Text>
-            </View>
+            {/* Show unread count if any are isRead === false */}
+            {notifications.some(notif => !notif.isRead) && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {notifications.filter(n => !n.isRead).length}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
+
           <Text style={styles.headerTitle}>Job Market Insights</Text>
           <Text style={styles.headerSubtitle}>For Indian Women Professionals</Text>
           
+          {/* Example dynamic stats: total job count, total sectors, unread notifications */}
           <View style={styles.statsContainer}>
             <View style={styles.statBox}>
-              <Text style={styles.statNumber}>4.2M</Text>
-              <Text style={styles.statLabel}>Job Openings</Text>
+              <Text style={styles.statNumber}>{jobs.length}</Text>
+              <Text style={styles.statLabel}>Total Jobs</Text>
             </View>
             <View style={styles.statBox}>
-              <Text style={styles.statNumber}>+8.3%</Text>
-              <Text style={styles.statLabel}>Growth Rate</Text>
+              <Text style={styles.statNumber}>{topSectors.length}</Text>
+              <Text style={styles.statLabel}>Sectors</Text>
             </View>
             <View style={styles.statBox}>
-              <Text style={styles.statNumber}>28%</Text>
-              <Text style={styles.statLabel}>Women in Workforce</Text>
+              <Text style={styles.statNumber}>
+                {notifications.filter(n => !n.isRead).length}
+              </Text>
+              <Text style={styles.statLabel}>Unread Notifs</Text>
             </View>
           </View>
         </LinearGradient>
       </View>
 
+      {/* Top Sectors from Firestore */}
       <View style={styles.sectionContainer}>
         <Text style={styles.sectionTitle}>Top Sectors Hiring Women</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {jobData.topSectors.map(sector => (
-            <TouchableOpacity key={sector.id} style={styles.sectorCard} onPress={() => openModal('sector', sector)}>
+          {topSectors.map((sector) => (
+            <TouchableOpacity
+              key={sector.id}
+              style={styles.sectorCard}
+              onPress={() => openModal('sector', sector)}
+            >
               <View style={styles.sectorIconContainer}>
-                <Ionicons name={sector.icon} size={28} color="#ff5f96" />
+                <Ionicons name={sector.icon || 'briefcase-outline'} size={28} color="#ff5f96" />
               </View>
               <Text style={styles.sectorName}>{sector.name}</Text>
               <Text style={styles.sectorGrowth}>{sector.growth} growth</Text>
-              <Text style={styles.sectorJobs}>{(sector.jobs/1000).toFixed(1)}K jobs</Text>
+              <Text style={styles.sectorJobs}>{(sector.jobs / 1000).toFixed(1)}K jobs</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
+      {/* Salary Trends (mock data) */}
       <View style={styles.sectionContainer}>
         <Text style={styles.sectionTitle}>Average Salary Trends</Text>
         <View style={styles.chartContainer}>
           <LineChart
-            data={jobData.salaryTrends}
+            data={salaryTrends}
             width={screenWidth - 40}
             height={220}
-            chartConfig={chartConfig}
+            chartConfig={{
+              backgroundGradientFrom: '#fff',
+              backgroundGradientTo: '#fff',
+              color: (opacity = 1) => `rgba(255,95,150, ${opacity})`,
+              strokeWidth: 2,
+            }}
             bezier
             style={styles.chart}
           />
@@ -311,129 +494,108 @@ const JobMarketInsightsScreen = () => {
         </View>
       </View>
 
+      {/* Gender Pay Gap (mock data) */}
       <View style={styles.sectionContainer}>
         <Text style={styles.sectionTitle}>Gender Pay Gap by Sector</Text>
         <Text style={styles.sectionSubtitle}>Pay difference percentage, 2024</Text>
         <View style={styles.chartContainer}>
           <BarChart
-            data={jobData.genderPayGap}
+            data={genderPayGap}
             width={screenWidth - 40}
             height={220}
             chartConfig={{
-              ...chartConfig,
+              backgroundGradientFrom: '#fff',
+              backgroundGradientTo: '#fff',
               color: (opacity = 1) => `rgba(255,95,150, ${opacity})`,
+              strokeWidth: 2,
             }}
             style={styles.chart}
           />
         </View>
       </View>
 
+      {/* Search & Filter UI */}
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>Search & Filter Jobs</Text>
+        <View style={styles.filterRow}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by job title..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          <View style={styles.filterSelect}>
+            <TouchableOpacity onPress={() => setSelectedMode('All')}>
+              <Text style={[
+                styles.filterOption,
+                selectedMode === 'All' && styles.filterOptionActive
+              ]}>All</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setSelectedMode('Remote')}>
+              <Text style={[
+                styles.filterOption,
+                selectedMode === 'Remote' && styles.filterOptionActive
+              ]}>Remote</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setSelectedMode('On-Site')}>
+              <Text style={[
+                styles.filterOption,
+                selectedMode === 'On-Site' && styles.filterOptionActive
+              ]}>On-Site</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setSelectedMode('Hybrid')}>
+              <Text style={[
+                styles.filterOption,
+                selectedMode === 'Hybrid' && styles.filterOptionActive
+              ]}>Hybrid</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
+      {/* Filtered Jobs from Firestore */}
       <View style={styles.sectionContainer}>
         <View style={styles.rowBetween}>
-          <Text style={styles.sectionTitle}>Featured Jobs</Text>
-          <TouchableOpacity onPress={() => alert('Viewing All Jobs')}>
+          <Text style={styles.sectionTitle}>Job Listings</Text>
+          <TouchableOpacity onPress={() => Alert.alert('View All', 'Implement a separate screen if needed')}>
             <Text style={styles.viewAllButton}>View All</Text>
           </TouchableOpacity>
         </View>
-        {jobData.featuredJobs.map(job => (
-          <TouchableOpacity key={job.id} style={styles.jobCard} onPress={() => openModal('job', job)}>
-            <View style={styles.jobCardHeader}>
-              <Text style={styles.jobTitle}>{job.title}</Text>
-              <Text style={styles.jobSalary}>{job.salary}</Text>
-            </View>
-            <Text style={styles.companyName}>{job.company}</Text>
-            <View style={styles.jobDetails}>
-              <View style={styles.jobDetailItem}>
-                <Ionicons name="location-outline" size={16} color="#666" />
-                <Text style={styles.jobDetailText}>{job.location}</Text>
+        {filteredJobs.length === 0 ? (
+          <Text style={{ color: '#666', marginTop: 5 }}>No matching jobs found.</Text>
+        ) : (
+          filteredJobs.map((job) => (
+            <TouchableOpacity
+              key={job.id}
+              style={styles.jobCard}
+              onPress={() => openModal('job', job)}
+            >
+              <View style={styles.jobCardHeader}>
+                <Text style={styles.jobTitle}>{job.title}</Text>
+                <Text style={styles.jobSalary}>{job.salaryRange || 'N/A'}</Text>
               </View>
-              <View style={styles.jobBadge}>
-                <Text style={styles.jobBadgeText}>{job.remote ? 'Remote' : 'On-site'}</Text>
+              <Text style={styles.companyName}>{job.companyLocation}</Text>
+              <View style={styles.jobDetails}>
+                <View style={styles.jobDetailItem}>
+                  <Ionicons name="location-outline" size={16} color="#666" />
+                  <Text style={styles.jobDetailText}>
+                    {job.workMode || 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.jobBadge}>
+                  <Text style={styles.jobBadgeText}>
+                    {job.workMode === 'Remote' ? 'Remote' : 'On-site'}
+                  </Text>
+                </View>
               </View>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </ScrollView>
-  );
-
-  // Resources Tab
-  const renderResourcesTab = () => (
-    <ScrollView 
-      showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      <View style={styles.tabHeaderContainer}>
-        <Text style={styles.tabHeaderTitle}>Resources & Support</Text>
-        <Text style={styles.tabHeaderSubtitle}>Programs and organizations helping Indian women advance their careers</Text>
-      </View>
-
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>In-Demand Skills</Text>
-        <Text style={styles.sectionSubtitle}>Skills with highest growth potential in 2024</Text>
-        {jobData.skills.map(skill => (
-          <View key={skill.id} style={styles.skillItem}>
-            <View style={styles.skillInfo}>
-              <Text style={styles.skillName}>{skill.name}</Text>
-              <View style={[
-                styles.demandBadge, 
-                skill.demand === 'Very High' ? styles.veryHighDemand : 
-                skill.demand === 'High' ? styles.highDemand : 
-                styles.mediumDemand
-              ]}>
-                <Text style={styles.demandBadgeText}>{skill.demand}</Text>
-              </View>
-            </View>
-            <TouchableOpacity style={styles.learnButton} onPress={() => openModal('skill', skill)}>
-              <Text style={styles.learnButtonText}>Learn</Text>
+              {job.applyBefore && (
+                <Text style={[styles.jobDetailText, { marginTop: 8 }]}>
+                  Apply Before: {job.applyBefore}
+                </Text>
+              )}
             </TouchableOpacity>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Support Programs</Text>
-        {jobData.resources.map(resource => (
-          <TouchableOpacity key={resource.id} style={styles.resourceCard} onPress={() => openModal('resource', resource)}>
-            <View style={styles.resourceContent}>
-              <Text style={styles.resourceTitle}>{resource.title}</Text>
-              <Text style={styles.resourceOrg}>{resource.org}</Text>
-            </View>
-            <View style={styles.resourceTypeBadge}>
-              <Text style={styles.resourceTypeText}>{resource.type}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Government Initiatives</Text>
-        <View style={styles.govtCard}>
-          <Image 
-            source={{ uri: 'https://via.placeholder.com/80' }} 
-            style={styles.govtLogo}
-          />
-          <View style={styles.govtCardContent}>
-            <Text style={styles.govtCardTitle}>MUDRA Loan Scheme</Text>
-            <Text style={styles.govtCardDesc}>Low-interest loans up to ₹10L for women entrepreneurs</Text>
-            <TouchableOpacity style={styles.govtCardButton} onPress={() => openModal('govt', { title: 'MUDRA Loan Scheme', description: 'Low-interest loans up to ₹10L for women entrepreneurs. Detailed info about eligibility, process, and benefits.', image: 'https://via.placeholder.com/80' })}>
-              <Text style={styles.govtCardButtonText}>Apply Now</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-        <View style={styles.govtCard}>
-          <Image 
-            source={{ uri: 'https://via.placeholder.com/80' }} 
-            style={styles.govtLogo}
-          />
-          <View style={styles.govtCardContent}>
-            <Text style={styles.govtCardTitle}>Skill India Mission</Text>
-            <Text style={styles.govtCardDesc}>Free skill development courses for women returning to workforce</Text>
-            <TouchableOpacity style={styles.govtCardButton} onPress={() => openModal('govt', { title: 'Skill India Mission', description: 'Free skill development courses for women returning to workforce. Detailed info about eligibility, process, and benefits.', image: 'https://via.placeholder.com/80' })}>
-              <Text style={styles.govtCardButtonText}>Check Eligibility</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+          ))
+        )}
       </View>
     </ScrollView>
   );
@@ -441,32 +603,9 @@ const JobMarketInsightsScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        {activeTab === 'overview' ? renderOverviewTab() : renderResourcesTab()}
+        {renderOverview()}
       </View>
-      <View style={styles.tabBar}>
-        <TouchableOpacity 
-          style={[styles.tabButton, activeTab === 'overview' && styles.activeTabButton]} 
-          onPress={() => setActiveTab('overview')}
-        >
-          <Ionicons 
-            name={activeTab === 'overview' ? "stats-chart" : "stats-chart-outline"} 
-            size={24} 
-            color={activeTab === 'overview' ? "#ff5f96" : "#666"} 
-          />
-          <Text style={[styles.tabLabel, activeTab === 'overview' && styles.activeTabLabel]}>Overview</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tabButton, activeTab === 'resources' && styles.activeTabButton]} 
-          onPress={() => setActiveTab('resources')}
-        >
-          <Ionicons 
-            name={activeTab === 'resources' ? "briefcase" : "briefcase-outline"} 
-            size={24} 
-            color={activeTab === 'resources' ? "#ff5f96" : "#666"} 
-          />
-          <Text style={[styles.tabLabel, activeTab === 'resources' && styles.activeTabLabel]}>Resources</Text>
-        </TouchableOpacity>
-      </View>
+
       {/* Enhanced Modal */}
       <EnhancedModal visible={modalVisible} onClose={closeModal}>
         {renderModalContent()}
@@ -476,27 +615,18 @@ const JobMarketInsightsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f8f8',
-  },
-  content: {
-    flex: 1,
-  },
+  container: { flex: 1, backgroundColor: '#f8f8f8' },
+  content: { flex: 1 },
+
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f8f8f8',
   },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: "#ff5f96",
-  },
-  headerContainer: {
-    marginBottom: 20,
-  },
+  loadingText: { marginTop: 16, fontSize: 16, color: "#ff5f96" },
+
+  headerContainer: { marginBottom: 20 },
   headerGradient: {
     paddingTop: 40,
     paddingBottom: 30,
@@ -504,11 +634,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 25,
     borderBottomRightRadius: 25,
   },
-  notificationPanel: {
-    position: 'absolute',
-    top: 40,
-    right: 20,
-  },
+  notificationPanel: { position: 'absolute', top: 40, right: 20 },
   notificationBadge: {
     position: 'absolute',
     top: -5,
@@ -518,27 +644,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     paddingVertical: 2,
   },
-  notificationBadgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginTop: 10,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
-    marginTop: 5,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    marginTop: 25,
-    justifyContent: 'space-between',
-  },
+  notificationBadgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
+
+  headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#fff', marginTop: 10 },
+  headerSubtitle: { fontSize: 16, color: 'rgba(255,255,255,0.9)', marginTop: 5 },
+  statsContainer: { flexDirection: 'row', marginTop: 25, justifyContent: 'space-between' },
   statBox: {
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 12,
@@ -546,33 +656,12 @@ const styles = StyleSheet.create({
     width: '30%',
     alignItems: 'center',
   },
-  statNumber: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.9)',
-    marginTop: 5,
-    textAlign: 'center',
-  },
-  sectionContainer: {
-    marginBottom: 25,
-    paddingHorizontal: 20,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    color: '#333',
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 15,
-    marginTop: -10,
-  },
+  statNumber: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
+  statLabel: { fontSize: 12, color: 'rgba(255,255,255,0.9)', marginTop: 5, textAlign: 'center' },
+
+  sectionContainer: { marginBottom: 25, paddingHorizontal: 20 },
+  sectionTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 15, color: '#333' },
+  sectionSubtitle: { fontSize: 14, color: '#666', marginBottom: 15, marginTop: -10 },
   sectorCard: {
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -592,22 +681,10 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginBottom: 10,
   },
-  sectorName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  sectorGrowth: {
-    fontSize: 14,
-    color: '#4CAF50',
-    marginTop: 5,
-    fontWeight: '500',
-  },
-  sectorJobs: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 5,
-  },
+  sectorName: { fontSize: 16, fontWeight: 'bold', color: '#333' },
+  sectorGrowth: { fontSize: 14, color: '#4CAF50', marginTop: 5, fontWeight: '500' },
+  sectorJobs: { fontSize: 14, color: '#666', marginTop: 5 },
+
   chartContainer: {
     alignItems: 'center',
     backgroundColor: '#fff',
@@ -619,26 +696,51 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  chart: {
-    borderRadius: 12,
-    marginVertical: 8,
+  chart: { borderRadius: 12, marginVertical: 8 },
+  chartCaption: { fontSize: 12, color: '#666', marginTop: 5, textAlign: 'center' },
+
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  viewAllButton: { color: "#ff5f96", fontSize: 14, fontWeight: '500' },
+
+  // Search & Filter
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
   },
-  chartCaption: {
+  searchInput: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginRight: 10,
+    fontSize: 14,
+    color: '#333',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  filterSelect: {
+    flexDirection: 'row',
+  },
+  filterOption: {
+    marginLeft: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    backgroundColor: '#eee',
     fontSize: 12,
     color: '#666',
-    marginTop: 5,
-    textAlign: 'center',
   },
-  rowBetween: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  filterOptionActive: {
+    backgroundColor: '#ff5f96',
+    color: '#fff',
   },
-  viewAllButton: {
-    color: "#ff5f96",
-    fontSize: 14,
-    fontWeight: '500',
-  },
+
+  // Jobs
   jobCard: {
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -656,228 +758,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  jobTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    flex: 1,
-  },
-  jobSalary: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: "#ff5f96",
-  },
-  companyName: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 10,
-  },
-  jobDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  jobDetailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  jobDetailText: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 5,
-  },
+  jobTitle: { fontSize: 16, fontWeight: 'bold', color: '#333', flex: 1 },
+  jobSalary: { fontSize: 15, fontWeight: 'bold', color: "#ff5f96" },
+  companyName: { fontSize: 14, color: '#666', marginBottom: 10 },
+  jobDetails: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  jobDetailItem: { flexDirection: 'row', alignItems: 'center' },
+  jobDetailText: { fontSize: 14, color: '#666', marginLeft: 5 },
   jobBadge: {
     backgroundColor: 'rgba(255,95,150,0.1)',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 15,
   },
-  jobBadgeText: {
-    fontSize: 12,
-    color: "#ff5f96",
-    fontWeight: '500',
-  },
-  tabBar: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    backgroundColor: '#fff',
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activeTabButton: {
-    borderTopWidth: 3,
-    borderTopColor: "#ff5f96",
-  },
-  tabLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 3,
-  },
-  activeTabLabel: {
-    color: "#ff5f96",
-    fontWeight: '500',
-  },
-  tabHeaderContainer: {
-    backgroundColor: "#ff5f96",
-    paddingVertical: 30,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
-    marginBottom: 20,
-  },
-  tabHeaderTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  tabHeaderSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.9)',
-    marginTop: 5,
-    lineHeight: 20,
-  },
-  skillItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  skillInfo: {
-    flex: 1,
-  },
-  skillName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 5,
-  },
-  demandBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-    alignSelf: 'flex-start',
-  },
-  veryHighDemand: {
-    backgroundColor: 'rgba(220,36,48,0.1)',
-  },
-  highDemand: {
-    backgroundColor: 'rgba(255,152,0,0.1)',
-  },
-  mediumDemand: {
-    backgroundColor: 'rgba(3,169,244,0.1)',
-  },
-  demandBadgeText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  learnButton: {
-    backgroundColor: 'rgba(255,95,150,0.1)',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  learnButtonText: {
-    color: "#ff5f96",
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  resourceCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  resourceContent: {
-    flex: 1,
-  },
-  resourceTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 5,
-  },
-  resourceOrg: {
-    fontSize: 14,
-    color: '#666',
-  },
-  resourceTypeBadge: {
-    backgroundColor: 'rgba(33,150,243,0.1)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 15,
-  },
-  resourceTypeText: {
-    fontSize: 12,
-    color: '#2196F3',
-    fontWeight: '500',
-  },
-  govtCard: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  govtLogo: {
-    width: 80,
-    height: 80,
-    borderRadius: 10,
-    marginRight: 15,
-  },
-  govtCardContent: {
-    flex: 1,
-  },
-  govtCardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
-  },
-  govtCardDesc: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 10,
-    lineHeight: 20,
-  },
-  govtCardButton: {
-    backgroundColor: "#ff5f96",
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-  },
-  govtCardButtonText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  // Enhanced Modal Styles
+  jobBadgeText: { fontSize: 12, color: "#ff5f96", fontWeight: '500' },
+
+  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -890,36 +785,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
   },
-  modalCloseButton: {
-    alignSelf: 'flex-end',
-    marginTop: 10,
-  },
-  modalCloseButtonText: {
-    fontSize: 16,
-    color: '#ff5f96',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
-  },
-  modalSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 10,
-  },
-  modalText: {
-    fontSize: 14,
-    color: '#444',
-    marginBottom: 10,
-  },
-  modalImage: {
-    width: '100%',
-    height: 150,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
+  modalCloseButton: { alignSelf: 'flex-end', marginTop: 10 },
+  modalCloseButtonText: { fontSize: 16, color: '#ff5f96' },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#333', marginBottom: 10 },
+  modalSubtitle: { fontSize: 16, color: '#666', marginBottom: 10 },
+  modalText: { fontSize: 14, color: '#444', marginBottom: 10 },
   markAllButton: {
     backgroundColor: "#ff5f96",
     paddingVertical: 8,
@@ -928,10 +798,35 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginTop: 10,
   },
-  markAllButtonText: {
-    color: '#fff',
+  markAllButtonText: { color: '#fff', fontSize: 14, fontWeight: '500' },
+
+  // In-app Apply
+  input: {
+    backgroundColor: '#f2f2f2',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 10,
     fontSize: 14,
-    fontWeight: '500',
+    color: '#333',
+  },
+  applyButton: {
+    backgroundColor: '#ff5f96',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+  },
+  shareButton: {
+    backgroundColor: '#ff5f96',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+  },
+  applyButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });
 
