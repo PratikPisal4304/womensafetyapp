@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    height: 60,
+    height: 70,
     backgroundColor: "#fff",
     position: "absolute",
     left: 0,
@@ -240,6 +240,6 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontSize: 11,
-    marginTop: 2,
+    paddingBottom: 8,
   },
 });
