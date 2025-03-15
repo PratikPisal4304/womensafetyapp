@@ -322,9 +322,9 @@ const styles = StyleSheet.create({
   },
   sosButton: {
     backgroundColor: '#e60000',
-    width: 160,
-    height: 160,
-    borderRadius: 80,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
