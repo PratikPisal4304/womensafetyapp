@@ -47,6 +47,8 @@ export default function GeminiChatScreen({ navigation }) {
   const [showChatHistory, setShowChatHistory] = useState(false);
   // Expanded sections: keys are `${messageKey}-${section.id}` with boolean values.
   const [expandedSections, setExpandedSections] = useState({});
+  // New state variable for country with default "India"
+  const [country, setCountry] = useState("India");
 
   const scrollViewRef = useRef();
   const inputRef = useRef();
@@ -181,7 +183,7 @@ export default function GeminiChatScreen({ navigation }) {
     return sections.length > 1 ? sections : [{ id: '0', title: 'Legal Analysis', content: text }];
   };
 
-  // Call OpenAI API for legal advice
+  // Call OpenAI API for legal advice with enhanced precision for Indian laws.
   const getLegalAdvice = async (userMessage, messageHistory = []) => {
     try {
       const contextMessages = messageHistory.map(msg => ({
@@ -189,6 +191,7 @@ export default function GeminiChatScreen({ navigation }) {
         content: msg.text || (msg.sections ? msg.sections.map(sec => `${sec.title}\n${sec.content}`).join('\n\n') : '')
       }));
       
+      // Update the system prompt to specify Indian legal advice.
       const response = await fetch(OPENAI_URL, {
         method: "POST",
         headers: {
@@ -198,8 +201,14 @@ export default function GeminiChatScreen({ navigation }) {
         body: JSON.stringify({
           model: 'gpt-3.5-turbo',
           messages: [
-            { role: 'system', content: 'You are a legal assistant. Ask the user to specify their legal problem and then provide relevant laws and IPC sections. Format your response with clear section headings.' },
-            { role: 'user', content: userMessage },
+            { 
+              role: 'system', 
+              content: 'You are a legal assistant specialized in Indian law. Provide detailed and precise legal advice with references to Indian laws, legal codes, and IPC sections. Always assume the user is located in India.' 
+            },
+            { 
+              role: 'user', 
+              content: `Country: ${country}\n${userMessage}` 
+            },
           ],
           temperature: 0.7,
         }),
@@ -298,8 +307,8 @@ export default function GeminiChatScreen({ navigation }) {
               onPress={() => toggleSection(`${messageKey}-${section.id}`)}
             >
               <Text style={styles.sectionTitle}>{section.title}</Text>
-              <AntDesign 
-                name={expandedSections[`${messageKey}-${section.id}`] ? "up" : "down"} 
+              <MaterialIcons 
+                name={expandedSections[`${messageKey}-${section.id}`] ? "arrow-drop-up" : "arrow-drop-down"} 
                 size={16} 
                 color="#666" 
               />
@@ -316,7 +325,11 @@ export default function GeminiChatScreen({ navigation }) {
             style={styles.actionButton}
             onPress={() => toggleAllSectionsForMessage(messageKey, message.sections)}
           >
-            <Ionicons name="arrow-up-down-outline" size={16} color="#666" />
+            <MaterialIcons 
+              name="swap-vert" 
+              size={16} 
+              color="#666" 
+            />
             <Text style={styles.actionButtonText}>Toggle All</Text>
           </TouchableOpacity>
           <TouchableOpacity
