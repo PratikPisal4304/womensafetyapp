@@ -789,6 +789,6 @@ const styles = StyleSheet.create({
   clearAllButtonText: {
     color: '#777',
     fontWeight: '500',
-    fontSize: 14,
+    fontSize: 15,
   },
 });
