@@ -474,10 +474,10 @@ const HomeScreen = ({ navigation }) => {
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
 
-        {/* Job Market Insights Section */}
+        {/* Job Market Section */}
         <TouchableOpacity
           style={styles.jobMarketSection}
-          onPress={() => navigation.navigate("JobMarketInsights")}
+          onPress={() => navigation.navigate("JobMarket")}
         >
           <View style={styles.jobMarketContent}>
             <Image

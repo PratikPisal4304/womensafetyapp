@@ -19,7 +19,7 @@ import GeminiChatScreen from "./screens/GeminiChatScreen";
 import GenerateReportScreen from "./screens/GenerateReportScreen";
 import HomeScreen from "./screens/HomeScreen";
 import InAppChatScreen from "./screens/InAppChatScreen";
-import JobMarketInsightsScreen from "./screens/JobMarketInsightsScreen";
+import JobMarketScreen from "./screens/JobMarketScreen";
 import LiveLocationScreen from "./screens/LiveLocationScreen";
 import LoginScreen from "./screens/LoginScreen";
 import MyLearniningPath from "./screens/MyLearningPathScreen";
@@ -51,7 +51,7 @@ function HomeStack() {
       <Stack.Screen name="AddFriends" component={AddFriendsScreen} />
       <Stack.Screen name="GenerateReport" component={GenerateReportScreen} />
       <Stack.Screen name="TrackMe" component={TrackMeScreen} />
-      <Stack.Screen name="JobMarketInsights" component={JobMarketInsightsScreen} />
+      <Stack.Screen name="JobMarket" component={JobMarketScreen} />
       <Stack.Screen name="SkillDevelopment" component={SkillDevelopmentScreen} />
       <Stack.Screen name="BudgetTool" component={BudgetToolScreen} />
       <Stack.Screen name="FinancialNews" component={FinancialNews} />
@@ -91,7 +91,7 @@ function FloatingTabBar({ state, descriptors, navigation }) {
 
   if (currentRouteName === "Home") {
     const childRoute = getFocusedRouteNameFromRoute(state.routes[state.index]) ?? "HomeMain";
-    if (childRoute === "FakeCall" || childRoute === "AddFriends" || childRoute === "GenerateReport" || childRoute === "JobMarketInsights" || childRoute === "BudgetTool" || childRoute === "FinancialNews" || childRoute === "MyLearningPath") {
+    if (childRoute === "FakeCall" || childRoute === "AddFriends" || childRoute === "GenerateReport" || childRoute === "JobMarket" || childRoute === "BudgetTool" || childRoute === "FinancialNews" || childRoute === "MyLearningPath") {
       hideTabBar = true;
     }
   } else if (currentRouteName === "Profile") {
