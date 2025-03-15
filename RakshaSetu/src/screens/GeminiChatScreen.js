@@ -1,6 +1,9 @@
 import { OPENAI_API_KEY } from '@env'; // Import API key from .env
-import { Ionicons, MaterialIcons, AntDesign } from '@expo/vector-icons';
+import { AntDesign, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
+import * as Speech from 'expo-speech';
+import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -17,9 +20,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
-import * as Speech from 'expo-speech';
-import { StatusBar } from 'expo-status-bar';
+console.log('OPENAI_API_KEY:', OPENAI_API_KEY);
 
 const PINK = '#ff5f96';
 const AI_BUBBLE = '#f8f8f8';

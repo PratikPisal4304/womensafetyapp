@@ -1,70 +1,82 @@
-import React, { useState, useEffect, useRef } from 'react';
+// src/screens/HomeScreen.js
+
+import { FontAwesome5, Ionicons } from "@expo/vector-icons";
+import * as Location from "expo-location";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  updateDoc,
+  writeBatch,
+} from "firebase/firestore";
+import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import {
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Dimensions,
   Image,
-  StatusBar,
-  ScrollView,
   Linking,
   Modal,
-  Animated,
+  ScrollView,
+  Share,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
   TouchableWithoutFeedback,
-  ActivityIndicator,
-  Dimensions
-} from 'react-native';
-import { LineChart } from 'react-native-chart-kit';
-import { collection, query, getDocs, updateDoc, writeBatch, orderBy, doc, getDoc } from 'firebase/firestore';
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Location from 'expo-location';
-import { auth, db } from '../../config/firebaseConfig'; // adjust path if needed
-import { useTranslation } from 'react-i18next';
+  View,
+} from "react-native";
+import { LineChart } from "react-native-chart-kit";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { auth, db } from "../../config/firebaseConfig"; // adjust path if needed
 
-const PINK = '#ff5f96';
+const PINK = "#ff5f96";
 
 const HomeScreen = ({ navigation }) => {
   const { t } = useTranslation();
-  const [username, setUsername] = useState('Lucy Patil'); // fallback
+  const [username, setUsername] = useState("Lucy Patil"); // fallback
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [notificationModalVisible, setNotificationModalVisible] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(false); // for notifications
+  const [loading, setLoading] = useState(false);
 
-  // New Job Insights state & fetch function
+  // New Job Insights (example data)
   const [jobInsights, setJobInsights] = useState({
     totalJobs: 0,
     trending: [],
     salaryData: {},
-    loading: true
+    loading: true,
   });
 
   const fetchJobInsights = async () => {
     try {
-      // In a real app, fetch from your API/Firestore
       setJobInsights({
         totalJobs: 1250,
         trending: [
-          { title: 'Software Engineer', growth: '+15%' },
-          { title: 'Data Analyst', growth: '+12%' },
-          { title: 'UX Designer', growth: '+8%' }
+          { title: "Software Engineer", growth: "+15%" },
+          { title: "Data Analyst", growth: "+12%" },
+          { title: "UX Designer", growth: "+8%" },
         ],
         salaryData: {
-          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+          labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
           datasets: [
             {
               data: [65000, 68000, 69500, 71000, 72500, 75000],
               color: () => PINK,
-              strokeWidth: 2
-            }
-          ]
+              strokeWidth: 2,
+            },
+          ],
         },
-        loading: false
+        loading: false,
       });
     } catch (error) {
-      console.log('Error fetching job insights:', error);
-      setJobInsights(prev => ({ ...prev, loading: false }));
+      console.log("Error fetching job insights:", error);
+      setJobInsights((prev) => ({ ...prev, loading: false }));
     }
   };
 
@@ -72,48 +84,47 @@ const HomeScreen = ({ navigation }) => {
     fetchJobInsights();
   }, []);
 
-  // Animated values for modal scale and opacity
+  // Animated modal for notifications
   const modalScale = useRef(new Animated.Value(0)).current;
   const modalOpacity = useRef(new Animated.Value(0)).current;
 
-  // Animate modal when visibility changes
   useEffect(() => {
     if (notificationModalVisible) {
       Animated.parallel([
         Animated.timing(modalScale, {
           toValue: 1,
           duration: 300,
-          useNativeDriver: true
+          useNativeDriver: true,
         }),
         Animated.timing(modalOpacity, {
           toValue: 1,
           duration: 300,
-          useNativeDriver: true
-        })
+          useNativeDriver: true,
+        }),
       ]).start();
     } else {
       Animated.parallel([
         Animated.timing(modalScale, {
           toValue: 0,
           duration: 300,
-          useNativeDriver: true
+          useNativeDriver: true,
         }),
         Animated.timing(modalOpacity, {
           toValue: 0,
           duration: 300,
-          useNativeDriver: true
-        })
+          useNativeDriver: true,
+        }),
       ]).start();
     }
   }, [notificationModalVisible]);
 
-  // Fetch user data from Firestore on mount
+  // Fetch user data
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
     (async () => {
       try {
-        const docRef = doc(db, 'users', user.uid);
+        const docRef = doc(db, "users", user.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
@@ -121,7 +132,7 @@ const HomeScreen = ({ navigation }) => {
           if (data.avatarUrl) setAvatarUrl(data.avatarUrl);
         }
       } catch (error) {
-        console.log('Error fetching user data:', error.message);
+        console.log("Error fetching user data:", error.message);
       }
     })();
   }, []);
@@ -135,53 +146,52 @@ const HomeScreen = ({ navigation }) => {
         setLoading(false);
         return;
       }
-      const notificationsRef = collection(db, 'users', user.uid, 'notifications');
-      const q = query(notificationsRef, orderBy('timestamp', 'desc'));
+      const notificationsRef = collection(db, "users", user.uid, "notifications");
+      const q = query(notificationsRef, orderBy("timestamp", "desc"));
       const querySnapshot = await getDocs(q);
       const notificationData = [];
       querySnapshot.forEach((doc) => {
         notificationData.push({
           id: doc.id,
-          ...doc.data()
+          ...doc.data(),
         });
       });
       setNotifications(notificationData);
     } catch (error) {
-      console.log('Error fetching notifications:', error);
+      console.log("Error fetching notifications:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch notifications when modal opens
   useEffect(() => {
     if (notificationModalVisible) {
       fetchNotifications();
     }
   }, [notificationModalVisible]);
 
-  // Mark a notification as read
   const markAsRead = async (notificationId) => {
     try {
       const user = auth.currentUser;
       if (!user) return;
-      const notificationRef = doc(db, 'users', user.uid, 'notifications', notificationId);
+      const notificationRef = doc(db, "users", user.uid, "notifications", notificationId);
       await updateDoc(notificationRef, { read: true });
-      setNotifications(notifications.map(item =>
-        item.id === notificationId ? { ...item, read: true } : item
-      ));
+      setNotifications(
+        notifications.map((item) =>
+          item.id === notificationId ? { ...item, read: true } : item
+        )
+      );
     } catch (error) {
-      console.log('Error marking notification as read:', error);
+      console.log("Error marking notification as read:", error);
     }
   };
 
-  // Clear all notifications
   const clearAllNotifications = async () => {
     try {
       const user = auth.currentUser;
       if (!user) return;
       const batch = writeBatch(db);
-      const notificationsRef = collection(db, 'users', user.uid, 'notifications');
+      const notificationsRef = collection(db, "users", user.uid, "notifications");
       const querySnapshot = await getDocs(notificationsRef);
       querySnapshot.forEach((doc) => {
         batch.delete(doc.ref);
@@ -189,16 +199,16 @@ const HomeScreen = ({ navigation }) => {
       await batch.commit();
       setNotifications([]);
     } catch (error) {
-      console.log('Error clearing notifications:', error);
+      console.log("Error clearing notifications:", error);
     }
   };
 
-  // Open external maps for nearby services
+  // External map links
   const openNearbyPoliceStations = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        alert(t('home.permissionDenied'));
+      if (status !== "granted") {
+        alert(t("home.permissionDenied"));
         return;
       }
       const currentLocation = await Location.getCurrentPositionAsync({});
@@ -206,15 +216,15 @@ const HomeScreen = ({ navigation }) => {
       const googleMapsURL = `https://www.google.com/maps/search/police+station/@${latitude},${longitude},15z`;
       await Linking.openURL(googleMapsURL);
     } catch (error) {
-      console.error('Error fetching location:', error);
+      console.error("Error fetching location:", error);
     }
   };
 
   const openNearbyHospitals = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        alert(t('home.permissionDenied'));
+      if (status !== "granted") {
+        alert(t("home.permissionDenied"));
         return;
       }
       const currentLocation = await Location.getCurrentPositionAsync({});
@@ -222,15 +232,15 @@ const HomeScreen = ({ navigation }) => {
       const googleMapsURL = `https://www.google.com/maps/search/hospital/@${latitude},${longitude},15z`;
       await Linking.openURL(googleMapsURL);
     } catch (error) {
-      console.error('Error fetching location:', error);
+      console.error("Error fetching location:", error);
     }
   };
 
   const openNearbyPharmacies = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        alert(t('home.permissionDenied'));
+      if (status !== "granted") {
+        alert(t("home.permissionDenied"));
         return;
       }
       const currentLocation = await Location.getCurrentPositionAsync({});
@@ -238,12 +248,48 @@ const HomeScreen = ({ navigation }) => {
       const googleMapsURL = `https://www.google.com/maps/search/pharmacy/@${latitude},${longitude},15z`;
       await Linking.openURL(googleMapsURL);
     } catch (error) {
-      console.error('Error fetching location:', error);
+      console.error("Error fetching location:", error);
     }
   };
 
+  // ===== Location Sharing Functions =====
+  // When "Share Location" is pressed, show an alert with two options.
+  // "Live Location" navigates directly to LiveLocationScreen (with a default 1-minute timer).
+  // "Current Location" shares the one-time current location.
+  const handleShareLocation = () => {
+    Alert.alert("Share Location", "Choose sharing option", [
+      {
+        text: "Live Location",
+        onPress: () =>
+          navigation.navigate("LiveLocationScreen", { duration: 1 }),
+      },
+      {
+        text: "Current Location",
+        onPress: shareCurrentLocation,
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+  // One-time share current location
+  const shareCurrentLocation = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      alert(t("home.permissionDenied"));
+      return;
+    }
+    const currentLocation = await Location.getCurrentPositionAsync({});
+    const { latitude, longitude } = currentLocation.coords;
+    const link = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+    Share.share({
+      message: `Here's my current location: ${link}`,
+    });
+  };
+
+  // ========================================
+
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+    <SafeAreaView style={styles.container} edges={["left", "right"]}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
       {/* Notification Modal */}
@@ -258,10 +304,7 @@ const HomeScreen = ({ navigation }) => {
             <Animated.View
               style={[
                 styles.modalContainer,
-                {
-                  transform: [{ scale: modalScale }],
-                  opacity: modalOpacity
-                }
+                { transform: [{ scale: modalScale }], opacity: modalOpacity },
               ]}
             >
               <View style={styles.notificationHeader}>
@@ -277,7 +320,9 @@ const HomeScreen = ({ navigation }) => {
                       key={notification.id}
                       style={[
                         styles.notificationItem,
-                        { backgroundColor: notification.read ? '#F8F8F8' : '#FFF0F5' }
+                        {
+                          backgroundColor: notification.read ? "#F8F8F8" : "#FFF0F5",
+                        },
                       ]}
                       onPress={() => markAsRead(notification.id)}
                     >
@@ -285,9 +330,9 @@ const HomeScreen = ({ navigation }) => {
                       <Text style={styles.notificationMessage}>{notification.message}</Text>
                       <Text style={styles.notificationTime}>
                         {notification.timestamp?.toDate().toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}{' '}
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}{" "}
                         · {notification.timestamp?.toDate().toLocaleDateString()}
                       </Text>
                     </TouchableOpacity>
@@ -299,10 +344,13 @@ const HomeScreen = ({ navigation }) => {
                   </View>
                 )}
               </ScrollView>
-              <View style={{ flexDirection: 'row' }}>
+              <View style={{ flexDirection: "row" }}>
                 {notifications.length > 0 && (
                   <TouchableOpacity
-                    style={[styles.closeButton, { flex: 1, borderRightWidth: 1, borderRightColor: '#EEE' }]}
+                    style={[
+                      styles.closeButton,
+                      { flex: 1, borderRightWidth: 1, borderRightColor: "#EEE" },
+                    ]}
                     onPress={clearAllNotifications}
                   >
                     <Text style={styles.closeButtonText}>Clear All</Text>
@@ -325,10 +373,14 @@ const HomeScreen = ({ navigation }) => {
         <View style={styles.header}>
           <View style={styles.userInfo}>
             <Image
-              source={avatarUrl ? { uri: avatarUrl } : require('../../assets/icon.png')}
+              source={
+                avatarUrl
+                  ? { uri: avatarUrl }
+                  : require("../../assets/icon.png")
+              }
               style={styles.avatar}
             />
-            <Text style={styles.greeting}>{t('home.greeting')}</Text>
+            <Text style={styles.greeting}>{t("home.greeting")}</Text>
             <Text style={styles.username}>{username}</Text>
           </View>
           <View style={styles.headerIcons}>
@@ -343,42 +395,61 @@ const HomeScreen = ({ navigation }) => {
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-          <TouchableOpacity onPress={() => navigation.navigate('FakeCall')} style={styles.actionButton}>
-            <Image source={require('../../assets/fake-call.png')} style={styles.actionIcon} />
-            <Text style={styles.actionText}>{t('home.fakeCall')}</Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("FakeCall")}
+            style={styles.actionButton}
+          >
+            <Image
+              source={require("../../assets/fake-call.png")}
+              style={styles.actionIcon}
+            />
+            <Text style={styles.actionText}>{t("home.fakeCall")}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
-            <Image source={require('../../assets/livelocation.png')} style={styles.actionIcon} />
-            <Text style={styles.actionText}>{t('home.shareLiveLocation')}</Text>
+          {/* Single Share Location Button with Alert Options */}
+          <TouchableOpacity style={styles.actionButton} onPress={handleShareLocation}>
+            <Image
+              source={require("../../assets/livelocation.png")}
+              style={styles.actionIcon}
+            />
+            <Text style={styles.actionText}>{t("home.shareLiveLocation")}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Add Close People Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('home.addClosePeopleTitle')}</Text>
-            <Text style={styles.sectionSubtitle}>{t('home.addClosePeopleSubtitle')}</Text>
+            <Text style={styles.sectionTitle}>{t("home.addClosePeopleTitle")}</Text>
+            <Text style={styles.sectionSubtitle}>{t("home.addClosePeopleSubtitle")}</Text>
           </View>
-          <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AddFriends')}>
-            <Text style={styles.addButtonText}>{t('home.addFriendsButton')}</Text>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => navigation.navigate("AddFriends")}
+          >
+            <Text style={styles.addButtonText}>{t("home.addFriendsButton")}</Text>
             <Ionicons name="person-add" size={20} color="white" />
           </TouchableOpacity>
         </View>
 
         {/* Skill Development Section */}
-        <TouchableOpacity style={styles.skillSection} onPress={() => navigation.navigate('SkillDevelopment')}>
+        <TouchableOpacity
+          style={styles.skillSection}
+          onPress={() => navigation.navigate("SkillDevelopment")}
+        >
           <View style={styles.skillContent}>
             <View style={styles.skillIconContainer}>
-              <Image source={require('../../assets/skill.png')} style={styles.skillIcon} />
+              <Image
+                source={require("../../assets/skill.png")}
+                style={styles.skillIcon}
+              />
             </View>
             <View style={styles.skillTextContainer}>
-              <Text style={styles.skillTitle}>{t('home.skillTitle')}</Text>
-              <Text style={styles.skillSubtitle}>{t('home.skillSubtitle')}</Text>
+              <Text style={styles.skillTitle}>{t("home.skillTitle")}</Text>
+              <Text style={styles.skillSubtitle}>{t("home.skillSubtitle")}</Text>
               <View style={styles.skillProgress}>
                 <View style={styles.progressBar}>
                   <View style={styles.progressFill} />
                 </View>
-                <Text style={styles.progressText}>{t('home.skillProgressText')}</Text>
+                <Text style={styles.progressText}>{t("home.skillProgressText")}</Text>
               </View>
             </View>
           </View>
@@ -388,24 +459,36 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         {/* AI Report Generator Section */}
-        <TouchableOpacity style={styles.journeySection} onPress={() => navigation.navigate('GenerateReport')}>
+        <TouchableOpacity
+          style={styles.journeySection}
+          onPress={() => navigation.navigate("GenerateReport")}
+        >
           <View style={styles.journeyContent}>
-            <Image source={require('../../assets/report.png')} style={styles.journeyIcon} />
+            <Image
+              source={require("../../assets/report.png")}
+              style={styles.journeyIcon}
+            />
             <View>
-              <Text style={styles.journeyTitle}>{t('home.generateReportTitle')}</Text>
-              <Text style={styles.journeySubtitle}>{t('home.generateReportSubtitle')}</Text>
+              <Text style={styles.journeyTitle}>{t("home.generateReportTitle")}</Text>
+              <Text style={styles.journeySubtitle}>{t("home.generateReportSubtitle")}</Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
 
         {/* Journey Section */}
-        <TouchableOpacity style={styles.journeySection} onPress={() => navigation.navigate('TrackMe')}>
+        <TouchableOpacity
+          style={styles.journeySection}
+          onPress={() => navigation.navigate("TrackMe")}
+        >
           <View style={styles.journeyContent}>
-            <Image source={require('../../assets/journey.png')} style={styles.journeyIcon} />
+            <Image
+              source={require("../../assets/journey.png")}
+              style={styles.journeyIcon}
+            />
             <View>
-              <Text style={styles.journeyTitle}>{t('home.journeyTitle')}</Text>
-              <Text style={styles.journeySubtitle}>{t('home.journeySubtitle')}</Text>
+              <Text style={styles.journeyTitle}>{t("home.journeyTitle")}</Text>
+              <Text style={styles.journeySubtitle}>{t("home.journeySubtitle")}</Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={24} color="black" />
@@ -414,14 +497,15 @@ const HomeScreen = ({ navigation }) => {
         {/* Job Market Insights Section */}
         <TouchableOpacity
           style={styles.jobInsightsSection}
-          onPress={() => navigation.navigate('JobMarketInsights')}
+          onPress={() => navigation.navigate("JobMarketInsights")}
         >
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              {t('Job Market Insights') || 'Job Market Insights'}
+              {t("Job Market Insights") || "Job Market Insights"}
             </Text>
             <Text style={styles.sectionSubtitle}>
-              {t('Career opportunities & salary trends') || 'Career opportunities & salary trends'}
+              {t("Career opportunities & salary trends") ||
+                "Career opportunities & salary trends"}
             </Text>
           </View>
 
@@ -431,7 +515,9 @@ const HomeScreen = ({ navigation }) => {
             <View style={styles.jobInsightsContent}>
               <View style={styles.jobStats}>
                 <View style={styles.jobStatItem}>
-                  <Text style={styles.jobStatNumber}>{jobInsights.totalJobs}</Text>
+                  <Text style={styles.jobStatNumber}>
+                    {jobInsights.totalJobs}
+                  </Text>
                   <Text style={styles.jobStatLabel}>Open Positions</Text>
                 </View>
                 <View style={styles.trendingJobs}>
@@ -449,20 +535,20 @@ const HomeScreen = ({ navigation }) => {
                 {jobInsights.salaryData.labels && (
                   <LineChart
                     data={jobInsights.salaryData}
-                    width={Dimensions.get('window').width - 80}
+                    width={Dimensions.get("window").width - 80}
                     height={160}
                     chartConfig={{
-                      backgroundColor: '#fff',
-                      backgroundGradientFrom: '#fff',
-                      backgroundGradientTo: '#fff',
+                      backgroundColor: "#fff",
+                      backgroundGradientFrom: "#fff",
+                      backgroundGradientTo: "#fff",
                       decimalPlaces: 0,
                       color: () => PINK,
-                      labelColor: () => '#888',
+                      labelColor: () => "#888",
                       propsForDots: {
-                        r: '5',
-                        strokeWidth: '2',
-                        stroke: PINK
-                      }
+                        r: "5",
+                        strokeWidth: "2",
+                        stroke: PINK,
+                      },
                     }}
                     bezier
                     style={styles.chart}
@@ -478,19 +564,28 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         {/* Emergency Buttons */}
-        <TouchableOpacity style={styles.emergencyButton} onPress={openNearbyPoliceStations}>
+        <TouchableOpacity
+          style={styles.emergencyButton}
+          onPress={openNearbyPoliceStations}
+        >
           <FontAwesome5 name="shield-alt" size={20} color="black" />
-          <Text style={styles.emergencyText}>{t('home.policeNearMe')}</Text>
+          <Text style={styles.emergencyText}>{t("home.policeNearMe")}</Text>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.emergencyButton} onPress={openNearbyHospitals}>
+        <TouchableOpacity
+          style={styles.emergencyButton}
+          onPress={openNearbyHospitals}
+        >
           <FontAwesome5 name="hospital" size={20} color="black" />
-          <Text style={styles.emergencyText}>{t('home.hospitalNearMe')}</Text>
+          <Text style={styles.emergencyText}>{t("home.hospitalNearMe")}</Text>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.emergencyButton} onPress={openNearbyPharmacies}>
+        <TouchableOpacity
+          style={styles.emergencyButton}
+          onPress={openNearbyPharmacies}
+        >
           <FontAwesome5 name="clinic-medical" size={20} color="black" />
-          <Text style={styles.emergencyText}>{t('home.pharmacyNearMe')}</Text>
+          <Text style={styles.emergencyText}>{t("home.pharmacyNearMe")}</Text>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
       </ScrollView>
@@ -503,7 +598,7 @@ export default HomeScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF'
+    backgroundColor: "#FFF",
   },
   header: {
     backgroundColor: PINK,
@@ -513,404 +608,402 @@ const styles = StyleSheet.create({
     paddingTop: 70,
     paddingBottom: 40,
     marginBottom: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center'
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   userInfo: {
-    flexDirection: 'column'
+    flexDirection: "column",
   },
   avatar: {
     width: 40,
     height: 40,
-    borderRadius: 20
+    borderRadius: 20,
   },
   greeting: {
     fontSize: 16,
-    color: '#666'
+    color: "#666",
   },
   username: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000'
+    fontWeight: "bold",
+    color: "#000",
   },
   headerIcons: {
-    flexDirection: 'row',
-    gap: 15
+    flexDirection: "row",
+    gap: 15,
   },
   quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    padding: 20
+    flexDirection: "row",
+    justifyContent: "space-around",
+    padding: 20,
   },
   actionButton: {
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     padding: 20,
     borderRadius: 15,
-    alignItems: 'center',
-    width: '45%',
-    shadowColor: '#000',
+    alignItems: "center",
+    width: "45%",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3
+    elevation: 3,
   },
   actionIcon: {
     width: 40,
     height: 40,
-    marginBottom: 10
+    marginBottom: 10,
   },
   actionText: {
-    textAlign: 'center',
-    color: '#000'
+    textAlign: "center",
+    color: "#000",
   },
   section: {
     padding: 20,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderRadius: 15,
     marginHorizontal: 20,
     marginVertical: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3
+    elevation: 3,
   },
   sectionHeader: {
-    marginBottom: 10
+    marginBottom: 10,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000'
+    fontWeight: "bold",
+    color: "#000",
   },
   sectionSubtitle: {
-    color: '#666',
-    fontSize: 14
+    color: "#666",
+    fontSize: 14,
   },
   addButton: {
-    backgroundColor: '#FF4B8C',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#FF4B8C",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     padding: 10,
     borderRadius: 25,
     gap: 10,
-    marginTop: 10
+    marginTop: 10,
   },
   addButtonText: {
-    color: '#FFF',
-    fontWeight: '500'
+    color: "#FFF",
+    fontWeight: "500",
   },
   skillSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     padding: 15,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderRadius: 15,
     marginHorizontal: 20,
     marginVertical: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
     borderLeftWidth: 4,
-    borderLeftColor: PINK
+    borderLeftColor: PINK,
   },
   skillContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
   },
   skillIconContainer: {
-    backgroundColor: PINK + '15',
+    backgroundColor: PINK + "15",
     padding: 10,
     borderRadius: 12,
-    marginRight: 15
+    marginRight: 15,
   },
   skillIcon: {
     width: 40,
-    height: 40
+    height: 40,
   },
   skillTextContainer: {
-    flex: 1
+    flex: 1,
   },
   skillTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 4
+    fontWeight: "bold",
+    color: "#000",
+    marginBottom: 4,
   },
   skillSubtitle: {
-    color: '#666',
+    color: "#666",
     fontSize: 13,
     lineHeight: 18,
-    marginBottom: 8
+    marginBottom: 8,
   },
   skillProgress: {
-    width: '100%',
-    marginTop: 5
+    width: "100%",
+    marginTop: 5,
   },
   progressBar: {
     height: 6,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: "#F0F0F0",
     borderRadius: 3,
-    width: '100%',
-    marginBottom: 5
+    width: "100%",
+    marginBottom: 5,
   },
   progressFill: {
-    height: '100%',
-    width: '40%',
+    height: "100%",
+    width: "40%",
     backgroundColor: PINK,
-    borderRadius: 3
+    borderRadius: 3,
   },
   progressText: {
     fontSize: 12,
-    color: '#888'
+    color: "#888",
   },
   skillArrowContainer: {
-    backgroundColor: PINK + '10',
+    backgroundColor: PINK + "10",
     padding: 8,
-    borderRadius: 20
+    borderRadius: 20,
   },
   journeySection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     padding: 20,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderRadius: 15,
     marginHorizontal: 20,
     marginVertical: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3
+    elevation: 3,
   },
   journeyContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
   },
   journeyIcon: {
     width: 40,
     height: 40,
-    marginRight: 15
+    marginRight: 15,
   },
   journeyTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000'
+    fontWeight: "bold",
+    color: "#000",
   },
   journeySubtitle: {
-    color: '#666',
-    fontSize: 12
+    color: "#666",
+    fontSize: 12,
   },
   emergencyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     padding: 20,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderRadius: 15,
     marginHorizontal: 20,
     marginVertical: 5,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3
+    elevation: 3,
   },
   emergencyText: {
     flex: 1,
     marginLeft: 15,
     fontSize: 16,
-    color: '#000'
+    color: "#000",
   },
-  // Modal styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-end'
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    justifyContent: "flex-start",
+    alignItems: "flex-end",
   },
   modalContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: StatusBar.currentHeight ? StatusBar.currentHeight + 15 : 55,
     right: 15,
     width: 300,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
+    overflow: "hidden",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
-    elevation: 10
+    elevation: 10,
   },
   notificationHeader: {
     backgroundColor: PINK,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)'
+    borderBottomColor: "rgba(0,0,0,0.05)",
   },
   notificationHeaderText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
     marginLeft: 10,
-    fontWeight: '700',
-    letterSpacing: 0.3
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
   notificationBody: {
     padding: 12,
-    maxHeight: 350
+    maxHeight: 350,
   },
   notificationItem: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: "#f9f9f9",
     padding: 14,
     borderRadius: 16,
     marginBottom: 10,
     borderLeftWidth: 4,
     borderLeftColor: PINK,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    elevation: 2
+    elevation: 2,
   },
   notificationTitle: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 5
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 5,
   },
   notificationMessage: {
     fontSize: 14,
-    color: '#555',
-    lineHeight: 20
+    color: "#555",
+    lineHeight: 20,
   },
   notificationTime: {
     fontSize: 12,
-    color: '#888',
+    color: "#888",
     marginTop: 8,
-    textAlign: 'right'
+    textAlign: "right",
   },
   emptyNotification: {
     padding: 25,
-    alignItems: 'center'
+    alignItems: "center",
   },
   emptyNotificationText: {
-    color: '#888',
-    textAlign: 'center',
+    color: "#888",
+    textAlign: "center",
     marginTop: 10,
-    fontSize: 14
+    fontSize: 14,
   },
   closeButton: {
-    backgroundColor: '#f6f6f6',
+    backgroundColor: "#f6f6f6",
     paddingVertical: 14,
-    alignItems: 'center',
+    alignItems: "center",
     borderTopWidth: 1,
-    borderTopColor: '#eee'
+    borderTopColor: "#eee",
   },
   closeButtonText: {
     color: PINK,
-    fontWeight: '600',
-    fontSize: 15
+    fontWeight: "600",
+    fontSize: 15,
   },
-  // Job Insights Section styles
   jobInsightsSection: {
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderRadius: 15,
     marginHorizontal: 20,
     marginVertical: 10,
     padding: 15,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3
+    elevation: 3,
   },
   jobInsightsContent: {
-    marginTop: 10
+    marginTop: 10,
   },
   jobStats: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 15
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 15,
   },
   jobStatItem: {
-    alignItems: 'center',
-    backgroundColor: PINK + '15',
+    alignItems: "center",
+    backgroundColor: PINK + "15",
     borderRadius: 10,
     padding: 10,
-    width: '30%'
+    width: "30%",
   },
   jobStatNumber: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: PINK
+    fontWeight: "bold",
+    color: PINK,
   },
   jobStatLabel: {
     fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 5
+    color: "#666",
+    textAlign: "center",
+    marginTop: 5,
   },
   trendingJobs: {
-    width: '65%'
+    width: "65%",
   },
   trendingTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 8,
-    color: '#444'
+    color: "#444",
   },
   trendingItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 6,
   },
   trendingJobTitle: {
     fontSize: 13,
-    color: '#333'
+    color: "#333",
   },
   trendingGrowth: {
     fontSize: 13,
-    color: '#4CAF50',
-    fontWeight: '500'
+    color: "#4CAF50",
+    fontWeight: "500",
   },
   salaryChartContainer: {
-    marginVertical: 5
+    marginVertical: 5,
   },
   chartTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 10,
-    color: '#444'
+    color: "#444",
   },
   chart: {
     marginVertical: 8,
-    borderRadius: 10
+    borderRadius: 10,
   },
   viewMoreButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: PINK + '10',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: PINK + "10",
     borderRadius: 25,
     padding: 10,
-    marginTop: 10
+    marginTop: 10,
   },
   viewMoreText: {
     color: PINK,
-    fontWeight: '500',
-    marginRight: 5
-  }
+    fontWeight: "500",
+    marginRight: 5,
+  },
 });

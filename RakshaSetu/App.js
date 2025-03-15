@@ -1,10 +1,12 @@
-import React from "react";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
-import Routes from "./src/routes";
-import { UserProvider } from "./src/context/UserContext";
+import React from "react";
+import 'react-native-get-random-values';
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ShakeDetectionProvider } from "./src/context/ShakeDetectionContext";
+import { UserProvider } from "./src/context/UserContext";
 import './src/i18n'; // Ensure this file exists
+import Routes from "./src/routes";
+
 
 const App = () => {
   return (

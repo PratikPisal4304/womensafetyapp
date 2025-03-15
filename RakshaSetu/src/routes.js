@@ -1,37 +1,38 @@
-import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Animated } from "react-native";
-import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { createStackNavigator } from "@react-navigation/stack";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
+import { createStackNavigator } from "@react-navigation/stack";
+import React from "react";
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-import KeyboardAwareWrapper from "./components/KeyboardAwareWrapper";
 import ShakeHandler from "../src/components/ShakeHandler";
+import KeyboardAwareWrapper from "./components/KeyboardAwareWrapper";
 
-import SplashScreen from "./screens/SplashScreen";
-import LoginScreen from "./screens/LoginScreen";
-import OTPVerificationScreen from "./screens/OTPVerificationScreen";
-import SignUpScreen from "./screens/SignUpScreen";
-import TellUsAboutYourselfScreen from "./screens/TellUsAboutYourselfScreen";
-import HomeScreen from "./screens/HomeScreen";
-import FakeCallScreen from "./screens/FakeCallScreen";
 import AddFriendsScreen from "./screens/AddCloseFriendsScreen";
-import SkillDevelopmentScreen from "./screens/SkillDevelopmentScreen";
-import GenerateReportScreen from "./screens/GenerateReportScreen";
-import TrackMeScreen from "./screens/TrackMeScreen";
-import SOSScreen from "./screens/SOSScreen";
-import ProfileScreen from "./screens/ProfileScreen";
+import BudgetToolScreen from "./screens/BudgetToolScreen";
+import CommunityScreen from "./screens/CommunityScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
+import EmergencyHelplineScreen from "./screens/EmergencyHelplineScreen";
+import FakeCallScreen from "./screens/FakeCallScreen";
+import FinancialNews from "./screens/FinancialNews";
+import GeminiChatScreen from "./screens/GeminiChatScreen";
+import GenerateReportScreen from "./screens/GenerateReportScreen";
+import HomeScreen from "./screens/HomeScreen";
+import InAppChatScreen from "./screens/InAppChatScreen";
+import JobMarketInsightsScreen from "./screens/JobMarketInsightsScreen";
+import LiveLocationScreen from './screens/LiveLocationScreen';
+import LoginScreen from "./screens/LoginScreen";
+import MyLearningPathScreen from "./screens/MyLearningPathScreen";
 import MyPostsScreen from "./screens/MyPostsScreen";
 import MyReportsScreen from "./screens/MyReportsScreen";
-import EmergencyHelplineScreen from "./screens/EmergencyHelplineScreen";
-import CommunityScreen from "./screens/CommunityScreen";
-import InAppChatScreen from "./screens/InAppChatScreen";
-import GeminiChatScreen from "./screens/GeminiChatScreen";
-import BudgetToolScreen from "./screens/BudgetToolScreen";
-import FinancialNews from "./screens/FinancialNews";
-import MyLearningPathScreen from "./screens/MyLearningPathScreen"; 
-import JobMarketInsightsScreen from "./screens/JobMarketInsightsScreen"; 
+import OTPVerificationScreen from "./screens/OTPVerificationScreen";
+import ProfileScreen from "./screens/ProfileScreen";
+import SignUpScreen from "./screens/SignUpScreen";
+import SkillDevelopmentScreen from "./screens/SkillDevelopmentScreen";
+import SOSScreen from "./screens/SOSScreen";
+import SplashScreen from "./screens/SplashScreen";
+import TellUsAboutYourselfScreen from "./screens/TellUsAboutYourselfScreen";
+import TrackMeScreen from "./screens/TrackMeScreen";
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -56,6 +57,7 @@ function HomeStack() {
       <Stack.Screen name="BudgetTool" component={BudgetToolScreen} />
       <Stack.Screen name="FinancialNews" component={FinancialNews} />
       <Stack.Screen name="JobMarketInsights" component={JobMarketInsightsScreen} />
+      <Stack.Screen name="LiveLocationScreen" component={LiveLocationScreen} options={{ title: 'Live Location' }} />
     </Stack.Navigator>
   );
 }

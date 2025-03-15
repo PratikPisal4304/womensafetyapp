@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Live Location Viewer</title>
+    <!-- Include Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <!-- Include Google Maps API (replace YOUR_GOOGLE_MAPS_API_KEY with your key) -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBzqSJUt0MVs3xFjFWTvLwiyjXwnzbkXok"></script>
+    <style>
+      html, body, #map {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+      // Firebase configuration (values must be strings)
+      const firebaseConfig = {
+        apiKey: "AIzaSyBRD6pmrMCcuAksz8hqxXAkP8hV3jih47c",
+        authDomain: "rakshasetu-c9e0b.firebaseapp.com",
+        projectId: "rakshasetu-c9e0b",
+        storageBucket: "rakshasetu-c9e0b.appspot.com",
+        messagingSenderId: "704291591905",
+        appId: "1:704291591905:web:ffde7bd519cfad3106c9a0",
+        measurementId: "G-JJ881F4VBQ"
+      };
+
+      // Initialize Firebase using compat
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+
+      // Extract shareId from URL query parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const shareId = urlParams.get('shareId');
+
+      let map, marker;
+      function initMap(latitude, longitude) {
+        const pos = { lat: latitude, lng: longitude };
+        map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 15,
+          center: pos,
+        });
+        marker = new google.maps.Marker({
+          position: pos,
+          map: map,
+          title: "Live Location",
+        });
+      }
+
+      // Listen for live location updates from Firestore
+      db.collection('liveLocations').doc(shareId).onSnapshot((doc) => {
+        if (doc.exists) {
+          const data = doc.data();
+          const { latitude, longitude } = data.location;
+          if (!map) {
+            initMap(latitude, longitude);
+          } else {
+            const pos = { lat: latitude, lng: longitude };
+            marker.setPosition(pos);
+            map.setCenter(pos);
+          }
+        } else {
+          alert("Live location sharing has ended.");
+        }
+      });
+    </script>
+  </body>
+</html>
