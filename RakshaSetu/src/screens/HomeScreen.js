@@ -27,20 +27,65 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  TouchableWithoutFeedback
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { auth, db } from '../../config/firebaseConfig';
+  TouchableWithoutFeedback,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { auth, db } from "../../config/firebaseConfig";
 
 const PINK = "#ff5f96";
 
 const HomeScreen = ({ navigation }) => {
   const { t } = useTranslation();
-  const [username, setUsername] = useState("Lucy Patil"); // fallback
+  const [username, setUsername] = useState("Lucy Patil"); // fallback name
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [notificationModalVisible, setNotificationModalVisible] = useState(false);
 
-  // Animated modal for notifications
+  // Notifications state
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Example Job Insights state (replace with your real data)
+  const [jobInsights, setJobInsights] = useState({
+    totalJobs: 0,
+    trending: [],
+    salaryData: {},
+    loading: true,
+  });
+
+  const fetchJobInsights = async () => {
+    try {
+      // Replace this with a real API/Firestore call if needed
+      setJobInsights({
+        totalJobs: 1250,
+        trending: [
+          { title: "Software Engineer", growth: "+15%" },
+          { title: "Data Analyst", growth: "+12%" },
+          { title: "UX Designer", growth: "+8%" },
+        ],
+        salaryData: {
+          labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+          datasets: [
+            {
+              data: [65000, 68000, 69500, 71000, 72500, 75000],
+              color: () => PINK,
+              strokeWidth: 2,
+            },
+          ],
+        },
+        loading: false,
+      });
+    } catch (error) {
+      console.log("Error fetching job insights:", error);
+      setJobInsights((prev) => ({ ...prev, loading: false }));
+    }
+  };
+
+  useEffect(() => {
+    fetchJobInsights();
+  }, []);
+
+  // Animated modal values for notifications
   const modalScale = useRef(new Animated.Value(0)).current;
   const modalOpacity = useRef(new Animated.Value(0)).current;
 
@@ -74,7 +119,7 @@ const HomeScreen = ({ navigation }) => {
     }
   }, [notificationModalVisible]);
 
-  // Fetch user data
+  // Fetch user data from Firestore
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -93,10 +138,6 @@ const HomeScreen = ({ navigation }) => {
     })();
   }, []);
 
-  // Notifications state
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(false);
-
   const fetchNotifications = async () => {
     setLoading(true);
     try {
@@ -105,11 +146,9 @@ const HomeScreen = ({ navigation }) => {
         setLoading(false);
         return;
       }
-      
-      const notificationsRef = collection(db, 'users', user.uid, 'notifications');
-      const q = query(notificationsRef, orderBy('timestamp', 'desc'));
+      const notificationsRef = collection(db, "users", user.uid, "notifications");
+      const q = query(notificationsRef, orderBy("timestamp", "desc"));
       const querySnapshot = await getDocs(q);
-      
       const notificationData = [];
       querySnapshot.forEach((docSnap) => {
         notificationData.push({
@@ -117,7 +156,6 @@ const HomeScreen = ({ navigation }) => {
           ...docSnap.data(),
         });
       });
-      
       setNotifications(notificationData);
     } catch (error) {
       console.log("Error fetching notifications:", error);
@@ -136,15 +174,13 @@ const HomeScreen = ({ navigation }) => {
     try {
       const user = auth.currentUser;
       if (!user) return;
-      
-      const notificationRef = doc(db, 'users', user.uid, 'notifications', notificationId);
-      await updateDoc(notificationRef, {
-        read: true,
-      });
-      
-      setNotifications(notifications.map(item => 
-        item.id === notificationId ? { ...item, read: true } : item
-      ));
+      const notificationRef = doc(db, "users", user.uid, "notifications", notificationId);
+      await updateDoc(notificationRef, { read: true });
+      setNotifications(
+        notifications.map((item) =>
+          item.id === notificationId ? { ...item, read: true } : item
+        )
+      );
     } catch (error) {
       console.log("Error marking notification as read:", error);
     }
@@ -154,15 +190,12 @@ const HomeScreen = ({ navigation }) => {
     try {
       const user = auth.currentUser;
       if (!user) return;
-      
       const batch = writeBatch(db);
       const notificationsRef = collection(db, "users", user.uid, "notifications");
       const querySnapshot = await getDocs(notificationsRef);
-      
       querySnapshot.forEach((docSnap) => {
         batch.delete(docSnap.ref);
       });
-      
       await batch.commit();
       setNotifications([]);
     } catch (error) {
@@ -218,10 +251,10 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
-  // ===== Location Sharing Functions =====
-  // When "Share Location" is pressed, show an alert with two options.
-  // "Live Location" navigates directly to LiveLocationScreen (with a default 1-minute timer).
-  // "Current Location" shares the one-time current location.
+  // ===== Location Sharing =====
+  // Single button triggers an alert with two options:
+  // "Live Location" navigates to LiveLocationScreen with a default timer (1 minute).
+  // "Current Location" shares a one-time location.
   const handleShareLocation = () => {
     Alert.alert("Share Location", "Choose sharing option", [
       {
@@ -252,8 +285,6 @@ const HomeScreen = ({ navigation }) => {
     });
   };
 
-  // ========================================
-
   return (
     <SafeAreaView style={styles.container} edges={["left", "right"]}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
@@ -270,27 +301,25 @@ const HomeScreen = ({ navigation }) => {
             <Animated.View
               style={[
                 styles.modalContainer,
-                {
-                  transform: [{ scale: modalScale }],
-                  opacity: modalOpacity,
-                },
+                { transform: [{ scale: modalScale }], opacity: modalOpacity },
               ]}
             >
               <View style={styles.notificationHeader}>
                 <Ionicons name="notifications" size={20} color="#fff" />
-                <Text style={styles.notificationHeaderText}>{t('notifications.header')}</Text>
+                <Text style={styles.notificationHeaderText}>
+                  {t("notifications.header")}
+                </Text>
               </View>
-              
               <ScrollView style={styles.notificationBody}>
                 {loading ? (
                   <ActivityIndicator color={PINK} size="small" style={{ padding: 20 }} />
                 ) : notifications.length > 0 ? (
                   notifications.map((notification) => (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       key={notification.id}
                       style={[
                         styles.notificationItem,
-                        { backgroundColor: notification.read ? '#F8F8F8' : '#FFF0F5' },
+                        { backgroundColor: notification.read ? "#F8F8F8" : "#FFF0F5" },
                       ]}
                       onPress={() => markAsRead(notification.id)}
                     >
@@ -298,34 +327,39 @@ const HomeScreen = ({ navigation }) => {
                       <Text style={styles.notificationMessage}>{notification.message}</Text>
                       <Text style={styles.notificationTime}>
                         {notification.timestamp?.toDate().toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })} · {notification.timestamp?.toDate().toLocaleDateString()}
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}{" "}
+                        · {notification.timestamp?.toDate().toLocaleDateString()}
                       </Text>
                     </TouchableOpacity>
                   ))
                 ) : (
                   <View style={styles.emptyNotification}>
                     <Ionicons name="notifications-off-outline" size={40} color="#DDD" />
-                    <Text style={styles.emptyNotificationText}>{t('notifications.empty')}</Text>
+                    <Text style={styles.emptyNotificationText}>
+                      {t("notifications.empty")}
+                    </Text>
                   </View>
                 )}
               </ScrollView>
-              
-              <View style={{ flexDirection: 'row' }}>
+              <View style={{ flexDirection: "row" }}>
                 {notifications.length > 0 && (
-                  <TouchableOpacity 
-                    style={[styles.closeButton, { flex: 1, borderRightWidth: 1, borderRightColor: '#EEE' }]}
+                  <TouchableOpacity
+                    style={[
+                      styles.closeButton,
+                      { flex: 1, borderRightWidth: 1, borderRightColor: "#EEE" },
+                    ]}
                     onPress={clearAllNotifications}
                   >
-                    <Text style={styles.closeButtonText}>{t('notifications.clearAll')}</Text>
+                    <Text style={styles.closeButtonText}>{t("notifications.clearAll")}</Text>
                   </TouchableOpacity>
                 )}
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.closeButton, { flex: 1 }]}
                   onPress={() => setNotificationModalVisible(false)}
                 >
-                  <Text style={styles.closeButtonText}>{t('notifications.dismiss')}</Text>
+                  <Text style={styles.closeButtonText}>{t("notifications.dismiss")}</Text>
                 </TouchableOpacity>
               </View>
             </Animated.View>
@@ -357,19 +391,25 @@ const HomeScreen = ({ navigation }) => {
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-          <TouchableOpacity onPress={() => navigation.navigate('FakeCall')} style={styles.actionButton}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("FakeCall")}
+            style={styles.actionButton}
+          >
             <Image
-              source={require('../../assets/fake-call.png')}
+              source={require("../../assets/fake-call.png")}
               style={styles.actionIcon}
             />
-            <Text style={styles.actionText}>{t('home.fakeCall')}</Text>
+            <Text style={styles.actionText}>{t("home.fakeCall")}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleShareLocation}
+          >
             <Image
-              source={require('../../assets/livelocation.png')}
+              source={require("../../assets/livelocation.png")}
               style={styles.actionIcon}
             />
-            <Text style={styles.actionText}>{t('home.shareLiveLocation')}</Text>
+            <Text style={styles.actionText}>{t("home.shareLiveLocation")}</Text>
           </TouchableOpacity>
         </View>
 
@@ -389,14 +429,14 @@ const HomeScreen = ({ navigation }) => {
         </View>
 
         {/* Skill Development Section */}
-        <TouchableOpacity 
-          style={styles.skillSection} 
-          onPress={() => navigation.navigate('SkillDevelopment')}
+        <TouchableOpacity
+          style={styles.skillSection}
+          onPress={() => navigation.navigate("SkillDevelopment")}
         >
           <View style={styles.skillContent}>
             <View style={styles.skillIconContainer}>
               <Image
-                source={require('../../assets/skill.png')}
+                source={require("../../assets/skill.png")}
                 style={styles.skillIcon}
               />
             </View>
@@ -417,33 +457,36 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         {/* AI Report Generator Section */}
-        <TouchableOpacity style={styles.journeySection} onPress={() => navigation.navigate('GenerateReport')}> 
+        <TouchableOpacity
+          style={styles.journeySection}
+          onPress={() => navigation.navigate("GenerateReport")}
+        >
           <View style={styles.journeyContent}>
             <Image
-              source={require('../../assets/report.png')}
+              source={require("../../assets/report.png")}
               style={styles.journeyIcon}
             />
             <View>
-              <Text style={styles.journeyTitle}>{t('home.generateReportTitle')}</Text>
-              <Text style={styles.journeySubtitle}>{t('home.generateReportSubtitle')}</Text>
+              <Text style={styles.journeyTitle}>{t("home.generateReportTitle")}</Text>
+              <Text style={styles.journeySubtitle}>{t("home.generateReportSubtitle")}</Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
 
         {/* Job Market Insights Section */}
-        <TouchableOpacity 
-          style={styles.jobMarketSection} 
-          onPress={() => navigation.navigate('JobMarketInsights')}
+        <TouchableOpacity
+          style={styles.jobMarketSection}
+          onPress={() => navigation.navigate("JobMarketInsights")}
         >
           <View style={styles.jobMarketContent}>
             <Image
-              source={require('../../assets/job.png')}
+              source={require("../../assets/job.png")}
               style={styles.jobMarketIcon}
             />
             <View>
-              <Text style={styles.jobMarketTitle}>{t('home.jobMarketInsightsTitle')}</Text>
-              <Text style={styles.jobMarketSubtitle}>{t('home.jobMarketInsightsSubtitle')}</Text>
+              <Text style={styles.jobMarketTitle}>{t("home.jobMarketInsightsTitle")}</Text>
+              <Text style={styles.jobMarketSubtitle}>{t("home.jobMarketInsightsSubtitle")}</Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={24} color="black" />
@@ -456,7 +499,7 @@ const HomeScreen = ({ navigation }) => {
         >
           <View style={styles.journeyContent}>
             <Image
-              source={require('../../assets/journey.png')}
+              source={require("../../assets/journey.png")}
               style={styles.journeyIcon}
             />
             <View>
@@ -466,7 +509,6 @@ const HomeScreen = ({ navigation }) => {
           </View>
           <Ionicons name="chevron-forward" size={24} color="black" />
         </TouchableOpacity>
-
 
         {/* Emergency Buttons */}
         <TouchableOpacity
@@ -501,7 +543,7 @@ const HomeScreen = ({ navigation }) => {
 export default HomeScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF' },
+  container: { flex: 1, backgroundColor: "#FFF" },
   header: {
     backgroundColor: PINK,
     borderBottomLeftRadius: 40,
@@ -510,16 +552,16 @@ const styles = StyleSheet.create({
     paddingTop: 70,
     paddingBottom: 40,
     marginBottom: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
-  userInfo: { flexDirection: 'column' },
+  userInfo: { flexDirection: "column" },
   avatar: { width: 40, height: 40, borderRadius: 20 },
-  greeting: { fontSize: 16, color: '#666' },
-  username: { fontSize: 24, fontWeight: 'bold', color: '#000' },
-  headerIcons: { flexDirection: 'row', gap: 15 },
-  quickActions: { flexDirection: 'row', justifyContent: 'space-around', padding: 20 },
+  greeting: { fontSize: 16, color: "#666" },
+  username: { fontSize: 24, fontWeight: "bold", color: "#000" },
+  headerIcons: { flexDirection: "row", gap: 15 },
+  quickActions: { flexDirection: "row", justifyContent: "space-around", padding: 20 },
   actionButton: {
     backgroundColor: "#FFF",
     padding: 20,
@@ -533,7 +575,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   actionIcon: { width: 40, height: 40, marginBottom: 10 },
-  actionText: { textAlign: 'center', color: '#000' },
+  actionText: { textAlign: "center", color: "#000" },
   section: {
     padding: 20,
     backgroundColor: "#FFF",
@@ -547,8 +589,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   sectionHeader: { marginBottom: 10 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#000' },
-  sectionSubtitle: { color: '#666', fontSize: 14 },
+  sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#000" },
+  sectionSubtitle: { color: "#666", fontSize: 14 },
   addButton: {
     backgroundColor: "#FF4B8C",
     flexDirection: "row",
@@ -559,7 +601,7 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 10,
   },
-  addButtonText: { color: '#FFF', fontWeight: '500' },
+  addButtonText: { color: "#FFF", fontWeight: "500" },
   skillSection: {
     flexDirection: "row",
     alignItems: "center",
@@ -577,17 +619,17 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: PINK,
   },
-  skillContent: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  skillIconContainer: { backgroundColor: PINK + '15', padding: 10, borderRadius: 12, marginRight: 15 },
+  skillContent: { flexDirection: "row", alignItems: "center", flex: 1 },
+  skillIconContainer: { backgroundColor: PINK + "15", padding: 10, borderRadius: 12, marginRight: 15 },
   skillIcon: { width: 40, height: 40 },
   skillTextContainer: { flex: 1 },
-  skillTitle: { fontSize: 18, fontWeight: 'bold', color: '#000', marginBottom: 4 },
-  skillSubtitle: { color: '#666', fontSize: 13, lineHeight: 18, marginBottom: 8 },
-  skillProgress: { width: '100%', marginTop: 5 },
-  progressBar: { height: 6, backgroundColor: '#F0F0F0', borderRadius: 3, width: '100%', marginBottom: 5 },
-  progressFill: { height: '100%', width: '40%', backgroundColor: PINK, borderRadius: 3 },
-  progressText: { fontSize: 12, color: '#888' },
-  skillArrowContainer: { backgroundColor: PINK + '10', padding: 8, borderRadius: 20 },
+  skillTitle: { fontSize: 18, fontWeight: "bold", color: "#000", marginBottom: 4 },
+  skillSubtitle: { color: "#666", fontSize: 13, lineHeight: 18, marginBottom: 8 },
+  skillProgress: { width: "100%", marginTop: 5 },
+  progressBar: { height: 6, backgroundColor: "#F0F0F0", borderRadius: 3, width: "100%", marginBottom: 5 },
+  progressFill: { height: "100%", width: "40%", backgroundColor: PINK, borderRadius: 3 },
+  progressText: { fontSize: 12, color: "#888" },
+  skillArrowContainer: { backgroundColor: PINK + "10", padding: 8, borderRadius: 20 },
   journeySection: {
     flexDirection: "row",
     alignItems: "center",
@@ -603,29 +645,29 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  journeyContent: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  journeyContent: { flexDirection: "row", alignItems: "center", flex: 1 },
   journeyIcon: { width: 40, height: 40, marginRight: 15 },
-  journeyTitle: { fontSize: 18, fontWeight: 'bold', color: '#000' },
-  journeySubtitle: { color: '#666', fontSize: 12 },
+  journeyTitle: { fontSize: 18, fontWeight: "bold", color: "#000" },
+  journeySubtitle: { color: "#666", fontSize: 12 },
   jobMarketSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     padding: 20,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderRadius: 15,
     marginHorizontal: 20,
     marginVertical: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  jobMarketContent: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  jobMarketContent: { flexDirection: "row", alignItems: "center", flex: 1 },
   jobMarketIcon: { width: 40, height: 40, marginRight: 15 },
-  jobMarketTitle: { fontSize: 18, fontWeight: 'bold', color: '#000' },
-  jobMarketSubtitle: { color: '#666', fontSize: 12 },
+  jobMarketTitle: { fontSize: 18, fontWeight: "bold", color: "#000" },
+  jobMarketSubtitle: { color: "#666", fontSize: 12 },
   emergencyButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -641,7 +683,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  emergencyText: { flex: 1, marginLeft: 15, fontSize: 16, color: '#000' },
+  emergencyText: { flex: 1, marginLeft: 15, fontSize: 16, color: "#000" },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
@@ -649,14 +691,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   modalContainer: {
-    position: "absolute",
+    position: 'absolute',
     top: StatusBar.currentHeight ? StatusBar.currentHeight + 15 : 55,
     right: 15,
     width: 300,
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
     borderRadius: 20,
-    overflow: "hidden",
-    shadowColor: "#000",
+    overflow: 'hidden',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -664,15 +706,15 @@ const styles = StyleSheet.create({
   },
   notificationHeader: {
     backgroundColor: PINK,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   notificationHeaderText: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 16,
     marginLeft: 10,
     fontWeight: '700',
@@ -683,13 +725,13 @@ const styles = StyleSheet.create({
     maxHeight: 350,
   },
   notificationItem: {
-    backgroundColor: "#f9f9f9",
+    backgroundColor: '#f9f9f9',
     padding: 14,
     borderRadius: 16,
     marginBottom: 10,
     borderLeftWidth: 4,
     borderLeftColor: PINK,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -708,7 +750,7 @@ const styles = StyleSheet.create({
   },
   notificationTime: {
     fontSize: 12,
-    color: "#888",
+    color: '#888',
     marginTop: 8,
     textAlign: 'right',
   },
@@ -717,21 +759,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyNotificationText: {
-    color: "#888",
-    textAlign: "center",
+    color: '#888',
+    textAlign: 'center',
     marginTop: 10,
     fontSize: 14,
   },
   closeButton: {
-    backgroundColor: "#f6f6f6",
+    backgroundColor: '#f6f6f6',
     paddingVertical: 14,
-    alignItems: "center",
+    alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: '#eee',
   },
   closeButtonText: {
     color: PINK,
     fontWeight: '600',
+    fontSize: 15,
+  },
+  clearAllButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    borderRightWidth: 1,
+    borderRightColor: '#eee',
+  },
+  clearAllButtonText: {
+    color: '#777',
+    fontWeight: '500',
     fontSize: 15,
   },
 });

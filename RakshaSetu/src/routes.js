@@ -20,6 +20,7 @@ import GenerateReportScreen from "./screens/GenerateReportScreen";
 import HomeScreen from "./screens/HomeScreen";
 import InAppChatScreen from "./screens/InAppChatScreen";
 import JobMarketInsightsScreen from "./screens/JobMarketInsightsScreen";
+import LiveLocationScreen from "./screens/LiveLocationScreen";
 import LoginScreen from "./screens/LoginScreen";
 import MyLearniningPath from "./screens/MyLearningPathScreen";
 import MyPostsScreen from "./screens/MyPostsScreen";
@@ -32,7 +33,6 @@ import SOSScreen from "./screens/SOSScreen";
 import SplashScreen from "./screens/SplashScreen";
 import TellUsAboutYourselfScreen from "./screens/TellUsAboutYourselfScreen";
 import TrackMeScreen from "./screens/TrackMeScreen";
-
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
@@ -56,6 +56,7 @@ function HomeStack() {
       <Stack.Screen name="BudgetTool" component={BudgetToolScreen} />
       <Stack.Screen name="FinancialNews" component={FinancialNews} />
       <Stack.Screen name="MyLearningPath" component={MyLearniningPath} />
+      <Stack.Screen name="LiveLocationScreen" component={LiveLocationScreen} />
     </Stack.Navigator>
   );
 }
