@@ -450,25 +450,45 @@ export default function GeminiChatScreen({ navigation }) {
     setShowOptions(false);
   };
 
-  // Clear all messages and save chat to history.
+  // Enhanced handleClearChat function with an option to save the conversation before deleting.
   const handleClearChat = () => {
+    if (messages.length === 0) return;
     Alert.alert(
       'Clear Chat',
-      'Are you sure you want to clear all messages? This cannot be undone.',
+      'Do you want to save this conversation before clearing it?',
       [
-        { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Clear',
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Clear without Saving',
           style: 'destructive',
           onPress: async () => {
+            // Remove live chat storage and clear messages.
+            try {
+              await AsyncStorage.removeItem('chatMessages');
+            } catch (error) {
+              console.error('Error clearing chatMessages from AsyncStorage:', error);
+            }
+            setMessages([]);
+            addWelcomeMessage();
+          },
+        },
+        {
+          text: 'Save & Clear',
+          onPress: async () => {
+            // Save current conversation to previous chats if there's any user input.
             if (messages.some(msg => msg.isUser)) {
               try {
                 const chatTitle = messages.find(msg => msg.isUser)?.text || 'Legal Chat';
                 const newChat = {
                   id: Date.now().toString(),
-                  title: chatTitle.substring(0, 30) + (chatTitle.length > 30 ? '...' : ''),
+                  title:
+                    chatTitle.substring(0, 30) +
+                    (chatTitle.length > 30 ? '...' : ''),
                   messages: messages,
-                  timestamp: new Date().toISOString()
+                  timestamp: new Date().toISOString(),
                 };
                 const updatedChats = [newChat, ...previousChats].slice(0, 10);
                 setPreviousChats(updatedChats);
@@ -477,10 +497,16 @@ export default function GeminiChatScreen({ navigation }) {
                 console.error('Failed to save chat history:', error);
               }
             }
+            // Clear live chat storage and messages.
+            try {
+              await AsyncStorage.removeItem('chatMessages');
+            } catch (error) {
+              console.error('Error clearing chatMessages from AsyncStorage:', error);
+            }
             setMessages([]);
             addWelcomeMessage();
-          }
-        }
+          },
+        },
       ]
     );
   };
