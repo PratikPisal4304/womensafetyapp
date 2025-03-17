@@ -3,72 +3,71 @@
 import * as Location from 'expo-location';
 import { deleteDoc, doc, setDoc, updateDoc } from 'firebase/firestore';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Button, Share, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  Button,
+  Share,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  TouchableOpacity,
+} from 'react-native';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../../config/firebaseConfig'; // Adjust path as needed
 
 const LiveLocationScreen = ({ route, navigation }) => {
-  const { duration } = route.params; // e.g. 1 minute
+  // Use duration from route params or default to 1 minute.
+  const initialDuration = route.params?.duration || 1;
+  const [duration, setDuration] = useState(initialDuration);
+  const [isSharing, setIsSharing] = useState(false);
   const [shareId, setShareId] = useState(null);
   const [remainingTime, setRemainingTime] = useState(duration * 60); // seconds
   const [locationSubscription, setLocationSubscription] = useState(null);
-  const timerRef = useRef(null);
+  const endTimeRef = useRef(null); // will store the end timestamp for sharing
 
-  useEffect(() => {
-    console.log('LiveLocationScreen mounted.');
-    startSharing().catch((err) => {
-      console.error('startSharing threw an error:', err);
-      Alert.alert('Error', 'Failed to start live sharing.');
-      navigation.goBack();
-    });
+  // Format seconds into "X:YY" format (minutes:seconds)
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
 
-    return () => {
-      console.log('LiveLocationScreen unmounted, cleaning up...');
-      if (locationSubscription) locationSubscription.remove();
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, []);
-
+  // Start sharing: get permissions, create Firestore document, start location watcher.
   const startSharing = async () => {
-    console.log('startSharing called.');
+    // Validate duration input.
+    if (isNaN(duration) || duration < 1) {
+      Alert.alert('Invalid Duration', 'Please enter a valid duration (minimum 1 minute).');
+      return;
+    }
 
-    // 1) Request location permission
+    // Request location permissions.
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
-      console.log('Location permission not granted. Navigating back.');
       Alert.alert('Permission Denied', 'Location permission is required.');
       navigation.goBack();
       return;
     }
-    console.log('Location permission granted.');
 
-    // 2) Generate a unique share ID
+    // Generate unique share ID.
     const id = uuidv4();
     setShareId(id);
-    console.log('Generated share ID:', id);
-
-    // 3) Get initial location
     try {
-      console.log('Fetching initial location...');
+      // Get initial location.
       const currentLocation = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
-      console.log('Successfully fetched initial location:', currentLocation.coords);
-
       const { latitude, longitude } = currentLocation.coords;
       const expiresAt = new Date(Date.now() + duration * 60 * 1000);
 
-      // 4) Create Firestore document
-      console.log('Creating Firestore document...');
+      // Create Firestore document.
       await setDoc(doc(db, 'liveLocations', id), {
         location: { latitude, longitude },
         createdAt: new Date(),
         expiresAt,
       });
-      console.log('Firestore document created with ID:', id);
 
-      // 5) Start watching location
-      console.log('Starting watchPositionAsync...');
+      // Start watching location updates.
       const subscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
@@ -77,71 +76,99 @@ const LiveLocationScreen = ({ route, navigation }) => {
         },
         async (loc) => {
           const { latitude, longitude } = loc.coords;
-          console.log('Location updated:', latitude, longitude);
           await updateDoc(doc(db, 'liveLocations', id), {
             location: { latitude, longitude },
           });
         }
       );
       setLocationSubscription(subscription);
-      console.log('Location watcher started.');
 
-      // 6) Delay 1 second, then open share sheet
-      console.log('Scheduling share sheet after 1s delay...');
+      // Share link after a short delay.
       setTimeout(() => {
-        console.log('Triggering share sheet now...');
         const shareLink = `https://rakshasetu-c9e0b.web.app/live?shareId=${id}`;
         Share.share({
           message: `Track my live location for ${duration} minute(s): ${shareLink}`,
-        })
-          .then((res) => console.log('Share result:', res))
-          .catch((err) => console.error('Share error:', err));
+        }).catch((err) => console.error('Share error:', err));
       }, 1000);
 
-      // 7) Start countdown timer
-      console.log(`Starting countdown timer for ${duration} minute(s).`);
-      timerRef.current = setInterval(() => {
-        setRemainingTime((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current);
-            stopSharing();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+      // Set the end time for the countdown and update state.
+      endTimeRef.current = Date.now() + duration * 60 * 1000;
+      setRemainingTime(duration * 60);
+      setIsSharing(true);
     } catch (error) {
-      console.error('Error fetching initial location or creating doc:', error);
-      Alert.alert('Error', 'Could not fetch location or create Firestore doc.');
+      Alert.alert('Error', 'Could not fetch location or create Firestore document.');
       navigation.goBack();
     }
   };
 
+  // Timer effect: once sharing starts, update the remaining time every second.
+  useEffect(() => {
+    if (!isSharing) return;
+    const interval = setInterval(() => {
+      const newRemaining = Math.max(0, Math.ceil((endTimeRef.current - Date.now()) / 1000));
+      setRemainingTime(newRemaining);
+      if (newRemaining <= 0) {
+        clearInterval(interval);
+        stopSharing();
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isSharing]);
+
+  // Stop sharing: remove location subscription and delete Firestore document.
   const stopSharing = async () => {
-    console.log('stopSharing called.');
-    if (locationSubscription) {
-      locationSubscription.remove();
-      console.log('Location subscription removed.');
-    }
-    if (shareId) {
-      console.log('Deleting Firestore document with ID:', shareId);
-      await deleteDoc(doc(db, 'liveLocations', shareId));
-    }
-    Alert.alert('Live Sharing Ended', 'Your live location sharing has ended.');
-    navigation.goBack();
+    Alert.alert('Stop Sharing', 'Are you sure you want to stop live location sharing?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Stop',
+        style: 'destructive',
+        onPress: async () => {
+          if (locationSubscription) {
+            locationSubscription.remove();
+          }
+          if (shareId) {
+            await deleteDoc(doc(db, 'liveLocations', shareId));
+          }
+          Alert.alert('Live Sharing Ended', 'Your live location sharing has ended.');
+          navigation.goBack();
+        },
+      },
+    ]);
   };
 
-  const formatTime = (seconds) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
+  // Clean up location subscription on component unmount.
+  useEffect(() => {
+    return () => {
+      if (locationSubscription) locationSubscription.remove();
+    };
+  }, [locationSubscription]);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Live Location Sharing</Text>
-      <Text style={styles.timer}>Time Remaining: {formatTime(remainingTime)}</Text>
-      <Button title="Stop Sharing" onPress={stopSharing} />
+      <View style={styles.card}>
+        <Text style={styles.title}>Live Location Sharing</Text>
+        {!isSharing ? (
+          <>
+            <Text style={styles.label}>Set Timer (minutes):</Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="numeric"
+              value={duration.toString()}
+              onChangeText={(text) => setDuration(Number(text))}
+            />
+            <TouchableOpacity style={styles.button} onPress={startSharing}>
+              <Text style={styles.buttonText}>Start Sharing</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <Text style={styles.timer}>Time Remaining: {formatTime(remainingTime)}</Text>
+            <TouchableOpacity style={styles.buttonStop} onPress={stopSharing}>
+              <Text style={styles.buttonText}>Stop Sharing</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
     </View>
   );
 };
@@ -151,17 +178,66 @@ export default LiveLocationScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
+    backgroundColor: '#ffd1e1', // custom background color
     justifyContent: 'center',
+    alignItems: 'center',
     padding: 16,
   },
+  card: {
+    backgroundColor: '#fff',
+    width: '90%',
+    borderRadius: 15,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 6,
+    alignItems: 'center',
+  },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: 'bold',
     marginBottom: 20,
+    color: '#333',
+  },
+  label: {
+    fontSize: 18,
+    marginBottom: 10,
+    color: '#555',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    width: '80%',
+    padding: 10,
+    borderRadius: 8,
+    fontSize: 18,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  button: {
+    backgroundColor: '#ff5f96',
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+    marginVertical: 10,
+  },
+  buttonStop: {
+    backgroundColor: '#d9534f',
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+    marginVertical: 10,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
   },
   timer: {
-    fontSize: 20,
+    fontSize: 24,
     marginBottom: 20,
+    color: '#333',
   },
 });
