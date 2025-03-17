@@ -13,6 +13,7 @@ import {
   Linking,
   Dimensions,
   Platform,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -23,12 +24,15 @@ const NewsScreen = () => {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchNews = async () => {
     setLoading(true);
     try {
+      // Use the searchTerm if provided, else default to 'women empowerment finance'
+      const query = searchTerm.trim() ? encodeURIComponent(searchTerm.trim()) : 'women+empowerment+finance';
       const response = await fetch(
-        'https://newsapi.org/v2/everything?q=women+empowerment+finance&language=en&sortBy=publishedAt&apiKey=479eb36d2cdf4453a5dc97c5ac585cec'
+        `https://newsapi.org/v2/everything?q=${query}&language=en&sortBy=publishedAt&apiKey=479eb36d2cdf4453a5dc97c5ac585cec`
       );
       const data = await response.json();
       setNews(data.articles || []);
@@ -46,6 +50,16 @@ const NewsScreen = () => {
 
   const onRefresh = () => {
     setRefreshing(true);
+    fetchNews();
+  };
+
+  const handleSearchSubmit = () => {
+    fetchNews();
+  };
+
+  const clearSearch = () => {
+    setSearchTerm('');
+    // Optionally, refresh news using the default query when cleared:
     fetchNews();
   };
 
@@ -138,8 +152,23 @@ const NewsScreen = () => {
         
         <View style={styles.searchContainer}>
           <View style={styles.searchBox}>
-            <Ionicons name="search" size={20} color="#ff5f96" />
-            <Text style={styles.searchPlaceholder}>Search for articles...</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search for articles..."
+              placeholderTextColor="#aaa"
+              value={searchTerm}
+              onChangeText={setSearchTerm}
+              onSubmitEditing={handleSearchSubmit}
+              returnKeyType="search"
+            />
+            {searchTerm ? (
+              <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+                <Ionicons name="close" size={20} color="#ff5f96" />
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity onPress={handleSearchSubmit}>
+              <Ionicons name="search" size={20} color="#ff5f96" />
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -183,11 +212,9 @@ const styles = StyleSheet.create({
     right: 0,
     height: HEADER_HEIGHT,
     backgroundColor: '#ff5f96',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 16 : 16,
     paddingBottom: 16,
     paddingHorizontal: 16,
-    // Increased vertical padding for a taller header
-    paddingTop: 65,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 16 : 65,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
     shadowColor: '#000',
@@ -234,10 +261,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  searchPlaceholder: {
-    color: '#aaa',
-    marginLeft: 8,
+  searchInput: {
+    flex: 1,
     fontSize: 14,
+    color: '#333',
+    padding: 0,
+    marginRight: 8,
+  },
+  clearButton: {
+    marginRight: 8,
   },
   featuredContainer: {
     marginTop: 16,
