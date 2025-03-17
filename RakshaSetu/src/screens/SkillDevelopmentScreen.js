@@ -349,53 +349,7 @@ function SkillDevelopmentScreen({ navigation }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [userEnrolledCourses, setUserEnrolledCourses] = useState([]);
   const [userProgress, setUserProgress] = useState({});
-  const [recommendedCourses, setRecommendedCourses] = useState([
-    {
-      id: 1,
-      title: 'Investment Fundamentals for Women',
-      author: 'Financial Educator Network',
-      duration: '3 weeks',
-      level: 'Beginner',
-      rating: 4.8,
-      students: 2540,
-      image: require('../../assets/icon.png'),
-      progress: 30,
-      label: 'PERSONALIZED',
-      matchScore: '93% match',
-      localContext: true,
-      favorite: false
-    },
-    {
-      id: 2,
-      title: 'Digital Marketing for Small Business',
-      author: 'Women Entrepreneurs Alliance',
-      duration: '4 weeks',
-      level: 'Intermediate',
-      rating: 4.9,
-      students: 3215,
-      image: require('../../assets/icon.png'),
-      progress: 0,
-      label: 'IN DEMAND',
-      matchScore: '87% match',
-      localContext: true,
-      favorite: false
-    },
-    {
-      id: 3,
-      title: 'Financial Independence Roadmap',
-      author: 'Maya Johnson',
-      duration: '6 weeks',
-      level: 'All Levels',
-      rating: 4.7,
-      students: 1890,
-      image: require('../../assets/icon.png'),
-      progress: 15,
-      label: 'TRENDING',
-      matchScore: '85% match',
-      localContext: false,
-      favorite: false
-    }
-  ]);
+  
   const [selectedModule, setSelectedModule] = useState(null);
   const [courseDetailModalVisible, setCourseDetailModalVisible] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -796,27 +750,6 @@ function SkillDevelopmentScreen({ navigation }) {
               />
             ))}
           </View>
-        </View>
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Personalized For You</Text>
-            <TouchableOpacity
-              style={styles.seeAllButton}
-              onPress={() => Alert.alert('More Recommendations', 'View all personalized course recommendations')}
-            >
-              <Text style={styles.seeAllText}>More</Text>
-              <Feather name="chevron-right" size={16} color="#ff5f96" />
-            </TouchableOpacity>
-          </View>
-          {recommendedCourses.map((course) => (
-            <RecommendedCard
-              key={course.id}
-              course={course}
-              onPress={navigateToCourseDetail}
-              onToggleFavorite={toggleFavorite}
-              isFavorite={favoriteCourses.includes(course.id)}
-            />
-          ))}
         </View>
         <View style={{ height: 80 }} />
       </Animated.ScrollView>
