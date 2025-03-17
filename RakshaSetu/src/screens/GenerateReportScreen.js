@@ -57,7 +57,8 @@ const GenerateReportScreen = ({ navigation }) => {
     { id: 3, name: 'Assault' },
     { id: 4, name: 'Theft' },
     { id: 5, name: 'Vandalism' },
-    { id: 6, name: 'Trespassing' }
+    { id: 6, name: 'Trespassing' },
+    { id: 7, name: 'Other' },
   ];
 
   useEffect(() => {
