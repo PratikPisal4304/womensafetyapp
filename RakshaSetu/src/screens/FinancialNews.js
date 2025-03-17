@@ -28,7 +28,7 @@ const NewsScreen = () => {
     setLoading(true);
     try {
       const response = await fetch(
-        'https://newsapi.org/v2/everything?q=women+empowerment+finance&language=en&apiKey=479eb36d2cdf4453a5dc97c5ac585cec'
+        'https://newsapi.org/v2/everything?q=women+empowerment+finance&language=en&sortBy=publishedAt&apiKey=479eb36d2cdf4453a5dc97c5ac585cec'
       );
       const data = await response.json();
       setNews(data.articles || []);
