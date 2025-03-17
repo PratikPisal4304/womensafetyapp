@@ -73,8 +73,8 @@ RakshaSetu/
 
 1. **Clone the repository**
    ```sh
-   git clone https://github.com/yourusername/RakshaSetu.git
-   cd RakshaSetu
+   git clone https://github.com/PratikPisal4304/womensafetyapp.git
+   cd womensafetyapp
    ```
 
 2. **Install dependencies**
