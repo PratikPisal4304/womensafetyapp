@@ -31,6 +31,9 @@
 - **📚 Financial Skill Hub**: Includes **finance lectures**, budgeting tools, and expense management for women's financial independence.
 - **🔒 Secure Data Storage**: **End-to-end encrypted** Firebase authentication ensures **user data privacy and safety**.
 
+### 💼 Job Market                                                                          
+- **👩‍💼 Job Listing**: Explore a dedicated job portal designed exclusively for women. Discover tailored opportunities in fields like security, technology, community outreach, and beyond empowering you to build a resilient and independent career path. 
+
 ## 🛠️ Tech Stack
 
 - **Frontend**: React Native (Expo)
@@ -73,8 +76,8 @@ RakshaSetu/
 
 1. **Clone the repository**
    ```sh
-   git clone https://github.com/yourusername/RakshaSetu.git
-   cd RakshaSetu
+   git clone https://github.com/PratikPisal4304/womensafetyapp.git
+   cd womensafetyapp
    ```
 
 2. **Install dependencies**
@@ -114,7 +117,7 @@ RakshaSetu/
    ```
 
 ## 📂 Additional Resources
-- 📊 [RakshaSetu Dashboard Presentation](RakshaSetu/docs/RakshaSetu-Presentation.pptx)
+- 📊 [RakshaSetu Presentation](RakshaSetu/docs/RakshaSetu-Presentation.pptx)
 
 ## 🤝 Contributing
 We welcome contributions! 🚀 If you’d like to contribute, please:
