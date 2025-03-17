@@ -31,6 +31,9 @@
 - **📚 Financial Skill Hub**: Includes **finance lectures**, budgeting tools, and expense management for women's financial independence.
 - **🔒 Secure Data Storage**: **End-to-end encrypted** Firebase authentication ensures **user data privacy and safety**.
 
+### 💼 Job Market                                                                          
+- **👩‍💼 Job Listing**: Explore a dedicated job portal designed exclusively for women. Discover tailored opportunities in fields like security, technology, community outreach, and beyond empowering you to build a resilient and independent career path. 
+
 ## 🛠️ Tech Stack
 
 - **Frontend**: React Native (Expo)
