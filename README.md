@@ -114,7 +114,7 @@ RakshaSetu/
    ```
 
 ## 📂 Additional Resources
-- 📊 [RakshaSetu Dashboard Presentation](RakshaSetu/docs/RakshaSetu-Presentation.pptx)
+- 📊 [RakshaSetu Presentation](RakshaSetu/docs/RakshaSetu-Presentation.pptx)
 
 ## 🤝 Contributing
 We welcome contributions! 🚀 If you’d like to contribute, please:
