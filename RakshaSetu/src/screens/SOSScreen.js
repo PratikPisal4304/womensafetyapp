@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as SMS from 'expo-sms';
+import * as Battery from 'expo-battery'; // Import the Battery API
 import MapView, { Marker } from 'react-native-maps';
 import {
   doc,
@@ -27,7 +28,6 @@ import {
 import { auth, db } from '../../config/firebaseConfig';
 import { useRoute, useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-// Import the API key from the .env file
 import { GOOGLE_MAPS_API_KEY } from '@env';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -271,6 +271,10 @@ function SOSScreen() {
       setLocation(loc.coords);
       const { latitude, longitude } = loc.coords;
 
+      // Get the battery level and convert it to a percentage.
+      const batteryLevel = await Battery.getBatteryLevelAsync();
+      const batteryPercentage = Math.round(batteryLevel * 100);
+
       // Verify API key.
       if (!GOOGLE_MAPS_API_KEY) {
         console.error("GOOGLE_MAPS_API_KEY is not defined!");
@@ -293,20 +297,22 @@ function SOSScreen() {
       const liveId = await startLiveLocationSharing();
       const liveLocationLink = liveId ? `https://rakshasetu-c9e0b.web.app/live?shareId=${liveId}` : '';
 
-      // Build message text with static location, Street View images, and live location link.
+      // Build message text including battery level.
       const message = `${t('sos.header')}
 
 ${t('sos.emergencyMessage')}
 
-My location: https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}
+Battery Level: ${batteryPercentage}%
 
- Street View 1: ${streetViewUrl1}
+  My location: https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}
 
- Street View 2: ${streetViewUrl2}
+  Street View 1: ${streetViewUrl1}
 
- Street View 3: ${streetViewUrl3}
+  Street View 2: ${streetViewUrl2}
 
- Live Location: ${liveLocationLink}`;
+  Street View 3: ${streetViewUrl3}
+
+  Live Location: ${liveLocationLink}`;
 
       // Determine contacts (closeFriends or fallback contacts).
       const allContacts = closeFriends.length > 0 ? closeFriends : [
