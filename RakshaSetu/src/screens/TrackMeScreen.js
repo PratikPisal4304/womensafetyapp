@@ -17,11 +17,12 @@ import MapView, { Marker, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import PolylineDecoder from '@mapbox/polyline';
 import { Ionicons } from '@expo/vector-icons';
-// Import the API key from the .env file
 import { GOOGLE_MAPS_API_KEY } from '@env';
+// Import your local crime data JSON file
+import crimeData from '../data/crimeData.json';
 
 const { width, height } = Dimensions.get('window');
-const PINK = '#ff5f96'; // Used in other parts of the app (header, buttons, etc.)
+const PINK = '#ff5f96';
 
 // Custom map style
 const customMapStyle = [
@@ -30,7 +31,7 @@ const customMapStyle = [
   { elementType: 'labels.text.stroke', stylers: [{ color: '#f5f1e6' }] },
 ];
 
-// Helper: Haversine formula to calculate distance (in meters)
+// Haversine distance in meters between two coordinates
 const haversineDistance = (coords1, coords2) => {
   const toRad = (value) => (value * Math.PI) / 180;
   const R = 6371000;
@@ -45,8 +46,66 @@ const haversineDistance = (coords1, coords2) => {
   return R * c;
 };
 
-// Mock safety data service – replace with your real API as needed
+// Determine current time slot based on the hour
+const getCurrentTimeSlot = () => {
+  const hour = new Date().getHours();
+  if (hour >= 0 && hour < 3) return '12-3_am';
+  if (hour >= 3 && hour < 6) return '3-6_am';
+  if (hour >= 6 && hour < 9) return '6-9_am';
+  if (hour >= 9 && hour < 12) return '9-12_am';
+  if (hour >= 12 && hour < 15) return '12-3_pm';
+  if (hour >= 15 && hour < 18) return '3-6_pm';
+  if (hour >= 18 && hour < 21) return '6-9_pm';
+  return '9-12_pm';
+};
+
+// Look for nearby crime data from the local JSON file (within a 1km threshold)
+const getSafetyDataFromCrimeData = (destCoord) => {
+  const threshold = 1000; // 1km threshold
+  let nearestRecord = null;
+  let minDistance = Infinity;
+
+  console.log('Searching local crime data for destination:', destCoord);
+
+  for (const record of crimeData) {
+    const dist = haversineDistance(destCoord, record.coordinates);
+    // Log the distance for each record
+    console.log(`Distance from destination to ${record.name}: ${dist.toFixed(2)} m`);
+    if (dist < threshold && dist < minDistance) {
+      minDistance = dist;
+      nearestRecord = record;
+    }
+  }
+  if (nearestRecord) {
+    const timeSlot = getCurrentTimeSlot();
+    const slotData = nearestRecord.time_slot_data[timeSlot];
+    console.log('Found nearby record:', nearestRecord.name, 'with time slot:', timeSlot);
+    if (slotData) {
+      return {
+        safetyScore: slotData.safety_score,
+        // Using simple logic: if safety score is 80 or above, it's "Safe"
+        safety: slotData.safety_score >= 80 ? 'Safe' : 'Caution advised',
+        crimeRate: slotData.factors.crime_rate,
+        visibility: slotData.factors.visibility,
+        roadBusyness: slotData.factors.road_busyness,
+        policePresence: slotData.factors.police_presence,
+        lighting: slotData.factors.lighting,
+        recentCrimes: slotData.factors.recent_crimes,
+        disturbances: slotData.factors.disturbances,
+        source: 'CrimeData',
+      };
+    } else {
+      console.log('No slot data found for time slot:', timeSlot);
+    }
+  } else {
+    console.log('No nearby crime data found within threshold.');
+  }
+  return null;
+};
+
+// Fallback mock safety data service if local data is not found
 const fetchSafetyData = async (coordinates) => {
+  console.log('Fetching mock safety data...');
   await new Promise((resolve) => setTimeout(resolve, 1000));
   return {
     safety: Math.random() > 0.5 ? 'Safe' : 'Caution advised',
@@ -57,10 +116,15 @@ const fetchSafetyData = async (coordinates) => {
       { type: 'Vandalism', date: '1 week ago', time: '11:30 PM' },
     ],
     safetyScore: Math.floor(Math.random() * 40) + 60,
+    crimeRate: 'medium',
+    roadBusyness: 'low',
+    policePresence: 'low',
+    disturbances: 'minor',
+    source: 'Mock',
   };
 };
 
-// Safety Rating Indicator Component
+// Component to show the safety rating score
 const SafetyRatingIndicator = ({ score }) => {
   let color = '#4CAF50';
   if (score < 70) color = '#FFC107';
@@ -75,7 +139,7 @@ const SafetyRatingIndicator = ({ score }) => {
 function TrackMeScreen() {
   const mapRef = useRef(null);
   const debounceTimerRef = useRef(null);
-  const journeyStartTimeRef = useRef(null); // Track journey start time
+  const journeyStartTimeRef = useRef(null);
   const searchInputRef = useRef(null);
 
   // Basic state variables
@@ -118,7 +182,6 @@ function TrackMeScreen() {
 
   useEffect(() => {
     requestLocationPermission();
-    // Auto-focus the search bar on mount
     searchInputRef.current?.focus();
   }, []);
 
@@ -136,14 +199,12 @@ function TrackMeScreen() {
     }
   };
 
-  // Toggle map type
   const toggleMapType = () => {
     const types = ['standard', 'satellite', 'hybrid', 'terrain'];
     const currentIndex = types.indexOf(mapType);
     setMapType(types[(currentIndex + 1) % types.length]);
   };
 
-  // Fetch nearby places
   const fetchNearbyPlaces = async () => {
     if (!location) return;
     try {
@@ -158,7 +219,6 @@ function TrackMeScreen() {
     }
   };
 
-  // Cycle nearby category
   const cycleNearbyCategory = () => {
     const categories = ['police', 'hospital', 'gas_station', 'restaurant'];
     const currentIndex = categories.indexOf(nearbyCategory);
@@ -169,7 +229,6 @@ function TrackMeScreen() {
     }
   };
 
-  // Fetch suggestions from Places Autocomplete API
   const fetchSuggestions = async (query) => {
     if (!query) {
       setSuggestions([]);
@@ -177,9 +236,7 @@ function TrackMeScreen() {
     }
     try {
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
-          query
-        )}&key=${GOOGLE_MAPS_API_KEY}`
+        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=${GOOGLE_MAPS_API_KEY}`
       );
       const data = await response.json();
       setSuggestions(data.status === 'OK' ? data.predictions : []);
@@ -189,7 +246,6 @@ function TrackMeScreen() {
     }
   };
 
-  // Handle destination input with debouncing
   const handleDestinationChange = (text) => {
     setDestination(text);
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
@@ -201,7 +257,6 @@ function TrackMeScreen() {
     }, 500);
   };
 
-  // Reset the full screen: clear destination data, route, safety info, etc., and recenter map
   const resetRoute = () => {
     setDestination('');
     setDestinationCoord(null);
@@ -215,7 +270,6 @@ function TrackMeScreen() {
     setSafetyModalVisible(false);
     setInstructionsModalVisible(false);
     setCustomizationModalVisible(false);
-    // Recenter the map to current location
     handleRecenter();
   };
 
@@ -232,7 +286,7 @@ function TrackMeScreen() {
     Keyboard.dismiss();
   };
 
-  // Search destination using Geocoding API and then fetch safety data
+  // Modified handleSearch with added logs to ensure data is fetched properly.
   const handleSearch = async (searchQuery) => {
     if (!searchQuery.trim()) {
       Alert.alert('Please enter a destination');
@@ -240,9 +294,7 @@ function TrackMeScreen() {
     }
     try {
       const geoResponse = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-          searchQuery
-        )}&key=${GOOGLE_MAPS_API_KEY}`
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&key=${GOOGLE_MAPS_API_KEY}`
       );
       const geoData = await geoResponse.json();
       if (geoData.status !== 'OK' || !geoData.results[0]) {
@@ -251,6 +303,7 @@ function TrackMeScreen() {
       }
       const { lat, lng } = geoData.results[0].geometry.location;
       const destCoord = { latitude: lat, longitude: lng };
+      console.log('Destination coordinates:', destCoord);
       setDestinationCoord(destCoord);
       if (mapRef.current) {
         mapRef.current.animateToRegion(
@@ -263,8 +316,14 @@ function TrackMeScreen() {
           1000
         );
       }
-      // Fetch safety data for the destination using the dummy API
-      const safety = await fetchSafetyData([destCoord]);
+      // Try to get safety data from local crime data
+      let safety = getSafetyDataFromCrimeData(destCoord);
+      if (safety) {
+        console.log('Local crime data found:', safety);
+      } else {
+        console.log('Falling back to mock safety data.');
+        safety = await fetchSafetyData(destCoord);
+      }
       setSafetyData(safety);
       setSafetyModalVisible(true);
     } catch (error) {
@@ -273,7 +332,6 @@ function TrackMeScreen() {
     }
   };
 
-  // Fetch route (primary and alternatives) using Google Directions API
   const fetchRoute = async (mode = 'driving') => {
     if (!location || !destinationCoord) return;
     try {
@@ -281,12 +339,10 @@ function TrackMeScreen() {
         `https://maps.googleapis.com/maps/api/directions/json?origin=${location.latitude},${location.longitude}&destination=${destinationCoord.latitude},${destinationCoord.longitude}&mode=${mode}&alternatives=true&key=${GOOGLE_MAPS_API_KEY}`
       );
       const data = await response.json();
-      console.log('Routes returned:', data.routes.length);
       if (data.status !== 'OK' || !data.routes || data.routes.length === 0) {
         Alert.alert('Route not found');
         return;
       }
-      // Use the first route as primary
       const primaryRoute = data.routes[0];
       const points = PolylineDecoder.decode(primaryRoute.overview_polyline.points);
       const coords = points.map((point) => ({
@@ -298,10 +354,7 @@ function TrackMeScreen() {
         setETA(primaryRoute.legs[0].duration.text);
         setDirectionsSteps(primaryRoute.legs[0].steps);
       }
-      // If there are alternatives (more than one route returned),
-      // set them in state and show the alternative modal.
       if (data.routes.length > 1) {
-        // data.routes.slice(1) returns all alternative routes (if any)
         setAlternativeRoutes(data.routes.slice(1));
         setAlternativeModalVisible(true);
       } else {
@@ -314,7 +367,6 @@ function TrackMeScreen() {
     }
   };
 
-  // Enhanced Navigation Instructions Modal (neutral styling)
   const renderInstructionsModal = () => (
     <Modal
       animationType="slide"
@@ -352,7 +404,6 @@ function TrackMeScreen() {
     </Modal>
   );
 
-  // Enhanced Alternative Routes Modal (neutral styling)
   const renderAlternativeModal = () => (
     <Modal
       animationType="slide"
@@ -406,7 +457,6 @@ function TrackMeScreen() {
     </Modal>
   );
 
-  // Customization Options Modal
   const renderCustomizationModal = () => (
     <Modal
       animationType="slide"
@@ -451,7 +501,6 @@ function TrackMeScreen() {
     </Modal>
   );
 
-  // Safety Review Modal – asks if the user felt safe while travelling
   const renderSafetyReviewModal = () => (
     <Modal
       animationType="slide"
@@ -500,7 +549,6 @@ function TrackMeScreen() {
     </Modal>
   );
 
-  // Recenter map to current location
   const handleRecenter = () => {
     if (mapRef.current && location) {
       mapRef.current.animateToRegion(
@@ -515,13 +563,10 @@ function TrackMeScreen() {
     }
   };
 
-  // Journey tracking functions with additional logic
   const startJourney = async () => {
     try {
-      // Reset distance and set the journey start time
       setDistanceTraveled(0);
       journeyStartTimeRef.current = new Date();
-      // Start watching location updates
       const locWatcher = await Location.watchPositionAsync(
         { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 5 },
         (loc) => {
@@ -552,10 +597,9 @@ function TrackMeScreen() {
     const journeyEndTime = new Date();
     const journeyDuration = journeyStartTimeRef.current
       ? (journeyEndTime - journeyStartTimeRef.current) / 1000
-      : 0; // duration in seconds
+      : 0;
     const avgSpeedKmH =
       journeyDuration > 0 ? ((distanceTraveled / journeyDuration) * 3.6).toFixed(2) : '0';
-    // Save journey stats and open safety review modal
     setJourneyStats({
       distance: (distanceTraveled / 1000).toFixed(2),
       duration: journeyDuration.toFixed(2),
@@ -723,6 +767,7 @@ function TrackMeScreen() {
                 <Ionicons name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
+            {/* Safety Modal Content */}
             <ScrollView style={styles.modalBody}>
               {safetyData ? (
                 <>
@@ -732,24 +777,11 @@ function TrackMeScreen() {
                   </View>
                   <View style={styles.safetyDetailRow}>
                     <View style={styles.safetyIconContainer}>
-                      <Ionicons
-                        name={safetyData.safety === 'Safe' ? 'shield-checkmark' : 'warning'}
-                        size={24}
-                        color={safetyData.safety === 'Safe' ? '#4CAF50' : '#FFC107'}
-                      />
+                      <Ionicons name="alert-circle" size={24} color="#F44336" />
                     </View>
                     <View style={styles.safetyDetailContent}>
-                      <Text style={styles.safetyDetailTitle}>Safety Status</Text>
-                      <Text style={styles.safetyDetailText}>{safetyData.safety}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.safetyDetailRow}>
-                    <View style={styles.safetyIconContainer}>
-                      <Ionicons name={safetyData.lighting === 'Well lit' ? 'sunny' : 'moon'} size={24} color="#2196F3" />
-                    </View>
-                    <View style={styles.safetyDetailContent}>
-                      <Text style={styles.safetyDetailTitle}>Lighting Conditions</Text>
-                      <Text style={styles.safetyDetailText}>{safetyData.lighting}</Text>
+                      <Text style={styles.safetyDetailTitle}>Crime Rate</Text>
+                      <Text style={styles.safetyDetailText}>{safetyData.crimeRate}</Text>
                     </View>
                   </View>
                   <View style={styles.safetyDetailRow}>
@@ -761,8 +793,44 @@ function TrackMeScreen() {
                       <Text style={styles.safetyDetailText}>{safetyData.visibility}</Text>
                     </View>
                   </View>
+                  <View style={styles.safetyDetailRow}>
+                    <View style={styles.safetyIconContainer}>
+                      <Ionicons name="car" size={24} color="#3F51B5" />
+                    </View>
+                    <View style={styles.safetyDetailContent}>
+                      <Text style={styles.safetyDetailTitle}>Road Busyness</Text>
+                      <Text style={styles.safetyDetailText}>{safetyData.roadBusyness}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.safetyDetailRow}>
+                    <View style={styles.safetyIconContainer}>
+                      <Ionicons name="shield-checkmark" size={24} color="#4CAF50" />
+                    </View>
+                    <View style={styles.safetyDetailContent}>
+                      <Text style={styles.safetyDetailTitle}>Police Presence</Text>
+                      <Text style={styles.safetyDetailText}>{safetyData.policePresence}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.safetyDetailRow}>
+                    <View style={styles.safetyIconContainer}>
+                      <Ionicons name={safetyData.lighting === 'Well lit' ? 'sunny' : 'moon'} size={24} color="#2196F3" />
+                    </View>
+                    <View style={styles.safetyDetailContent}>
+                      <Text style={styles.safetyDetailTitle}>Lighting</Text>
+                      <Text style={styles.safetyDetailText}>{safetyData.lighting}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.safetyDetailRow}>
+                    <View style={styles.safetyIconContainer}>
+                      <Ionicons name="time-outline" size={24} color="#FF9800" />
+                    </View>
+                    <View style={styles.safetyDetailContent}>
+                      <Text style={styles.safetyDetailTitle}>Disturbances</Text>
+                      <Text style={styles.safetyDetailText}>{safetyData.disturbances}</Text>
+                    </View>
+                  </View>
                   <Text style={styles.crimeTitle}>Recent Incidents</Text>
-                  {safetyData.recentCrimes && safetyData.recentCrimes.length > 0 ? (
+                  {Array.isArray(safetyData.recentCrimes) ? (
                     safetyData.recentCrimes.map((crime, index) => (
                       <View key={index} style={styles.crimeItem}>
                         <View style={styles.crimeIconContainer}>
@@ -777,7 +845,9 @@ function TrackMeScreen() {
                       </View>
                     ))
                   ) : (
-                    <Text style={styles.noCrimeText}>No recent incidents reported.</Text>
+                    <Text style={styles.noCrimeText}>
+                      {safetyData.recentCrimes ? String(safetyData.recentCrimes) : 'No recent incidents reported.'}
+                    </Text>
                   )}
                   <View style={styles.safetyButtonContainer}>
                     <TouchableOpacity style={styles.safetyButton} onPress={() => setSafetyModalVisible(false)}>
@@ -793,13 +863,9 @@ function TrackMeScreen() {
         </View>
       </Modal>
 
-      {/* Enhanced Alternative Routes Modal */}
       {renderAlternativeModal()}
-      {/* Enhanced Navigation Instructions Modal */}
       {renderInstructionsModal()}
-      {/* Customization Options Modal */}
       {renderCustomizationModal()}
-      {/* Safety Review Modal */}
       {renderSafetyReviewModal()}
     </View>
   );
@@ -947,7 +1013,6 @@ const styles = StyleSheet.create({
   safetyButton: { backgroundColor: '#FF69B4', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
   safetyButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
   customOption: { paddingVertical: 10 },
-  // Enhanced Modal Styles (Neutral styling)
   modalContentEnhanced: {
     backgroundColor: '#fff',
     borderTopLeftRadius: 25,
@@ -961,58 +1026,16 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 10,
   },
-  modalHeaderEnhanced: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    backgroundColor: '#fff',
-  },
-  modalTitleEnhanced: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#333',
-  },
-  closeButtonEnhanced: {
-    padding: 5,
-  },
-  modalBodyEnhanced: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  directionStepEnhanced: {
-    marginBottom: 15,
-  },
-  directionStepTextEnhanced: {
-    fontSize: 16,
-    color: '#333',
-  },
-  dividerEnhanced: {
-    height: 1,
-    backgroundColor: '#ccc',
-    marginTop: 10,
-  },
-  altRouteCard: {
-    backgroundColor: '#f0f0f0',
-    padding: 15,
-    borderRadius: 15,
-    marginBottom: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#eee',
-  },
-  altRouteIcon: {
-    marginRight: 10,
-  },
-  altRouteTextEnhanced: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '600',
-  },
+  modalHeaderEnhanced: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: '#eee', backgroundColor: '#fff' },
+  modalTitleEnhanced: { fontSize: 20, fontWeight: '700', color: '#333' },
+  closeButtonEnhanced: { padding: 5 },
+  modalBodyEnhanced: { paddingHorizontal: 20, paddingVertical: 15 },
+  directionStepEnhanced: { marginBottom: 15 },
+  directionStepTextEnhanced: { fontSize: 16, color: '#333' },
+  dividerEnhanced: { height: 1, backgroundColor: '#ccc', marginTop: 10 },
+  altRouteCard: { backgroundColor: '#f0f0f0', padding: 15, borderRadius: 15, marginBottom: 15, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#eee' },
+  altRouteIcon: { marginRight: 10 },
+  altRouteTextEnhanced: { fontSize: 16, color: '#333', fontWeight: '600' },
 });
 
 export default TrackMeScreen;
