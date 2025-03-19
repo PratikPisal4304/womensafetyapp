@@ -8,7 +8,7 @@
       },
       "time_slot_data": {
         "12-3_am": {
-          "safety_score": 60,
+          "safety_score": 80,
           "factors": {
             "crime_rate": "medium",
             "visibility": "low",
@@ -20,7 +20,7 @@
           }
         },
         "3-6_am": {
-          "safety_score": 55,
+          "safety_score": 75,
           "factors": {
             "crime_rate": "medium",
             "visibility": "low",
@@ -92,7 +92,7 @@
           }
         },
         "9-12_pm": {
-          "safety_score": 68,
+          "safety_score": 80,
           "factors": {
             "crime_rate": "medium",
             "visibility": "low",
