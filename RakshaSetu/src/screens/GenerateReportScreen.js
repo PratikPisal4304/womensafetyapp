@@ -16,7 +16,11 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import { Audio } from 'expo-av';
+import {
+  Audio,
+  InterruptionModeIOS,
+  InterruptionModeAndroid,
+} from 'expo-av';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Print from 'expo-print';
@@ -51,6 +55,10 @@ const GenerateReportScreen = ({ navigation }) => {
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [reportData, setReportData] = useState(null);
 
+  // NEW OR UPDATED CODE: Track playback sound and status
+  const [sound, setSound] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
   const incidentTypesOptions = [
     { id: 1, name: 'Harassment' },
     { id: 2, name: 'Stalking' },
@@ -60,6 +68,9 @@ const GenerateReportScreen = ({ navigation }) => {
     { id: 6, name: 'Trespassing' },
     { id: 7, name: 'Other' },
   ];
+
+  // Maximum recording duration in seconds
+  const MAX_RECORDING_DURATION = 120;
 
   useEffect(() => {
     (async () => {
@@ -116,7 +127,7 @@ const GenerateReportScreen = ({ navigation }) => {
     }
   };
 
-  // Enhanced voice recording with timer and blinking dot indicator
+  // Enhanced voice recording with timer, blinking dot indicator, and auto-stop after max duration
   const startRecording = async () => {
     try {
       const { status } = await Audio.requestPermissionsAsync();
@@ -128,17 +139,25 @@ const GenerateReportScreen = ({ navigation }) => {
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
         staysActiveInBackground: true,
-        interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_DO_NOT_MIX,
-        interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DUCK_OTHERS,
+        interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
       });
+
       const newRecording = new Audio.Recording();
       await newRecording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
       await newRecording.startAsync();
       setRecording(newRecording);
       setIsRecording(true);
       setRecordingDuration(0);
+
       recordingInterval.current = setInterval(() => {
-        setRecordingDuration(prev => prev + 1);
+        setRecordingDuration(prev => {
+          if (prev + 1 >= MAX_RECORDING_DURATION) {
+            stopRecording(); // Auto-stop recording at max duration
+            return prev + 1;
+          }
+          return prev + 1;
+        });
       }, 1000);
     } catch (error) {
       Alert.alert('Recording Error', error.message);
@@ -159,17 +178,71 @@ const GenerateReportScreen = ({ navigation }) => {
     }
   };
 
+  // NEW OR UPDATED CODE: Pause, Resume, and Stop for playback
   const playRecording = async () => {
     if (!recordingUri) return;
     try {
+      // Configure for playback
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+        staysActiveInBackground: false,
+        playThroughEarpieceAndroid: false,
+      });
+
+      // Create the sound
       const { sound } = await Audio.Sound.createAsync({ uri: recordingUri });
+
+      // Keep a reference to the sound so we can pause/resume/stop
+      setSound(sound);
+
+      // Handle auto-stop after finishing playback
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.didJustFinish) {
+          setIsPlaying(false);
+        }
+      });
+
+      // Start playback
       await sound.playAsync();
+      setIsPlaying(true);
     } catch (error) {
       Alert.alert('Playback Error', error.message);
     }
   };
 
-  // Image functions
+  const pausePlayback = async () => {
+    if (!sound) return;
+    try {
+      await sound.pauseAsync();
+      setIsPlaying(false);
+    } catch (error) {
+      Alert.alert('Playback Error', error.message);
+    }
+  };
+
+  const resumePlayback = async () => {
+    if (!sound) return;
+    try {
+      await sound.playAsync();
+      setIsPlaying(true);
+    } catch (error) {
+      Alert.alert('Playback Error', error.message);
+    }
+  };
+
+  const stopPlayback = async () => {
+    if (!sound) return;
+    try {
+      await sound.stopAsync();
+      setIsPlaying(false);
+    } catch (error) {
+      Alert.alert('Playback Error', error.message);
+    }
+  };
+
   const takePhoto = async () => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -338,7 +411,29 @@ ____________________________
     }
   };
 
-  // --- New Helper Function for Uploading Images to Firebase Storage ---
+  // NEW OR UPDATED CODE: Helper to upload audio
+  const uploadAudioAsync = async (uri, audioName, reportId) => {
+    const blob = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = function() {
+        resolve(xhr.response);
+      };
+      xhr.onerror = function(e) {
+        console.error(e);
+        reject(new TypeError('Network request failed'));
+      };
+      xhr.responseType = 'blob';
+      xhr.open('GET', uri, true);
+      xhr.send(null);
+    });
+    const storage = getStorage();
+    const storageRef = ref(storage, `incident_reports/${reportId}/${audioName}`);
+    await uploadBytes(storageRef, blob);
+    blob.close();
+    return await getDownloadURL(storageRef);
+  };
+
+  // Helper Function for Uploading Images
   const uploadImageAsync = async (uri, imageName, reportId) => {
     const blob = await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
@@ -357,13 +452,13 @@ ____________________________
     const storageRef = ref(storage, `incident_reports/${reportId}/${imageName}`);
     await uploadBytes(storageRef, blob);
     blob.close();
-    const downloadURL = await getDownloadURL(storageRef);
-    return downloadURL;
+    return await getDownloadURL(storageRef);
   };
 
-  // Connect with Firestore and Firebase Storage: Save report to database and upload images
+  // Connect with Firestore and Firebase Storage: Save report to database and upload images/audio
   const saveReport = async (reportData) => {
     try {
+      // 1) Upload Images
       let uploadedImages = [];
       if (images.length > 0) {
         uploadedImages = await Promise.all(
@@ -372,6 +467,18 @@ ____________________________
       }
       reportData.attachedImages = uploadedImages;
       reportData.imageCount = uploadedImages.length;
+
+      // 2) Upload Audio if present
+      if (recordingUri) {
+        try {
+          const audioURL = await uploadAudioAsync(recordingUri, 'audio_recording.mp3', reportData.id);
+          reportData.audioURL = audioURL;
+        } catch (error) {
+          console.error('Audio upload error:', error);
+        }
+      }
+
+      // 3) Save entire report in Firestore
       await setDoc(doc(db, 'incident_reports', reportData.id), reportData);
     } catch (error) {
       console.error('Saving report error:', error);
@@ -438,7 +545,11 @@ ____________________________
               <p><strong>Incident Type:</strong> ${reportData.incidentType}</p>
               <p><strong>Date & Time of Incident:</strong> ${reportData.timestamp.toLocaleString()}</p>
               <p><strong>Location:</strong> ${reportData.location}</p>
-              ${reportData.locationCoords ? `<p><strong>GPS Coordinates:</strong> (${reportData.locationCoords.latitude.toFixed(6)}, ${reportData.locationCoords.longitude.toFixed(6)})</p>` : ''}
+              ${
+                reportData.locationCoords
+                  ? `<p><strong>GPS Coordinates:</strong> (${reportData.locationCoords.latitude.toFixed(6)}, ${reportData.locationCoords.longitude.toFixed(6)})</p>`
+                  : ''
+              }
               <p><strong>Reported By:</strong> ${reportData.reportedBy}</p>
             </div>
             <div class="section">
@@ -450,12 +561,16 @@ ____________________________
               <p><strong>Photographic Evidence:</strong> ${reportData.imageCount} photo(s) attached.</p>
               <p><strong>Audio Statement:</strong> ${reportData.hasRecording ? "Attached" : "Not provided"}</p>
             </div>
-            ${imagesHtml ? `<div class="section">
-              <h2>Attached Photos</h2>
-              <div class="images">
-                ${imagesHtml}
-              </div>
-            </div>` : ''}
+            ${
+              imagesHtml
+                ? `<div class="section">
+                     <h2>Attached Photos</h2>
+                     <div class="images">
+                       ${imagesHtml}
+                     </div>
+                   </div>`
+                : ''
+            }
           </body>
         </html>
       `;
@@ -481,14 +596,21 @@ ____________________________
         </Text>
         <Text style={styles.reportSectionTitle}>SUMMARY</Text>
         <Text style={styles.reportText}>
-          On {reportData.timestamp.toLocaleDateString()} at approximately {reportData.timestamp.toLocaleTimeString()}, the complainant reported a {reportData.incidentType.toLowerCase()} incident at {reportData.location}
-          {reportData.locationCoords ? ` (${reportData.locationCoords.latitude.toFixed(6)}, ${reportData.locationCoords.longitude.toFixed(6)})` : ''}.
+          On {reportData.timestamp.toLocaleDateString()} at approximately{' '}
+          {reportData.timestamp.toLocaleTimeString()}, the complainant reported a{' '}
+          {reportData.incidentType.toLowerCase()} incident at {reportData.location}
+          {reportData.locationCoords
+            ? ` (${reportData.locationCoords.latitude.toFixed(6)}, ${reportData.locationCoords.longitude.toFixed(6)})`
+            : ''}
+          .
         </Text>
         <Text style={styles.reportSectionTitle}>DETAILS</Text>
         <Text style={styles.reportText}>{reportData.description}</Text>
         <Text style={styles.reportSectionTitle}>EVIDENCE</Text>
         <Text style={styles.reportText}>• {reportData.imageCount} Photo(s) attached</Text>
-        <Text style={styles.reportText}>• {reportData.hasRecording ? "Audio statement attached" : "No audio statement"}</Text>
+        <Text style={styles.reportText}>
+          • {reportData.hasRecording ? 'Audio statement attached' : 'No audio statement'}
+        </Text>
         {reportData.attachedImages && reportData.attachedImages.length > 0 && (
           <>
             <Text style={styles.reportSectionTitle}>ATTACHED PHOTOS</Text>
@@ -518,7 +640,9 @@ ____________________________
       <ScrollView style={styles.scrollView}>
         {/* Incident Type */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Type of Incident<Text style={styles.required}>*</Text></Text>
+          <Text style={styles.sectionTitle}>
+            Type of Incident<Text style={styles.required}>*</Text>
+          </Text>
           {formErrors.incidentType && <Text style={styles.errorText}>{formErrors.incidentType}</Text>}
           <View style={styles.incidentTypesContainer}>
             {incidentTypesOptions.map((type) => (
@@ -537,7 +661,12 @@ ____________________________
                   }
                 }}
               >
-                <Text style={[styles.incidentTypeText, incidentType === type.name && styles.selectedIncidentTypeText]}>
+                <Text
+                  style={[
+                    styles.incidentTypeText,
+                    incidentType === type.name && styles.selectedIncidentTypeText
+                  ]}
+                >
                   {type.name}
                 </Text>
               </TouchableOpacity>
@@ -546,9 +675,11 @@ ____________________________
         </View>
         {/* Location */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Location<Text style={styles.required}>*</Text></Text>
+          <Text style={styles.sectionTitle}>
+            Location<Text style={styles.required}>*</Text>
+          </Text>
           {formErrors.location && <Text style={styles.errorText}>{formErrors.location}</Text>}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.locationContainer, formErrors.location && styles.errorBorder]}
             onPress={getCurrentLocation}
           >
@@ -561,38 +692,45 @@ ____________________________
             {!location && <Ionicons name="chevron-forward" size={20} color="#999" />}
           </TouchableOpacity>
           {location && (
-            <TouchableOpacity style={styles.editLocationButton} onPress={() => {
-              if (Platform.OS === 'ios') {
-                Alert.prompt(
-                  'Edit Location',
-                  'Enter location manually:',
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Save', onPress: (text) => {
-                        if (text && text.trim()) {
-                          setLocation(text.trim());
-                          if (formErrors.location) {
-                            const { location, ...rest } = formErrors;
-                            setFormErrors(rest);
+            <TouchableOpacity
+              style={styles.editLocationButton}
+              onPress={() => {
+                if (Platform.OS === 'ios') {
+                  Alert.prompt(
+                    'Edit Location',
+                    'Enter location manually:',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Save',
+                        onPress: (text) => {
+                          if (text && text.trim()) {
+                            setLocation(text.trim());
+                            if (formErrors.location) {
+                              const { location, ...rest } = formErrors;
+                              setFormErrors(rest);
+                            }
                           }
                         }
-                      } 
-                    },
-                  ],
-                  'plain-text',
-                  location
-                );
-              } else {
-                Alert.alert('Edit Location', 'Manual editing is only available on iOS.');
-              }
-            }}>
+                      }
+                    ],
+                    'plain-text',
+                    location
+                  );
+                } else {
+                  Alert.alert('Edit Location', 'Manual editing is only available on iOS.');
+                }
+              }}
+            >
               <Text style={styles.editLocationText}>Edit manually</Text>
             </TouchableOpacity>
           )}
         </View>
         {/* Description */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Describe what happened<Text style={styles.required}>*</Text></Text>
+          <Text style={styles.sectionTitle}>
+            Describe what happened<Text style={styles.required}>*</Text>
+          </Text>
           {formErrors.description && <Text style={styles.errorText}>{formErrors.description}</Text>}
           <TextInput
             style={[styles.descriptionInput, formErrors.description && styles.errorBorder]}
@@ -616,7 +754,7 @@ ____________________________
               style={[styles.voiceButton, isRecording && styles.recordingActive]}
               onPress={isRecording ? stopRecording : startRecording}
             >
-              <Ionicons name={isRecording ? "stop" : "mic"} size={24} color="white" />
+              <Ionicons name={isRecording ? 'stop' : 'mic'} size={24} color="white" />
               <Text style={styles.voiceButtonText}>
                 {isRecording ? 'Stop Recording' : 'Record Voice Statement'}
               </Text>
@@ -627,11 +765,30 @@ ____________________________
                 {new Date(recordingDuration * 1000).toISOString().substr(11, 8)}
               </Text>
             )}
+            {/* Existing "Play Recording" Button replaced with a set of playback controls */}
             {recordingUri && (
-              <TouchableOpacity style={styles.playButton} onPress={playRecording}>
-                <Ionicons name="play" size={20} color="#ff6b93" />
-                <Text style={styles.playButtonText}>Play Recording</Text>
-              </TouchableOpacity>
+              <View style={{ marginTop: 12, alignItems: 'center' }}>
+                {/* If not playing, show Play/Resume; if playing, show Pause; always show Stop if we have a sound */}
+                {!isPlaying ? (
+                  <TouchableOpacity style={styles.playButton} onPress={sound ? resumePlayback : playRecording}>
+                    <Ionicons name="play" size={20} color="#ff6b93" />
+                    <Text style={styles.playButtonText}>
+                      {sound ? 'Resume Recording' : 'Play Recording'}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.playButton} onPress={pausePlayback}>
+                    <Ionicons name="pause" size={20} color="#ff6b93" />
+                    <Text style={styles.playButtonText}>Pause Recording</Text>
+                  </TouchableOpacity>
+                )}
+                {sound && (
+                  <TouchableOpacity style={styles.playButton} onPress={stopPlayback}>
+                    <Ionicons name="stop-circle" size={20} color="#ff6b93" />
+                    <Text style={styles.playButtonText}>Stop Recording</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             )}
           </View>
         </View>
@@ -657,7 +814,7 @@ ____________________________
               {images.map((uri, index) => (
                 <View key={index} style={styles.imageContainer}>
                   <Image source={{ uri }} style={styles.selectedImage} />
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.removeImageButton}
                     onPress={() => {
                       const newImages = [...images];
@@ -675,7 +832,8 @@ ____________________________
         {/* Privacy Notice */}
         <View style={styles.section}>
           <Text style={styles.privacyNotice}>
-            Your report will be processed using AI technology to assist law enforcement. All data is encrypted and handled according to our privacy policy.
+            Your report will be processed using AI technology to assist law enforcement. All data is
+            encrypted and handled according to our privacy policy.
           </Text>
         </View>
       </ScrollView>
@@ -745,9 +903,17 @@ ____________________________
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8f8f8' },
   header: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 50, paddingBottom: 16,
-    backgroundColor: 'white', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1, shadowRadius: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 50,
+    paddingBottom: 16,
+    backgroundColor: 'white',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   backButton: { padding: 8 },
   headerTitle: { marginLeft: 16, fontSize: 20, fontWeight: '600', color: '#333' },
@@ -759,55 +925,118 @@ const styles = StyleSheet.create({
   errorBorder: { borderColor: '#ff4757' },
   incidentTypesContainer: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
   incidentTypeButton: {
-    backgroundColor: '#f1f1f1', borderRadius: 50, paddingHorizontal: 16, paddingVertical: 10,
-    margin: 4, borderWidth: 1, borderColor: '#e0e0e0',
+    backgroundColor: '#f1f1f1',
+    borderRadius: 50,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    margin: 4,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   incidentTypeText: { fontSize: 14, color: '#666' },
   selectedIncidentType: { backgroundColor: '#ffebf1', borderColor: '#ff6b93' },
   selectedIncidentTypeText: { color: '#ff6b93', fontWeight: '500' },
   locationContainer: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 8, padding: 12,
-    borderWidth: 1, borderColor: '#e0e0e0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   locationIconContainer: { marginRight: 12 },
   locationText: { flex: 1, color: '#666', fontSize: 14 },
   editLocationButton: { alignSelf: 'flex-end', marginTop: 8 },
   editLocationText: { color: '#ff6b93', fontSize: 12 },
   descriptionInput: {
-    backgroundColor: 'white', borderRadius: 8, borderWidth: 1, borderColor: '#e0e0e0', padding: 12,
-    height: 120, fontSize: 14, color: '#333',
+    backgroundColor: 'white',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    padding: 12,
+    height: 120,
+    fontSize: 14,
+    color: '#333',
   },
   characterCount: { alignSelf: 'flex-end', fontSize: 12, color: '#999', marginTop: 4 },
+  recordingContainer: { marginTop: 16, alignItems: 'center' },
   voiceButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ff6b93',
-    borderRadius: 50, paddingVertical: 12, marginTop: 16, position: 'relative'
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ff6b93',
+    borderRadius: 50,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    position: 'relative',
   },
   recordingActive: { backgroundColor: '#ff4757' },
   voiceButtonText: { color: 'white', fontWeight: '600', marginLeft: 8 },
   blinkingDot: { width: 10, height: 10, backgroundColor: 'red', borderRadius: 5, marginLeft: 8 },
   recordingTimer: { textAlign: 'center', marginTop: 8, fontSize: 14, color: '#333' },
-  playButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  playButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
   playButtonText: { color: '#ff6b93', marginLeft: 4, fontWeight: '500' },
   imageOptionsContainer: { flexDirection: 'row', justifyContent: 'space-between' },
   imageOption: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 8,
-    padding: 12, marginHorizontal: 4, borderWidth: 1, borderColor: '#e0e0e0',
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 12,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   imageOptionIconContainer: { marginRight: 12 },
   imageOptionText: { color: '#666', fontSize: 14 },
   selectedImagesContainer: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 16 },
   imageContainer: { width: '30%', aspectRatio: 1, margin: '1.5%', position: 'relative' },
   selectedImage: { width: '100%', height: '100%', borderRadius: 8 },
-  removeImageButton: { position: 'absolute', top: -8, right: -8, backgroundColor: 'white', borderRadius: 12, elevation: 2 },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    elevation: 2,
+  },
   privacyNotice: { fontSize: 12, color: '#999', textAlign: 'center', marginTop: 16 },
   generateButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ff6b93',
-    borderRadius: 8, paddingVertical: 16, margin: 16, elevation: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ff6b93',
+    borderRadius: 8,
+    paddingVertical: 16,
+    margin: 16,
+    elevation: 2,
   },
   generateButtonText: { color: 'white', fontWeight: '600', fontSize: 16, marginLeft: 8 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
-  modalContent: { backgroundColor: 'white', borderRadius: 8, padding: 20, maxHeight: '80%' },
-  modalHeader: { borderBottomWidth: 1, borderBottomColor: '#ddd', paddingBottom: 8, marginBottom: 12 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    paddingBottom: 8,
+    marginBottom: 12,
+  },
   modalTitle: { fontSize: 20, fontWeight: '600', color: '#333', textAlign: 'center' },
   modalScroll: { paddingBottom: 20 },
   reportContainer: { marginBottom: 20 },
