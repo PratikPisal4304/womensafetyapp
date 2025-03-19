@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { Audio } from 'expo-av';
 
-// Import getAuth to access the current user
+// Firebase imports
 import { getAuth } from 'firebase/auth';
 import { collection, query, where, orderBy, getDocs, deleteDoc, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../config/firebaseConfig';
@@ -65,7 +65,7 @@ const MyReportScreen = ({ navigation }) => {
         return;
       }
 
-      // Fetch reports where userId matches the current user's UID
+      // Query to fetch only reports where the userId matches the current user's UID
       const q = query(
         collection(db, 'incident_reports'),
         where('userId', '==', user.uid),
@@ -79,7 +79,7 @@ const MyReportScreen = ({ navigation }) => {
       });
       setReports(reportsArray);
     } catch (error) {
-      console.error('Error loading reports: ', error);
+      console.error('Error loading reports:', error);
       Alert.alert('Error', 'Failed to load reports');
     } finally {
       setLoading(false);
@@ -98,6 +98,18 @@ const MyReportScreen = ({ navigation }) => {
     return unsubscribe;
   }, [navigation]);
 
+  // Helper function to safely convert Firestore Timestamp or a numeric/string date to a readable string
+  const formatDate = (value) => {
+    if (!value) return ''; // no date
+
+    // If it's a Firestore Timestamp object, it should have a toDate() method
+    if (typeof value.toDate === 'function') {
+      return value.toDate().toLocaleString();
+    }
+    // Otherwise, assume it's a number or string parseable by new Date()
+    return new Date(value).toLocaleString();
+  };
+
   // Open report details
   const viewReportDetails = (report) => {
     setSelectedReport(report);
@@ -106,8 +118,7 @@ const MyReportScreen = ({ navigation }) => {
   };
 
   const goBackToList = () => {
-    // Stop any audio playing when going back
-    stopAudio();
+    stopAudio(); // stop audio if playing
     setCurrentView('list');
     setSelectedReport(null);
     setIsEditing(false);
@@ -182,9 +193,8 @@ const MyReportScreen = ({ navigation }) => {
     }
   };
 
-  // Inline Editing Functions
+  // Inline Editing
   const handleStartEditing = () => {
-    // Pre-fill edit fields
     setEditedIncidentType(selectedReport.incidentType);
     setEditedDescription(selectedReport.description);
     setEditedLocation(selectedReport.location);
@@ -192,7 +202,6 @@ const MyReportScreen = ({ navigation }) => {
   };
 
   const handleSaveEdit = async () => {
-    // Create updated report using edited values
     const updatedReport = {
       ...selectedReport,
       incidentType: editedIncidentType,
@@ -217,26 +226,21 @@ const MyReportScreen = ({ navigation }) => {
     }
   };
 
-  // AUDIO LOGIC: Play, Pause, Stop
+  // AUDIO: play, pause, stop
   const playAudio = async (uri) => {
     try {
-      // If we already have a sound loaded, resume or replay
       if (sound) {
         await sound.playAsync();
         setIsPlaying(true);
         return;
       }
-      // Otherwise, create a new sound
       const { sound: newSound } = await Audio.Sound.createAsync({ uri });
       setSound(newSound);
-
-      // Listen for playback finishing
       newSound.setOnPlaybackStatusUpdate((status) => {
         if (status.didJustFinish) {
           setIsPlaying(false);
         }
       });
-
       await newSound.playAsync();
       setIsPlaying(true);
     } catch (error) {
@@ -276,37 +280,41 @@ const MyReportScreen = ({ navigation }) => {
   });
 
   // Render a single report card in the list
-  const renderReportItem = ({ item }) => (
-    <TouchableOpacity style={styles.reportCard} onPress={() => viewReportDetails(item)}>
-      <View style={styles.reportHeader}>
-        <Text style={styles.reportType}>{item.incidentType}</Text>
-        <View style={styles.statusBadge}>
-          <Text style={styles.statusText}>{item.status || 'Draft'}</Text>
-        </View>
-      </View>
-      <Text style={styles.reportDate}>
-        {item.timestamp ? new Date(item.timestamp).toLocaleString() : ''}
-      </Text>
-      <Text style={styles.reportDescription} numberOfLines={2}>{item.description}</Text>
-      <View style={styles.cardActions}>
-        <TouchableOpacity style={styles.actionButton} onPress={() => viewReportDetails(item)}>
-          <Ionicons name="eye-outline" size={20} color="#555" />
-          <Text style={styles.actionText}>View</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton} onPress={() => deleteReport(item.id)}>
-          <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-          <Text style={[styles.actionText, { color: '#FF3B30' }]}>Delete</Text>
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
-  );
+  const renderReportItem = ({ item }) => {
+    // Safely format the date
+    const displayDate = formatDate(item.timestamp);
 
-  // List view of reports
+    return (
+      <TouchableOpacity style={styles.reportCard} onPress={() => viewReportDetails(item)}>
+        <View style={styles.reportHeader}>
+          <Text style={styles.reportType}>{item.incidentType}</Text>
+          <View style={styles.statusBadge}>
+            <Text style={styles.statusText}>{item.status || 'Draft'}</Text>
+          </View>
+        </View>
+        <Text style={styles.reportDate}>
+          {displayDate}
+        </Text>
+        <Text style={styles.reportDescription} numberOfLines={2}>{item.description}</Text>
+        <View style={styles.cardActions}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => viewReportDetails(item)}>
+            <Ionicons name="eye-outline" size={20} color="#555" />
+            <Text style={styles.actionText}>View</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton} onPress={() => deleteReport(item.id)}>
+            <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+            <Text style={[styles.actionText, { color: '#FF3B30' }]}>Delete</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  // List view
   const ReportListView = () => (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
-        {/* A spacer so "My Reports" is centered if needed */}
         <View style={styles.spacer} />
         <Text style={styles.headerTitle}>My Reports</Text>
         <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('GenerateReport')}>
@@ -331,12 +339,12 @@ const MyReportScreen = ({ navigation }) => {
     </SafeAreaView>
   );
 
-  // Detailed view for a selected report with inline editing support + audio controls
+  // Detail view
   const ReportDetailView = () => {
     if (!selectedReport) return null;
 
-    // If you store audio under "audioURL", rename as needed
     const audioUri = selectedReport.audioURL || selectedReport.recordingUri;
+    const displayDate = formatDate(selectedReport.timestamp);
 
     return (
       <SafeAreaView style={styles.container}>
@@ -354,7 +362,6 @@ const MyReportScreen = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
-          {/* Title and status display */}
           <View style={styles.titleContainer}>
             <Text style={styles.detailTitle}>{selectedReport.incidentType} Incident Report</Text>
             <View style={styles.detailStatusBadge}>
@@ -362,7 +369,7 @@ const MyReportScreen = ({ navigation }) => {
             </View>
           </View>
           <Text style={styles.detailDateTime}>
-            {selectedReport.timestamp ? new Date(selectedReport.timestamp).toLocaleString() : ''}
+            {displayDate}
           </Text>
           <View style={styles.infoCard}>
             <Text style={styles.infoLabel}>Report ID:</Text>
@@ -375,7 +382,7 @@ const MyReportScreen = ({ navigation }) => {
               <Text style={styles.statusValueText}> {selectedReport.status || 'Draft'}</Text>
             </View>
           </View>
-          {/* If in editing mode, show inputs; otherwise, show text details */}
+
           {isEditing ? (
             <View style={styles.editForm}>
               <Text style={styles.sectionTitle}>Edit Incident Type</Text>
@@ -424,12 +431,12 @@ const MyReportScreen = ({ navigation }) => {
               ) : (
                 <Text style={styles.detailsText}>No images attached.</Text>
               )}
+
               {/* AUDIO CONTROLS */}
               {audioUri ? (
                 <View style={{ marginVertical: 16 }}>
                   <Text style={styles.sectionTitle}>AUDIO STATEMENT</Text>
                   <View style={styles.audioControls}>
-                    {/* If currently playing, show Pause/Stop; if not playing, show Play */}
                     {isPlaying ? (
                       <>
                         <TouchableOpacity 
@@ -450,7 +457,7 @@ const MyReportScreen = ({ navigation }) => {
                     ) : (
                       <>
                         {sound ? (
-                          // We have a sound loaded but it's paused or stopped -> "Resume" + "Stop"
+                          // Sound loaded but paused/stopped -> Resume + Stop
                           <>
                             <TouchableOpacity 
                               style={styles.audioButton} 
@@ -468,7 +475,7 @@ const MyReportScreen = ({ navigation }) => {
                             </TouchableOpacity>
                           </>
                         ) : (
-                          // No sound loaded yet -> "Play"
+                          // No sound loaded -> Play
                           <TouchableOpacity 
                             style={styles.audioButton} 
                             onPress={() => playAudio(audioUri)}
@@ -484,7 +491,7 @@ const MyReportScreen = ({ navigation }) => {
               ) : (
                 <Text style={styles.detailsText}>No audio recording attached.</Text>
               )}
-              {/* Show edit and submit buttons if report is draft */}
+
               {(!selectedReport.status || selectedReport.status === 'Draft') && (
                 <View style={styles.buttonRow}>
                   {/* SUBMIT BUTTON */}
@@ -788,7 +795,11 @@ const styles = StyleSheet.create({
     fontSize: 16, 
     fontWeight: '600' 
   },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: '#333' },
+  headerTitle: { 
+    fontSize: 20, 
+    fontWeight: '700', 
+    color: '#333' 
+  },
   modalOverlay: { 
     flex: 1, 
     backgroundColor: 'rgba(0,0,0,0.5)', 
