@@ -35,6 +35,7 @@ import { GEMINI_API_KEY } from '@env';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { setDoc, doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../../config/firebaseConfig';
+import { getAuth } from 'firebase/auth'; // <-- Make sure to import getAuth
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
@@ -478,8 +479,15 @@ ____________________________
         }
       }
 
-      // 3) Save entire report in Firestore
-      await setDoc(doc(db, 'incident_reports', reportData.id), reportData);
+      // 3) Attach the userId to filter in MyReportScreen
+      const firebaseAuth = getAuth();
+      const currentUser = firebaseAuth.currentUser;
+
+      // 4) Save entire report in Firestore, including userId
+      await setDoc(doc(db, 'incident_reports', reportData.id), {
+        ...reportData,
+        userId: currentUser ? currentUser.uid : 'unknown', // <-- The critical field
+      });
     } catch (error) {
       console.error('Saving report error:', error);
     }
@@ -900,6 +908,8 @@ ____________________________
   );
 };
 
+export default GenerateReportScreen;
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8f8f8' },
   header: {
@@ -1066,6 +1076,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   modalActionButtonText: { color: 'white', fontWeight: '700', fontSize: 16, marginLeft: 8 },
+  submitButton: {},
   closeModalButton: {
     backgroundColor: '#ff6b93',
     paddingVertical: 14,
@@ -1081,5 +1092,3 @@ const styles = StyleSheet.create({
   },
   closeModalButtonText: { color: 'white', fontWeight: '700', fontSize: 16 },
 });
-
-export default GenerateReportScreen;

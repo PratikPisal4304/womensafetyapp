@@ -19,7 +19,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { Audio } from 'expo-av';
-import { collection, query, orderBy, getDocs, deleteDoc, updateDoc, doc } from 'firebase/firestore';
+
+// Import getAuth to access the current user
+import { getAuth } from 'firebase/auth';
+import { collection, query, where, orderBy, getDocs, deleteDoc, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../config/firebaseConfig';
 
 const MyReportScreen = ({ navigation }) => {
@@ -36,18 +39,34 @@ const MyReportScreen = ({ navigation }) => {
   const [editedDescription, setEditedDescription] = useState('');
   const [editedLocation, setEditedLocation] = useState('');
 
-  // Load reports from Firestore and sort them (newest first)
+  // Load only the current user's reports from Firestore and sort them (newest first)
   const loadReports = async () => {
     try {
       setLoading(true);
-      const q = query(collection(db, 'incident_reports'), orderBy('timestamp', 'desc'));
+
+      // Get the current user
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) {
+        Alert.alert('Error', 'User not logged in');
+        return;
+      }
+
+      // Fetch reports where userId matches the current user's UID
+      const q = query(
+        collection(db, 'incident_reports'),
+        where('userId', '==', user.uid),
+        orderBy('timestamp', 'desc')
+      );
       const querySnapshot = await getDocs(q);
+
       const reportsArray = [];
       querySnapshot.forEach((docSnap) => {
         reportsArray.push({ id: docSnap.id, ...docSnap.data() });
       });
       setReports(reportsArray);
     } catch (error) {
+      console.error('Error loading reports: ', error);
       Alert.alert('Error', 'Failed to load reports');
     } finally {
       setLoading(false);
@@ -82,13 +101,13 @@ const MyReportScreen = ({ navigation }) => {
   // Confirm and delete report from Firestore
   const deleteReport = (id) => {
     Alert.alert(
-      "Confirm Delete",
-      "Are you sure you want to delete this report?",
+      'Confirm Delete',
+      'Are you sure you want to delete this report?',
       [
-        { text: "Cancel", style: "cancel" },
+        { text: 'Cancel', style: 'cancel' },
         { 
-          text: "Delete", 
-          style: "destructive", 
+          text: 'Delete', 
+          style: 'destructive', 
           onPress: async () => {
             try {
               await deleteDoc(doc(db, 'incident_reports', id));
@@ -121,11 +140,11 @@ const MyReportScreen = ({ navigation }) => {
   // Confirm submission before updating the report
   const confirmSubmitReport = () => {
     Alert.alert(
-      "Confirm Submission",
-      "Are you sure you want to submit this report?",
+      'Confirm Submission',
+      'Are you sure you want to submit this report?',
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Submit", onPress: () => submitReport() }
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Submit', onPress: () => submitReport() }
       ]
     );
   };
@@ -186,10 +205,10 @@ const MyReportScreen = ({ navigation }) => {
 
   // Filter reports based on search query (incident type or description)
   const filteredReports = reports.filter(report => {
-    const query = searchQuery.toLowerCase();
+    const queryText = searchQuery.toLowerCase();
     return (
-      report.incidentType.toLowerCase().includes(query) ||
-      report.description.toLowerCase().includes(query)
+      report.incidentType?.toLowerCase().includes(queryText) ||
+      report.description?.toLowerCase().includes(queryText)
     );
   });
 
@@ -284,7 +303,9 @@ const MyReportScreen = ({ navigation }) => {
               <Text style={styles.detailStatusText}>{selectedReport.status || 'Draft'}</Text>
             </View>
           </View>
-          <Text style={styles.detailDateTime}>{new Date(selectedReport.timestamp).toLocaleString()}</Text>
+          <Text style={styles.detailDateTime}>
+            {selectedReport.timestamp ? new Date(selectedReport.timestamp).toLocaleString() : ''}
+          </Text>
           <View style={styles.infoCard}>
             <Text style={styles.infoLabel}>Report ID:</Text>
             <Text style={styles.infoValue}> {selectedReport.incidentId}</Text>
@@ -346,7 +367,10 @@ const MyReportScreen = ({ navigation }) => {
                 <Text style={styles.detailsText}>No images attached.</Text>
               )}
               {selectedReport.recordingUri ? (
-                <TouchableOpacity style={styles.playButton} onPress={() => playRecording(selectedReport.recordingUri)}>
+                <TouchableOpacity 
+                  style={styles.playButton} 
+                  onPress={() => playRecording(selectedReport.recordingUri)}
+                >
                   <Ionicons name="play-outline" size={20} color="#007AFF" />
                   <Text style={styles.playButtonText}>Play Audio Statement</Text>
                 </TouchableOpacity>
@@ -382,6 +406,8 @@ const MyReportScreen = ({ navigation }) => {
     </KeyboardAvoidingView>
   );
 };
+
+export default MyReportScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9F9F9' },
@@ -421,64 +447,316 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  reportHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  reportType: { fontSize: 16, fontWeight: '600', color: '#333', flex: 1 },
-  statusBadge: { backgroundColor: '#FF9EC3', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  statusText: { color: '#FFFFFF', fontSize: 12, fontWeight: '600', textTransform: 'uppercase' },
-  reportDate: { fontSize: 14, color: '#8E8E93', marginBottom: 8 },
-  reportDescription: { fontSize: 14, color: '#555', marginBottom: 16, lineHeight: 20 },
-  cardActions: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#E5E5EA', paddingTop: 12, justifyContent: 'space-around' },
-  actionButton: { flexDirection: 'row', alignItems: 'center' },
-  actionText: { fontSize: 14, fontWeight: '500', color: '#555', marginLeft: 4 },
-  detailContainer: { flex: 1, backgroundColor: '#F9F9F9', paddingHorizontal: 16 },
-  titleContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, marginBottom: 8 },
-  detailTitle: { fontSize: 24, fontWeight: '700', color: '#333', flex: 1 },
-  detailStatusBadge: { backgroundColor: '#FF9EC3', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  detailStatusText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600', textTransform: 'uppercase' },
-  detailDateTime: { fontSize: 16, color: '#8E8E93', marginBottom: 16 },
-  infoCard: { flexDirection: 'row', backgroundColor: '#EFEFF4', padding: 16, borderRadius: 12, marginBottom: 16 },
-  infoLabel: { fontSize: 16, fontWeight: '600', color: '#333' },
-  infoValue: { fontSize: 16, color: '#333' },
-  statusContainer: { backgroundColor: '#EFEFF4', padding: 16, borderRadius: 12, marginBottom: 16 },
-  statusDetail: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
-  statusValueText: { fontSize: 16, color: '#333', fontWeight: '600', marginLeft: 8 },
-  sectionTitle: { fontSize: 16, fontWeight: '600', color: '#666', marginTop: 20, marginBottom: 10 },
-  summaryText: { fontSize: 16, color: '#555', lineHeight: 22, marginBottom: 16 },
-  locationText: { fontSize: 16, color: '#555', marginBottom: 12 },
-  detailsText: { fontSize: 16, color: '#555', marginBottom: 16 },
-  imagesContainer: { marginBottom: 16 },
-  photoScroll: { marginVertical: 8 },
-  reportPhoto: { width: 120, height: 120, borderRadius: 8, marginRight: 8 },
-  playButton: { flexDirection: 'row', alignItems: 'center', marginVertical: 16 },
-  playButtonText: { marginLeft: 8, fontSize: 16, color: '#007AFF' },
-  submitButton: { backgroundColor: '#007AFF', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8, alignItems: 'center', marginVertical: 20 },
-  submitButtonText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
-  editButton: { backgroundColor: '#FFA500', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8, alignItems: 'center', marginBottom: 20 },
-  editButtonText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
-  bottomSpacing: { height: 40 },
+  reportHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 8 
+  },
+  reportType: { 
+    fontSize: 16, 
+    fontWeight: '600', 
+    color: '#333', 
+    flex: 1 
+  },
+  statusBadge: { 
+    backgroundColor: '#FF9EC3', 
+    paddingHorizontal: 12, 
+    paddingVertical: 4, 
+    borderRadius: 20, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  statusText: { 
+    color: '#FFFFFF', 
+    fontSize: 12, 
+    fontWeight: '600', 
+    textTransform: 'uppercase' 
+  },
+  reportDate: { 
+    fontSize: 14, 
+    color: '#8E8E93', 
+    marginBottom: 8 
+  },
+  reportDescription: { 
+    fontSize: 14, 
+    color: '#555', 
+    marginBottom: 16, 
+    lineHeight: 20 
+  },
+  cardActions: { 
+    flexDirection: 'row', 
+    borderTopWidth: 1, 
+    borderTopColor: '#E5E5EA', 
+    paddingTop: 12, 
+    justifyContent: 'space-around' 
+  },
+  actionButton: { 
+    flexDirection: 'row', 
+    alignItems: 'center' 
+  },
+  actionText: { 
+    fontSize: 14, 
+    fontWeight: '500', 
+    color: '#555', 
+    marginLeft: 4 
+  },
+  detailContainer: { 
+    flex: 1, 
+    backgroundColor: '#F9F9F9', 
+    paddingHorizontal: 16 
+  },
+  titleContainer: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginTop: 16, 
+    marginBottom: 8 
+  },
+  detailTitle: { 
+    fontSize: 24, 
+    fontWeight: '700', 
+    color: '#333', 
+    flex: 1 
+  },
+  detailStatusBadge: { 
+    backgroundColor: '#FF9EC3', 
+    paddingHorizontal: 16, 
+    paddingVertical: 8, 
+    borderRadius: 20 
+  },
+  detailStatusText: { 
+    color: '#FFFFFF', 
+    fontSize: 14, 
+    fontWeight: '600', 
+    textTransform: 'uppercase' 
+  },
+  detailDateTime: { 
+    fontSize: 16, 
+    color: '#8E8E93', 
+    marginBottom: 16 
+  },
+  infoCard: { 
+    flexDirection: 'row', 
+    backgroundColor: '#EFEFF4', 
+    padding: 16, 
+    borderRadius: 12, 
+    marginBottom: 16 
+  },
+  infoLabel: { 
+    fontSize: 16, 
+    fontWeight: '600', 
+    color: '#333' 
+  },
+  infoValue: { 
+    fontSize: 16, 
+    color: '#333' 
+  },
+  statusContainer: { 
+    backgroundColor: '#EFEFF4', 
+    padding: 16, 
+    borderRadius: 12, 
+    marginBottom: 16 
+  },
+  statusDetail: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginTop: 8 
+  },
+  statusValueText: { 
+    fontSize: 16, 
+    color: '#333', 
+    fontWeight: '600', 
+    marginLeft: 8 
+  },
+  sectionTitle: { 
+    fontSize: 16, 
+    fontWeight: '600', 
+    color: '#666', 
+    marginTop: 20, 
+    marginBottom: 10 
+  },
+  summaryText: { 
+    fontSize: 16, 
+    color: '#555', 
+    lineHeight: 22, 
+    marginBottom: 16 
+  },
+  locationText: { 
+    fontSize: 16, 
+    color: '#555', 
+    marginBottom: 12 
+  },
+  detailsText: { 
+    fontSize: 16, 
+    color: '#555', 
+    marginBottom: 16 
+  },
+  imagesContainer: { 
+    marginBottom: 16 
+  },
+  photoScroll: { 
+    marginVertical: 8 
+  },
+  reportPhoto: { 
+    width: 120, 
+    height: 120, 
+    borderRadius: 8, 
+    marginRight: 8 
+  },
+  playButton: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginVertical: 16 
+  },
+  playButtonText: { 
+    marginLeft: 8, 
+    fontSize: 16, 
+    color: '#007AFF' 
+  },
+  submitButton: { 
+    backgroundColor: '#007AFF', 
+    paddingVertical: 12, 
+    paddingHorizontal: 24, 
+    borderRadius: 8, 
+    alignItems: 'center', 
+    marginVertical: 20 
+  },
+  submitButtonText: { 
+    color: '#FFF', 
+    fontSize: 16, 
+    fontWeight: '600' 
+  },
+  editButton: { 
+    backgroundColor: '#FFA500', 
+    paddingVertical: 12, 
+    paddingHorizontal: 24, 
+    borderRadius: 8, 
+    alignItems: 'center', 
+    marginBottom: 20 
+  },
+  editButtonText: { 
+    color: '#FFF', 
+    fontSize: 16, 
+    fontWeight: '600' 
+  },
+  bottomSpacing: { 
+    height: 40 
+  },
   // New styles for inline edit form
-  editForm: { marginVertical: 20, backgroundColor: '#fff', padding: 16, borderRadius: 8, elevation: 2 },
-  editInput: { borderWidth: 1, borderColor: '#ccc', borderRadius: 4, padding: 8, marginBottom: 12, fontSize: 16, color: '#333' },
-  editButtonsContainer: { flexDirection: 'row', justifyContent: 'space-around' },
-  saveButton: { backgroundColor: '#28a745', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 4 },
-  saveButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  cancelButton: { backgroundColor: '#dc3545', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 4 },
-  cancelButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
-  modalContent: { backgroundColor: 'white', borderRadius: 8, padding: 20, maxHeight: '80%' },
-  modalHeader: { borderBottomWidth: 1, borderBottomColor: '#ddd', paddingBottom: 8, marginBottom: 12 },
-  modalTitle: { fontSize: 20, fontWeight: '600', color: '#333', textAlign: 'center' },
-  modalScroll: { paddingBottom: 20 },
-  reportContainer: { marginBottom: 20 },
-  reportTitle: { fontSize: 18, fontWeight: '600', marginBottom: 4, color: '#333', textAlign: 'center' },
-  reportTimestamp: { fontSize: 12, color: '#666', marginBottom: 12, textAlign: 'center' },
-  reportSectionTitle: { fontSize: 16, fontWeight: '600', marginTop: 12, marginBottom: 4, color: '#444' },
-  reportText: { fontSize: 14, color: '#444', lineHeight: 20 },
-  photoScroll: { marginVertical: 8 },
-  reportPhoto: { width: 120, height: 120, borderRadius: 8, marginRight: 8 },
-  aiAnalysisContainer: { marginTop: 8, backgroundColor: '#f0f0f0', borderRadius: 8, padding: 10 },
-  aiAnalysisText: { fontSize: 14, color: '#333', lineHeight: 20 },
-  modalFooter: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  editForm: { 
+    marginVertical: 20, 
+    backgroundColor: '#fff', 
+    padding: 16, 
+    borderRadius: 8, 
+    elevation: 2 
+  },
+  editInput: { 
+    borderWidth: 1, 
+    borderColor: '#ccc', 
+    borderRadius: 4, 
+    padding: 8, 
+    marginBottom: 12, 
+    fontSize: 16, 
+    color: '#333' 
+  },
+  editButtonsContainer: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-around' 
+  },
+  saveButton: { 
+    backgroundColor: '#28a745', 
+    paddingVertical: 10, 
+    paddingHorizontal: 20, 
+    borderRadius: 4 
+  },
+  saveButtonText: { 
+    color: '#fff', 
+    fontSize: 16, 
+    fontWeight: '600' 
+  },
+  cancelButton: { 
+    backgroundColor: '#dc3545', 
+    paddingVertical: 10, 
+    paddingHorizontal: 20, 
+    borderRadius: 4 
+  },
+  cancelButtonText: { 
+    color: '#fff', 
+    fontSize: 16, 
+    fontWeight: '600' 
+  },
+  modalOverlay: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.5)', 
+    justifyContent: 'center', 
+    padding: 20 
+  },
+  modalContent: { 
+    backgroundColor: 'white', 
+    borderRadius: 8, 
+    padding: 20, 
+    maxHeight: '80%' 
+  },
+  modalHeader: { 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#ddd', 
+    paddingBottom: 8, 
+    marginBottom: 12 
+  },
+  modalTitle: { 
+    fontSize: 20, 
+    fontWeight: '600', 
+    color: '#333', 
+    textAlign: 'center' 
+  },
+  modalScroll: { 
+    paddingBottom: 20 
+  },
+  reportContainer: { 
+    marginBottom: 20 
+  },
+  reportTitle: { 
+    fontSize: 18, 
+    fontWeight: '600', 
+    marginBottom: 4, 
+    color: '#333', 
+    textAlign: 'center' 
+  },
+  reportTimestamp: { 
+    fontSize: 12, 
+    color: '#666', 
+    marginBottom: 12, 
+    textAlign: 'center' 
+  },
+  reportSectionTitle: { 
+    fontSize: 16, 
+    fontWeight: '600', 
+    marginTop: 12, 
+    marginBottom: 4, 
+    color: '#444' 
+  },
+  reportText: { 
+    fontSize: 14, 
+    color: '#444', 
+    lineHeight: 20 
+  },
+  aiAnalysisContainer: { 
+    marginTop: 8, 
+    backgroundColor: '#f0f0f0', 
+    borderRadius: 8, 
+    padding: 10 
+  },
+  aiAnalysisText: { 
+    fontSize: 14, 
+    color: '#333', 
+    lineHeight: 20 
+  },
+  modalFooter: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    marginBottom: 12 
+  },
   modalActionButton: {
     flex: 1,
     flexDirection: 'row',
@@ -495,7 +773,12 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  modalActionButtonText: { color: 'white', fontWeight: '700', fontSize: 16, marginLeft: 8 },
+  modalActionButtonText: { 
+    color: 'white', 
+    fontWeight: '700', 
+    fontSize: 16, 
+    marginLeft: 8 
+  },
   closeModalButton: {
     backgroundColor: '#ff6b93',
     paddingVertical: 14,
@@ -509,7 +792,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  closeModalButtonText: { color: 'white', fontWeight: '700', fontSize: 16 },
+  closeModalButtonText: { 
+    color: 'white', 
+    fontWeight: '700', 
+    fontSize: 16 
+  },
 });
-
-export default MyReportScreen;
