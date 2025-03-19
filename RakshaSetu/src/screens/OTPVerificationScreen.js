@@ -20,27 +20,33 @@ const { width, height } = Dimensions.get('window');
 const PINK = '#ff5f96';
 
 export default function OTPVerificationScreen({ route, navigation }) {
-  // Retrieve verificationId & mobileNumber from navigation params
-  const { verificationId, mobileNumber } = route.params;
+  // We might have fromScreen, verificationId, phone, etc. from route.params
+  const {
+    verificationId,
+    mobileNumber,  // For Login
+    phone,         // For Signup
+    email,         // Possibly from signup
+    fromScreen,    // 'Login' or 'Signup'
+  } = route.params || {};
 
-  // 6-digit OTP array
+  // If you want to unify phone usage:
+  const displayedNumber = mobileNumber || phone || '';
+
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const otpRefs = Array.from({ length: 6 }, () => useRef(null));
 
-  // Handle digit input
   const handleOtpChange = (text, index) => {
-    const newText = text.replace(/[^0-9]/g, '').slice(-1); // Only 1 digit
+    const newText = text.replace(/[^0-9]/g, '').slice(-1);
     const updated = [...otp];
     updated[index] = newText;
     setOtp(updated);
 
-    // Move to next box if typed
+    // Move to next
     if (newText && index < 5) {
       otpRefs[index + 1].current?.focus();
     }
   };
 
-  // Actually verify the OTP with Firebase
   const handleVerifyOTP = async () => {
     if (otp.includes('')) {
       Alert.alert('Error', 'Please fill out all 6 digits of the OTP.');
@@ -49,33 +55,48 @@ export default function OTPVerificationScreen({ route, navigation }) {
     const code = otp.join('');
 
     try {
-      // Build the credential using the verificationId + code
       const phoneCredential = PhoneAuthProvider.credential(verificationId, code);
-
-      // Sign in the user with phone
       const userCredential = await signInWithCredential(auth, phoneCredential);
       const { uid, phoneNumber } = userCredential.user;
 
-      // Optionally save user data to Firestore
+      // Save user data if needed
       const userDocRef = doc(db, 'users', uid);
       const userDoc = await getDoc(userDocRef);
       if (!userDoc.exists()) {
+        // If from signup, we can store the email param too
         await setDoc(userDocRef, {
-          phone: phoneNumber,
+          phone: phoneNumber, // or phone param
+          email: email || '',
           createdAt: new Date().toISOString(),
         });
       }
 
-      // Now user is signed in with phone => "phone" will show as a provider
-      Alert.alert('Success', `OTP verified! Phone sign-in complete.`);
-      navigation.replace('MainTabs'); // or your main/home screen
+      Alert.alert('Success', 'OTP verified!');
+
+      // Decide next screen
+      if (fromScreen === 'Login') {
+        navigation.replace('MainTabs');
+      } else if (fromScreen === 'Signup') {
+        navigation.replace('TellUsAboutYourselfScreen');
+      } else {
+        // fallback
+        navigation.replace('MainTabs');
+      }
     } catch (error) {
       Alert.alert('Error', error.message);
     }
   };
 
   const handleChangeNumber = () => {
-    navigation.replace('LoginScreen');
+    // Decide which screen to go back to
+    if (fromScreen === 'Login') {
+      navigation.replace('Login');
+    } else if (fromScreen === 'Signup') {
+      navigation.replace('SignUpScreen');
+    } else {
+      // fallback
+      navigation.replace('LoginScreen');
+    }
   };
 
   const handleResendCode = () => {
@@ -92,10 +113,9 @@ export default function OTPVerificationScreen({ route, navigation }) {
 
           <View style={styles.formCard}>
             <Text style={styles.subtitle}>
-              Enter the 6-digit verification code sent to {mobileNumber}
+              Enter the 6-digit verification code sent to {displayedNumber}
             </Text>
 
-            {/* OTP boxes */}
             <View style={styles.otpRow}>
               {otp.map((digit, i) => (
                 <View key={`otp-${i}`} style={styles.otpBox}>
@@ -111,17 +131,14 @@ export default function OTPVerificationScreen({ route, navigation }) {
               ))}
             </View>
 
-            {/* Change Number */}
             <TouchableOpacity onPress={handleChangeNumber}>
               <Text style={styles.changeNumberText}>Change Number</Text>
             </TouchableOpacity>
 
-            {/* Verify OTP */}
             <TouchableOpacity style={styles.verifyButton} onPress={handleVerifyOTP}>
               <Text style={styles.verifyButtonText}>Verify OTP</Text>
             </TouchableOpacity>
 
-            {/* Resend Code */}
             <TouchableOpacity onPress={handleResendCode}>
               <Text style={styles.resendText}>Resend Code</Text>
             </TouchableOpacity>
@@ -132,7 +149,7 @@ export default function OTPVerificationScreen({ route, navigation }) {
   );
 }
 
-const CARD_HEIGHT = 320; // Adjust as needed
+const CARD_HEIGHT = 320;
 
 const styles = StyleSheet.create({
   container: {

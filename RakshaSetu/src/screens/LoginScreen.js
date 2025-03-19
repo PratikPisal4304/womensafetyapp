@@ -17,7 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 
-// Import `auth, db` instead of `auth, firestore`
+// Firebase
 import { auth, db } from '../../config/firebaseConfig';
 import { signInWithPhoneNumber, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -25,6 +25,8 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { useTranslation } from 'react-i18next';
+
+// Env
 import {
   EXPO_CLIENT_ID,
   IOS_CLIENT_ID,
@@ -39,8 +41,6 @@ WebBrowser.maybeCompleteAuthSession();
 
 function LoginScreen({ navigation }) {
   const { t, i18n } = useTranslation();
-
-  // Phone input & UI states
   const [mobileNumber, setMobileNumber] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState(i18n.language || 'en');
   const [showLanguageModal, setShowLanguageModal] = useState(false);
@@ -56,8 +56,8 @@ function LoginScreen({ navigation }) {
     webClientId: WEB_CLIENT_ID,
   });
 
+  // Handle Google Sign-In response
   useEffect(() => {
-    // Listen for Google sign-in response
     if (response?.type === 'success') {
       const { idToken, accessToken } = response.authentication;
       const credential = GoogleAuthProvider.credential(idToken, accessToken);
@@ -77,7 +77,9 @@ function LoginScreen({ navigation }) {
               createdAt: new Date().toISOString(),
             });
           }
-          navigation.replace('HomeScreen');
+
+          // Move to home or main screen
+          navigation.replace('MainTabs');
         })
         .catch((error) => {
           Alert.alert(t('common.error'), error.message);
@@ -85,7 +87,7 @@ function LoginScreen({ navigation }) {
     }
   }, [response, t, navigation]);
 
-  // Language selection
+  // Language modal
   const handleLanguagePress = () => setShowLanguageModal(true);
   const handleSelectLanguage = (lang) => {
     setSelectedLanguage(lang.value);
@@ -93,12 +95,12 @@ function LoginScreen({ navigation }) {
     setShowLanguageModal(false);
   };
 
-  // Google sign-in button
+  // Google Sign-In
   const handleGoogleSignIn = () => {
     promptAsync();
   };
 
-  // Send OTP for phone sign-in
+  // Phone OTP
   const handleSendOTP = async () => {
     if (!mobileNumber.startsWith('+91') || mobileNumber.length !== 13) {
       Alert.alert(t('common.error'), t('login.invalidMobileError'));
@@ -117,10 +119,11 @@ function LoginScreen({ navigation }) {
       );
       Alert.alert(t('login.otpSuccessTitle'), t('login.otpSuccessMessage', { mobile: mobileNumber }));
 
-      // Navigate to OTP screen, pass verificationId & phone number
+      // Navigate to OTP screen with fromScreen = 'Login'
       navigation.replace('OTPVerificationScreen', {
         verificationId: confirmationResult.verificationId,
         mobileNumber,
+        fromScreen: 'Login',
       });
     } catch (error) {
       Alert.alert(t('common.error'), error.message);
@@ -182,13 +185,13 @@ function LoginScreen({ navigation }) {
               onChangeText={(text) => setMobileNumber(text.replace(/[^0-9+]/g, ''))}
             />
 
-            {/* Google Sign-In button */}
+            {/* Google Sign-In */}
             <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn}>
               <Ionicons name="logo-google" size={20} color="#fff" style={{ marginRight: 8 }} />
               <Text style={styles.googleButtonText}>{t('login.googleButtonText')}</Text>
             </TouchableOpacity>
 
-            {/* Phone Sign-In (Send OTP) */}
+            {/* Phone OTP */}
             <TouchableOpacity style={styles.sendOtpButton} onPress={handleSendOTP}>
               <Text style={styles.sendOtpButtonText}>{t('login.sendOtpButtonText')}</Text>
             </TouchableOpacity>
