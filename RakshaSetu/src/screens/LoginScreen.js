@@ -30,16 +30,15 @@ const PINK = '#ff5f96';
 
 WebBrowser.maybeCompleteAuthSession();
 
- function LoginScreen({ navigation }) {
+function LoginScreen({ navigation }) {
   const { t, i18n } = useTranslation();
   const [mobileNumber, setMobileNumber] = useState('');
-  // selectedLanguage is now managed with i18n.changeLanguage if needed
   const [selectedLanguage, setSelectedLanguage] = useState(i18n.language || 'en');
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const recaptchaVerifier = useRef(null);
   const [verificationId, setVerificationId] = useState(null);
 
-  // Languages array for modal – you can customize this as needed
+  // Languages array for the modal
   const languages = [
     { label: 'English', value: 'en' },
     { label: 'हिंदी', value: 'hi' },
@@ -50,15 +49,18 @@ WebBrowser.maybeCompleteAuthSession();
     { label: 'ಕನ್ನಡ', value: 'kn' },
     { label: 'ਪੰਜਾਬੀ', value: 'pa' }
   ];
+
   useEffect(() => {
     console.log('i18n object:', i18n);
   }, []);
 
+  // Configure Google Auth Request
   const [request, response, promptAsync] = Google.useAuthRequest({
     expoClientId: EXPO_CLIENT_ID,
     iosClientId: IOS_CLIENT_ID,
     androidClientId: ANDROID_CLIENT_ID,
     webClientId: WEB_CLIENT_ID,
+    // You can include responseType: 'id_token' if required for your Firebase setup
   });
 
   useEffect(() => {
@@ -87,6 +89,7 @@ WebBrowser.maybeCompleteAuthSession();
   }, [response, t, navigation]);
 
   const handleLanguagePress = () => setShowLanguageModal(true);
+
   const handleSelectLanguage = (lang) => {
     setSelectedLanguage(lang.value);
     i18n.changeLanguage(lang.value);

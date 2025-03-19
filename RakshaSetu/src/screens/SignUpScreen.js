@@ -28,7 +28,8 @@ import * as Google from 'expo-auth-session/providers/google';
 import { useTranslation } from 'react-i18next';
 
 // Import the client IDs from environment variables
-import { EXPO_CLIENT_ID, IOS_CLIENT_ID, ANDROID_CLIENT_ID, WEB_CLIENT_ID } from '@env';
+// We're using only the web client, so we'll fallback iosClientId and androidClientId to WEB_CLIENT_ID
+import { WEB_CLIENT_ID } from '@env';
 
 const { width, height } = Dimensions.get('window');
 const PINK = '#ff5f96';
@@ -61,12 +62,12 @@ function SignUpScreen({ navigation }) {
     console.log('i18n object:', i18n);
   }, [i18n]);
 
-  // Google sign-in hook using environment variables for client IDs
+  // Google sign-in hook using only the web client ID for all platforms
   const [request, response, promptAsync] = Google.useAuthRequest({
-    expoClientId: EXPO_CLIENT_ID,
-    iosClientId: IOS_CLIENT_ID,
-    androidClientId: ANDROID_CLIENT_ID,
     webClientId: WEB_CLIENT_ID,
+    iosClientId: WEB_CLIENT_ID,      // Fallback for iOS
+    androidClientId: WEB_CLIENT_ID,  // Fallback for Android
+    responseType: 'id_token',
   });
 
   // Monitor Google sign-in response
@@ -348,3 +349,4 @@ const styles = StyleSheet.create({
 });
 
 export default SignUpScreen;
+
