@@ -33,11 +33,24 @@ const MyReportScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // States for inline editing in detail view
+  // Inline editing states
   const [isEditing, setIsEditing] = useState(false);
   const [editedIncidentType, setEditedIncidentType] = useState('');
   const [editedDescription, setEditedDescription] = useState('');
   const [editedLocation, setEditedLocation] = useState('');
+
+  // Audio playback states
+  const [sound, setSound] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  // Cleanup the sound object when unmounting or switching away
+  useEffect(() => {
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
+  }, [sound]);
 
   // Load only the current user's reports from Firestore and sort them (newest first)
   const loadReports = async () => {
@@ -88,11 +101,13 @@ const MyReportScreen = ({ navigation }) => {
   // Open report details
   const viewReportDetails = (report) => {
     setSelectedReport(report);
-    setIsEditing(false); // reset editing mode when opening a report
+    setIsEditing(false); // reset editing mode
     setCurrentView('detail');
   };
 
   const goBackToList = () => {
+    // Stop any audio playing when going back
+    stopAudio();
     setCurrentView('list');
     setSelectedReport(null);
     setIsEditing(false);
@@ -168,9 +183,8 @@ const MyReportScreen = ({ navigation }) => {
   };
 
   // Inline Editing Functions
-
   const handleStartEditing = () => {
-    // Pre-fill edit fields with current report data
+    // Pre-fill edit fields
     setEditedIncidentType(selectedReport.incidentType);
     setEditedDescription(selectedReport.description);
     setEditedLocation(selectedReport.location);
@@ -203,7 +217,56 @@ const MyReportScreen = ({ navigation }) => {
     }
   };
 
-  // Filter reports based on search query (incident type or description)
+  // Audio Playback Handlers
+  const playAudio = async (uri) => {
+    try {
+      // If we already have a sound loaded, resume or replay
+      if (sound) {
+        await sound.playAsync();
+        setIsPlaying(true);
+        return;
+      }
+      // Otherwise, create a new sound
+      const { sound: newSound } = await Audio.Sound.createAsync({ uri });
+      setSound(newSound);
+
+      // Listen for playback finishing
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.didJustFinish) {
+          setIsPlaying(false);
+        }
+      });
+
+      await newSound.playAsync();
+      setIsPlaying(true);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to play audio recording');
+    }
+  };
+
+  const pauseAudio = async () => {
+    if (sound) {
+      try {
+        await sound.pauseAsync();
+        setIsPlaying(false);
+      } catch (error) {
+        Alert.alert('Error', 'Failed to pause audio');
+      }
+    }
+  };
+
+  const stopAudio = async () => {
+    if (sound) {
+      try {
+        await sound.stopAsync();
+        setIsPlaying(false);
+      } catch (error) {
+        Alert.alert('Error', 'Failed to stop audio');
+      }
+    }
+  };
+
+  // Filter reports by search query
   const filteredReports = reports.filter(report => {
     const queryText = searchQuery.toLowerCase();
     return (
@@ -211,16 +274,6 @@ const MyReportScreen = ({ navigation }) => {
       report.description?.toLowerCase().includes(queryText)
     );
   });
-
-  // Play audio recording using Expo Audio API
-  const playRecording = async (uri) => {
-    try {
-      const { sound } = await Audio.Sound.createAsync({ uri });
-      await sound.playAsync();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to play audio recording');
-    }
-  };
 
   // Render a single report card in the list
   const renderReportItem = ({ item }) => (
@@ -253,6 +306,7 @@ const MyReportScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
+        {/* A spacer so "My Reports" is centered if needed */}
         <View style={styles.spacer} />
         <Text style={styles.headerTitle}>My Reports</Text>
         <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('GenerateReport')}>
@@ -277,9 +331,13 @@ const MyReportScreen = ({ navigation }) => {
     </SafeAreaView>
   );
 
-  // Detailed view for a selected report with inline editing support
+  // Detailed view for a selected report with inline editing support + audio controls
   const ReportDetailView = () => {
     if (!selectedReport) return null;
+
+    // If you store audio under "audioURL", rename as needed
+    const audioUri = selectedReport.audioURL || selectedReport.recordingUri;
+
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -366,27 +424,64 @@ const MyReportScreen = ({ navigation }) => {
               ) : (
                 <Text style={styles.detailsText}>No images attached.</Text>
               )}
-              {selectedReport.recordingUri ? (
-                <TouchableOpacity 
-                  style={styles.playButton} 
-                  onPress={() => playRecording(selectedReport.recordingUri)}
-                >
-                  <Ionicons name="play-outline" size={20} color="#007AFF" />
-                  <Text style={styles.playButtonText}>Play Audio Statement</Text>
-                </TouchableOpacity>
+              {/* AUDIO CONTROLS */}
+              {audioUri ? (
+                <View style={{ marginVertical: 16 }}>
+                  <Text style={styles.sectionTitle}>AUDIO STATEMENT</Text>
+                  <View style={styles.audioControls}>
+                    {/* If currently playing, show Pause/Stop; if not playing, show Play */}
+                    {isPlaying ? (
+                      <>
+                        <TouchableOpacity 
+                          style={styles.audioButton} 
+                          onPress={pauseAudio}
+                        >
+                          <Ionicons name="pause" size={20} color="#fff" />
+                          <Text style={styles.audioButtonText}>Pause</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={[styles.audioButton, { backgroundColor: '#dc3545' }]} 
+                          onPress={stopAudio}
+                        >
+                          <Ionicons name="stop" size={20} color="#fff" />
+                          <Text style={styles.audioButtonText}>Stop</Text>
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <TouchableOpacity 
+                        style={styles.audioButton} 
+                        onPress={() => playAudio(audioUri)}
+                      >
+                        <Ionicons name="play" size={20} color="#fff" />
+                        <Text style={styles.audioButtonText}>Play</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
               ) : (
                 <Text style={styles.detailsText}>No audio recording attached.</Text>
               )}
               {/* Show edit and submit buttons if report is draft */}
               {(!selectedReport.status || selectedReport.status === 'Draft') && (
-                <>
-                  <TouchableOpacity style={styles.submitButton} onPress={confirmSubmitReport}>
-                    <Text style={styles.submitButtonText}>Submit Report</Text>
+                /* -------------------- UPDATED BUTTONS HERE -------------------- */
+                <View style={styles.buttonRow}>
+                  {/* SUBMIT BUTTON */}
+                  <TouchableOpacity 
+                    style={[styles.buttonBase, styles.submitButton]} 
+                    onPress={confirmSubmitReport}
+                  >
+                    <Ionicons name="send" size={20} color="#FFF" style={{ marginRight: 8 }} />
+                    <Text style={styles.buttonText}>Submit Report</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.editButton} onPress={handleStartEditing}>
-                    <Text style={styles.editButtonText}>Edit Report</Text>
+                  {/* EDIT BUTTON */}
+                  <TouchableOpacity 
+                    style={[styles.buttonBase, styles.editButton]} 
+                    onPress={handleStartEditing}
+                  >
+                    <Ionicons name="create" size={20} color="#FFF" style={{ marginRight: 8 }} />
+                    <Text style={styles.buttonText}>Edit Report</Text>
                   </TouchableOpacity>
-                </>
+                </View>
               )}
             </>
           )}
@@ -604,46 +699,31 @@ const styles = StyleSheet.create({
     borderRadius: 8, 
     marginRight: 8 
   },
-  playButton: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginVertical: 16 
-  },
-  playButtonText: { 
-    marginLeft: 8, 
-    fontSize: 16, 
-    color: '#007AFF' 
-  },
-  submitButton: { 
-    backgroundColor: '#007AFF', 
-    paddingVertical: 12, 
-    paddingHorizontal: 24, 
-    borderRadius: 8, 
-    alignItems: 'center', 
-    marginVertical: 20 
-  },
-  submitButtonText: { 
-    color: '#FFF', 
-    fontSize: 16, 
-    fontWeight: '600' 
-  },
-  editButton: { 
-    backgroundColor: '#FFA500', 
-    paddingVertical: 12, 
-    paddingHorizontal: 24, 
-    borderRadius: 8, 
-    alignItems: 'center', 
-    marginBottom: 20 
-  },
-  editButtonText: { 
-    color: '#FFF', 
-    fontSize: 16, 
-    fontWeight: '600' 
-  },
   bottomSpacing: { 
     height: 40 
   },
-  // New styles for inline edit form
+  // AUDIO CONTROLS
+  audioControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  audioButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#28a745', // or any color
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  audioButtonText: {
+    color: '#fff',
+    marginLeft: 6,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Inline edit form
   editForm: { 
     marginVertical: 20, 
     backgroundColor: '#fff', 
@@ -686,6 +766,7 @@ const styles = StyleSheet.create({
     fontSize: 16, 
     fontWeight: '600' 
   },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: '#333' },
   modalOverlay: { 
     flex: 1, 
     backgroundColor: 'rgba(0,0,0,0.5)', 
@@ -796,5 +877,37 @@ const styles = StyleSheet.create({
     color: 'white', 
     fontWeight: '700', 
     fontSize: 16 
+  },
+
+  /* ========== NEW BUTTON STYLES ========== */
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    marginTop: 20,
+  },
+  buttonBase: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginHorizontal: 4,
+    // Optional shadow/elevation
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  submitButton: {
+    backgroundColor: '#007AFF',
+  },
+  editButton: {
+    backgroundColor: '#FFA500',
+  },
+  buttonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
