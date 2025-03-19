@@ -1,0 +1,2441 @@
+[
+    {
+      "name": "Gujarat Vidyapith",
+      "address": "Ashram Rd, opposite Gujarat Vidyapith, Ahmedabad, Gujarat 380014, India",
+      "coordinates": {
+        "latitude": 23.04404,
+        "longitude":  72.56928
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 60,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 55,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 72,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 80,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 85,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 82,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 75,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 68,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "Sabarmati Ashram",
+      "address": "Gandhi Smarak Sangrahalaya, Ashram Rd, Ahmedabad, Gujarat 380027, India",
+      "coordinates": {
+        "latitude": 23.06067,
+        "longitude":  72.58032
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 63,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 58,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 75,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 83,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 88,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 85,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 78,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 71,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "Kankaria Lake",
+      "address": "Kankaria, Ahmedabad, Gujarat 380008, India",
+      "coordinates": {
+        "latitude": 23.006452140753407, 
+        "longitude": 72.60252845061706
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 58,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 53,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 70,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 78,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 83,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 80,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 73,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 66,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "Sardar Patel Stadium",
+      "address": "Navrangpura, Ahmedabad, Gujarat 380009, India",
+      "coordinates": {
+        "latitude": 23.046637742998136,
+        "longitude": 72.56513483676446
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 65,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 60,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 77,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 85,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 90,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 87,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 80,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 73,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "Law Garden",
+      "address": "Ellisbridge, Ahmedabad, Gujarat 380006, India",
+      "coordinates": {
+        "latitude": 23.02731236801543,
+        "longitude": 72.56072038131046
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 60,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 55,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 72,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 80,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 85,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 82,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 75,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 68,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "Ahmedabad One Mall",
+      "address": "Vastrapur, Ahmedabad, Gujarat 380015, India",
+      "coordinates": {
+        "latitude": 23.0400758372801,
+        "longitude": 72.53148729054188
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 57,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 52,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 69,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 77,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 82,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 79,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 72,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 65,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "ISKCON Temple, Ahmedabad",
+      "address": "Sarkhej - Gandhinagar Hwy, Sarkhej, Ahmedabad, Gujarat 380054, India",
+      "coordinates": {
+        "latitude": 23.028516878090212,
+        "longitude": 72.5069127539072
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 62,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 57,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 74,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 82,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 87,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 84,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 77,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 70,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "Calico Museum of Textiles",
+      "address": "The Retreat, Opp. Underbridge, Shahibaug, Ahmedabad, Gujarat 380004, India",
+      "coordinates": {
+        "latitude": 23.054613255897237,
+        "longitude": 72.59212716892137
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 59,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 54,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 71,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 79,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 84,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 81,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 74,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 67,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "Hathisingh Jain Temple",
+      "address": "Bardolpura, Delhi Darwaza, Ahmedabad, Gujarat 380004, India",
+      "coordinates": {
+        "latitude": 23.041168789693987,
+        "longitude": 72.58944270973234
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 64,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 59,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 76,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 84,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 89,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 86,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 79,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 72,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "Jama Masjid, Ahmedabad",
+      "address": "Manek Chowk, Gandhi Rd, Danapidth, Khadia, Ahmedabad, Gujarat 380001, India",
+      "coordinates": {
+        "latitude": 23.02416667673545,
+        "longitude": 72.58710679755534
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 60,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 55,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 72,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 80,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 85,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 82,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 75,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 68,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "Teen Darwaza",
+      "address": "Gandhi Rd, Khadia, Ahmedabad, Gujarat 380001, India",
+      "coordinates": {
+        "latitude": 23.02452244318831,
+        "longitude": 72.5845295385669
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 61,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 56,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 73,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 81,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 86,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 83,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 76,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 69,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "Sidi Saiyyed Mosque",
+      "address": "Opp. Electricity House, Gheekanta, Lal Darwaja, Ahmedabad, Gujarat 380001, India",
+      "coordinates": {
+        "latitude": 23.027086746816956,
+        "longitude": 72.58107380175593
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 58,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 53,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 70,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 78,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 83,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 80,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 73,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 66,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "Auto World Vintage Car Museum",
+      "address": "Dastan Farm, Sardar Patel Ring Rd, Kathwada, Ahmedabad, Gujarat 382430, India",
+      "coordinates": {
+        "latitude": 23.05745239878248,
+        "longitude": 72.68728315390781
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 63,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 58,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 75,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 83,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 88,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 85,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 78,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 71,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "Adalaj Stepwell",
+      "address": "Adalaj Rd, Adalaj, Gujarat 382421, India",
+      "coordinates": {
+        "latitude": 23.167067835094606,
+        "longitude": 72.5801093861461
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 60,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 55,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 72,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 80,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 85,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 82,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 75,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 68,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "Indroda Dinosaur and Fossil Park",
+      "address": "Indroda Circle, Sector-7, Gandhinagar, Gujarat 382007, India",
+      "coordinates": {
+        "latitude": 23.19293754790216,
+        "longitude": 72.64659376669148
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 59,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 54,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 71,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 79,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 84,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 81,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 74,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 67,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "Science City, Ahmedabad",
+      "address": "Science City Rd, Hebatpur, Ahmedabad, Gujarat 380060, India",
+      "coordinates": {
+        "latitude": 23.080287684484837, 
+        "longitude": 72.49566935786686
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 62,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 57,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 74,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 82,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 87,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 84,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 77,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 70,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "Vastrapur Lake",
+      "address": "Vastrapur, Ahmedabad, Gujarat 380015, India",
+      "coordinates": {
+        "latitude": 23.03867457662622,
+        "longitude": 72.52892365390748
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 60,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 55,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 72,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 80,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 85,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 82,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 75,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 68,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "Gujarat University",
+      "address": "Navrangpura, Ahmedabad, Gujarat 380009, India",
+      "coordinates": {
+        "latitude": 23.04055527917165,
+        "longitude": 72.54266759443934
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 57,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 52,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 69,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 77,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 82,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 79,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 72,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 65,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "Parimal Garden",
+      "address": "Ambawadi, Ahmedabad, Gujarat 380015, India",
+      "coordinates": {
+        "latitude": 23.02048134486711,
+        "longitude": 72.55613913856679
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 61,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 56,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 73,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 81,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 86,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 83,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 76,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 69,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "Sundarvan",
+      "address": "Near ISRO, Drive In Rd, Ahmedabad, Gujarat 380054, India",
+      "coordinates": {
+        "latitude": 23.02711990522129,
+        "longitude": 72.52150509443895
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 62,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 57,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 74,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 82,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 87,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 84,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 77,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 70,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "Shreyas Folk Museum",
+      "address": "Near Shreyas Foundation, Ambawadi, Ahmedabad, Gujarat 380015, India",
+      "coordinates": {
+        "latitude": 23.01380007824043,
+        "longitude": 72.53940912507176
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 59,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 54,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 71,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 79,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 84,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 81,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 74,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 67,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "Lal Darwaja",
+      "address": "Lal Darwaja, Ahmedabad, Gujarat, India",
+      "coordinates": {
+        "latitude": 23.026413554059463,
+        "longitude": 72.58266659775312
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 60,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 55,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 72,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "9-12_am": {
+          "safety_score": 80,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 85,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 82,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 75,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 68,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    },
+    {
+      "name": "Manek Chowk",
+      "address": "Manek Chowk, Khadia, Ahmedabad, Gujarat, India",
+      "coordinates": {
+        "latitude": 23.02338616398959,
+        "longitude": 72.58787710973179
+      },
+      "time_slot_data": {
+        "12-3_am": {
+          "safety_score": 63,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "3-6_am": {
+          "safety_score": 58,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        },
+        "6-9_am": {
+          "safety_score": 75,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+       "9-12_am": {
+          "safety_score": 80,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "12-3_pm": {
+          "safety_score": 85,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "high",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "3-6_pm": {
+          "safety_score": 82,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "high",
+            "road_busyness": "high",
+            "police_presence": "medium",
+            "lighting": "good",
+            "recent_crimes": "none",
+            "disturbances": "none"
+          }
+        },
+        "6-9_pm": {
+          "safety_score": 75,
+          "factors": {
+            "crime_rate": "low",
+            "visibility": "medium",
+            "road_busyness": "medium",
+            "police_presence": "medium",
+            "lighting": "average",
+            "recent_crimes": "none",
+            "disturbances": "minor"
+          }
+        },
+        "9-12_pm": {
+          "safety_score": 68,
+          "factors": {
+            "crime_rate": "medium",
+            "visibility": "low",
+            "road_busyness": "low",
+            "police_presence": "low",
+            "lighting": "poor",
+            "recent_crimes": "few",
+            "disturbances": "minor"
+          }
+        }
+      }
+    }
+  ]
+  
