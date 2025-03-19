@@ -120,31 +120,119 @@ const fetchSafetyData = async (coordinates) => {
   };
 };
 
+// Helper to generate a random safety score between a minimum and maximum value.
+const getRandomSafetyScore = (min = 60, max = 90) => {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+};
+
+// Generate a complete mock safety data object.
+const getMockSafetyData = () => {
+  return {
+    safetyScore: getRandomSafetyScore(),
+    safety: getRandomSafetyScore() >= 80 ? 'Safe' : 'Caution advised',
+    crimeRate: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)],
+    visibility: ['high', 'medium', 'low'][Math.floor(Math.random() * 3)],
+    roadBusyness: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)],
+    policePresence: ['high', 'medium', 'low'][Math.floor(Math.random() * 3)],
+    lighting: ['Well lit', 'good', 'average', 'poor'][Math.floor(Math.random() * 4)],
+    recentCrimes: [
+      { type: 'Theft', date: '2 days ago', time: '9:45 PM' },
+      { type: 'Vandalism', date: '1 week ago', time: '11:30 PM' },
+    ],
+    disturbances: ['none', 'minor', 'major'][Math.floor(Math.random() * 3)],
+    source: 'Mock',
+  };
+};
+
+// Helper function to get safety data at a point. Uses local data if available; otherwise, returns mock data.
+const getSafetyDataAtPoint = (coord) => {
+  const localData = getSafetyDataFromCrimeData(coord);
+  return localData || getMockSafetyData();
+};
+
+// Factor weight mappings for adjusting base safety scores.
+const factorWeights = {
+  crimeRate: {
+    low: 10,
+    medium: 0,
+    high: -10,
+  },
+  visibility: {
+    high: 10,
+    medium: 5,
+    low: 0,
+  },
+  roadBusyness: {
+    low: 5,
+    medium: 0,
+    high: -5,
+  },
+  policePresence: {
+    high: 10,
+    medium: 5,
+    low: 0,
+  },
+  lighting: {
+    'Well lit': 10,
+    good: 10,
+    average: 5,
+    poor: 0,
+  },
+  disturbances: {
+    none: 10,
+    minor: 5,
+    major: 0,
+  },
+};
+
+// Compute a composite score for a given safety data object.
+// In addition to the base safetyScore and weighted factors,
+// we subtract an additional penalty if there are any recent incidents.
+const computeCompositeScore = (safetyData) => {
+  if (!safetyData) return getRandomSafetyScore();
+  let composite = safetyData.safetyScore;
+  composite += factorWeights.crimeRate[safetyData.crimeRate] || 0;
+  composite += factorWeights.visibility[safetyData.visibility] || 0;
+  composite += factorWeights.roadBusyness[safetyData.roadBusyness] || 0;
+  composite += factorWeights.policePresence[safetyData.policePresence] || 0;
+  composite += factorWeights.lighting[safetyData.lighting] || 0;
+  composite += factorWeights.disturbances[safetyData.disturbances] || 0;
+  // Subtract penalty: for each recent crime, subtract 5 points.
+  if (safetyData.recentCrimes && Array.isArray(safetyData.recentCrimes)) {
+    composite -= safetyData.recentCrimes.length * 5;
+  }
+  return composite;
+};
+
 // Enhanced evaluation of route safety.
-// We sample points more densely, compute both average and minimum safety scores,
-// and then combine them with weights (70% average, 30% minimum).
-const enhancedEvaluateRouteSafety = (coords) => {
-  if (coords.length === 0) return 100;
-  // Sample every 10th point or ensure at least 5 samples.
-  const sampleInterval = Math.max(1, Math.floor(coords.length / 20));
+// We sample up to 10 evenly spaced points along the route,
+// compute composite safety scores at each point, then combine the average and minimum composite scores (70%/30%).
+const enhancedEvaluateRouteSafety = (points, durationValue = 0) => {
+  if (points.length === 0) return 100;
+  const sampleCount = Math.min(10, points.length);
+  const interval = Math.floor(points.length / sampleCount);
   let totalScore = 0;
   let minScore = Infinity;
   let samples = 0;
-  for (let i = 0; i < coords.length; i += sampleInterval) {
-    const safetyDataAtPoint = getSafetyDataFromCrimeData(coords[i]);
-    // If no data is found, use a default score of 100 (safe)
-    const score = safetyDataAtPoint ? safetyDataAtPoint.safetyScore : 100;
+  for (let i = 0; i < points.length; i += interval) {
+    const safetyDataAtPoint = getSafetyDataAtPoint(points[i]);
+    const score = computeCompositeScore(safetyDataAtPoint);
     totalScore += score;
     if (score < minScore) minScore = score;
     samples++;
   }
   const avgScore = samples > 0 ? totalScore / samples : 100;
-  // Weighted combination: 70% average, 30% minimum.
-  const finalScore = 0.7 * avgScore + 0.3 * minScore;
+  let finalScore = 0.7 * avgScore + 0.3 * minScore;
+  // Optional: Apply a duration penalty if the route takes significantly longer.
+  // const baseDuration = 600; // seconds (10 minutes)
+  // const penaltyFactor = 0.1; // penalty per extra second
+  // if (durationValue > baseDuration) {
+  //   finalScore -= (durationValue - baseDuration) * penaltyFactor;
+  // }
   return finalScore;
 };
 
-// Component to show the safety rating score
+// Component to display the safety rating with color coding.
 const SafetyRatingIndicator = ({ score }) => {
   let color = '#4CAF50';
   if (score < 70) color = '#FFC107';
@@ -174,7 +262,7 @@ function TrackMeScreen() {
   const [showNearbyPlaces, setShowNearbyPlaces] = useState(false);
   const [nearbyCategory, setNearbyCategory] = useState('police');
 
-  // New state: safe route navigation enabled by default
+  // Safe route navigation enabled by default
   const [safeRouteNavigation, setSafeRouteNavigation] = useState(true);
 
   // Journey tracking state
@@ -358,7 +446,7 @@ function TrackMeScreen() {
   };
 
   // Enhanced fetchRoute:
-  // Fetches all routes, computes a safety score for each using enhancedEvaluateRouteSafety,
+  // Fetches all routes, computes an enhanced safety score for each alternative using enhancedEvaluateRouteSafety,
   // and then stores the alternatives for display.
   const fetchRoute = async (mode = 'driving') => {
     if (!location || !destinationCoord) return;
@@ -371,7 +459,7 @@ function TrackMeScreen() {
         Alert.alert('Route not found');
         return;
       }
-      // Map each route to include its computed safety score using enhancedEvaluateRouteSafety.
+      // Compute enhanced safety for each route alternative.
       const routesWithSafety = data.routes.map((route) => {
         const polylineStr =
           route.overview_polyline && route.overview_polyline.points
