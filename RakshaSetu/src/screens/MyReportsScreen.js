@@ -217,7 +217,7 @@ const MyReportScreen = ({ navigation }) => {
     }
   };
 
-  // Audio Playback Handlers
+  // AUDIO LOGIC: Play, Pause, Stop
   const playAudio = async (uri) => {
     try {
       // If we already have a sound loaded, resume or replay
@@ -448,13 +448,36 @@ const MyReportScreen = ({ navigation }) => {
                         </TouchableOpacity>
                       </>
                     ) : (
-                      <TouchableOpacity 
-                        style={styles.audioButton} 
-                        onPress={() => playAudio(audioUri)}
-                      >
-                        <Ionicons name="play" size={20} color="#fff" />
-                        <Text style={styles.audioButtonText}>Play</Text>
-                      </TouchableOpacity>
+                      <>
+                        {sound ? (
+                          // We have a sound loaded but it's paused or stopped -> "Resume" + "Stop"
+                          <>
+                            <TouchableOpacity 
+                              style={styles.audioButton} 
+                              onPress={() => playAudio(audioUri)}
+                            >
+                              <Ionicons name="play" size={20} color="#fff" />
+                              <Text style={styles.audioButtonText}>Resume</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                              style={[styles.audioButton, { backgroundColor: '#dc3545' }]} 
+                              onPress={stopAudio}
+                            >
+                              <Ionicons name="stop" size={20} color="#fff" />
+                              <Text style={styles.audioButtonText}>Stop</Text>
+                            </TouchableOpacity>
+                          </>
+                        ) : (
+                          // No sound loaded yet -> "Play"
+                          <TouchableOpacity 
+                            style={styles.audioButton} 
+                            onPress={() => playAudio(audioUri)}
+                          >
+                            <Ionicons name="play" size={20} color="#fff" />
+                            <Text style={styles.audioButtonText}>Play</Text>
+                          </TouchableOpacity>
+                        )}
+                      </>
                     )}
                   </View>
                 </View>
@@ -463,7 +486,6 @@ const MyReportScreen = ({ navigation }) => {
               )}
               {/* Show edit and submit buttons if report is draft */}
               {(!selectedReport.status || selectedReport.status === 'Draft') && (
-                /* -------------------- UPDATED BUTTONS HERE -------------------- */
                 <View style={styles.buttonRow}>
                   {/* SUBMIT BUTTON */}
                   <TouchableOpacity 
@@ -879,7 +901,7 @@ const styles = StyleSheet.create({
     fontSize: 16 
   },
 
-  /* ========== NEW BUTTON STYLES ========== */
+  // NEW STYLES FOR SUBMIT & EDIT BUTTONS
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-evenly',
