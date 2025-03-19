@@ -1,4 +1,3 @@
-// OTPVerificationScreen.js
 import React, { useState, useRef } from 'react';
 import {
   View,
@@ -13,19 +12,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
+import { auth, db } from '../../config/firebaseConfig';
+import { PhoneAuthProvider, signInWithCredential } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+
 const { width, height } = Dimensions.get('window');
 const PINK = '#ff5f96';
 
-export default function OTPVerificationScreen({ navigation }) {
+export default function OTPVerificationScreen({ route, navigation }) {
+  // Retrieve verificationId & mobileNumber from navigation params
+  const { verificationId, mobileNumber } = route.params;
+
   // 6-digit OTP array
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
-
-  // Refs for auto-focus
   const otpRefs = Array.from({ length: 6 }, () => useRef(null));
 
   // Handle digit input
   const handleOtpChange = (text, index) => {
-    const newText = text.replace(/[^0-9]/g, '').slice(-1); // 1 digit only
+    const newText = text.replace(/[^0-9]/g, '').slice(-1); // Only 1 digit
     const updated = [...otp];
     updated[index] = newText;
     setOtp(updated);
@@ -36,24 +40,44 @@ export default function OTPVerificationScreen({ navigation }) {
     }
   };
 
-  // "Verify OTP" button
-  const handleVerifyOTP = () => {
+  // Actually verify the OTP with Firebase
+  const handleVerifyOTP = async () => {
     if (otp.includes('')) {
       Alert.alert('Error', 'Please fill out all 6 digits of the OTP.');
       return;
     }
     const code = otp.join('');
-    Alert.alert('Success', `OTP "${code}" has been verified!`);
-    // e.g. navigation.replace('NextScreen')
+
+    try {
+      // Build the credential using the verificationId + code
+      const phoneCredential = PhoneAuthProvider.credential(verificationId, code);
+
+      // Sign in the user with phone
+      const userCredential = await signInWithCredential(auth, phoneCredential);
+      const { uid, phoneNumber } = userCredential.user;
+
+      // Optionally save user data to Firestore
+      const userDocRef = doc(db, 'users', uid);
+      const userDoc = await getDoc(userDocRef);
+      if (!userDoc.exists()) {
+        await setDoc(userDocRef, {
+          phone: phoneNumber,
+          createdAt: new Date().toISOString(),
+        });
+      }
+
+      // Now user is signed in with phone => "phone" will show as a provider
+      Alert.alert('Success', `OTP verified! Phone sign-in complete.`);
+      navigation.replace('MainTabs'); // or your main/home screen
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    }
   };
 
-  // "Change Number"
   const handleChangeNumber = () => {
-    Alert.alert('Change Number', 'Logic to change phone number goes here.');
-    // e.g. navigation.replace('Login') or some other route
+    navigation.replace('LoginScreen');
   };
 
-  // "Resend Code"
   const handleResendCode = () => {
     Alert.alert('Resend Code', 'Logic to resend OTP goes here.');
   };
@@ -61,21 +85,14 @@ export default function OTPVerificationScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <KeyboardAwareScrollView contentContainerStyle={{ flexGrow: 1 }} bounces={false}>
-        {/* Pink gradient top section */}
-        <LinearGradient
-          colors={['#ff9dbf', PINK]}
-          style={styles.gradientBackground}
-        >
+        <LinearGradient colors={['#ff9dbf', PINK]} style={styles.gradientBackground}>
           <View style={styles.topSection}>
-            {/* Title only, no back arrow */}
             <Text style={styles.title}>Phone Verification</Text>
           </View>
 
-          {/* White pill container */}
           <View style={styles.formCard}>
-            {/* Instruction text */}
             <Text style={styles.subtitle}>
-              Enter 6 digit verification code sent to your phone number
+              Enter the 6-digit verification code sent to {mobileNumber}
             </Text>
 
             {/* OTP boxes */}
@@ -94,20 +111,17 @@ export default function OTPVerificationScreen({ navigation }) {
               ))}
             </View>
 
-            {/* Change Number link */}
-            <TouchableOpacity onPress={() => navigation.replace('Login')}>
+            {/* Change Number */}
+            <TouchableOpacity onPress={handleChangeNumber}>
               <Text style={styles.changeNumberText}>Change Number</Text>
             </TouchableOpacity>
 
-            {/* Verify OTP button */}
-            <TouchableOpacity
-              style={styles.verifyButton}
-              onPress={() => navigation.replace('MainTabs')}
-            >
+            {/* Verify OTP */}
+            <TouchableOpacity style={styles.verifyButton} onPress={handleVerifyOTP}>
               <Text style={styles.verifyButtonText}>Verify OTP</Text>
             </TouchableOpacity>
 
-            {/* Resend Code link */}
+            {/* Resend Code */}
             <TouchableOpacity onPress={handleResendCode}>
               <Text style={styles.resendText}>Resend Code</Text>
             </TouchableOpacity>
@@ -118,7 +132,6 @@ export default function OTPVerificationScreen({ navigation }) {
   );
 }
 
-// ============= STYLES =============
 const CARD_HEIGHT = 320; // Adjust as needed
 
 const styles = StyleSheet.create({
@@ -130,7 +143,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   topSection: {
-    paddingTop: 60, // extra space since no back arrow
+    paddingTop: 60,
     paddingHorizontal: 20,
     height: height * 0.25,
     justifyContent: 'flex-end',

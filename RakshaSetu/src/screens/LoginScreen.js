@@ -16,14 +16,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
-import { auth, firestore } from '../../config/firebaseConfig';
+
+// Import `auth, db` instead of `auth, firestore`
+import { auth, db } from '../../config/firebaseConfig';
 import { signInWithPhoneNumber, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { useTranslation } from 'react-i18next';
-// Import client IDs from environment variables
-import { EXPO_CLIENT_ID, IOS_CLIENT_ID, ANDROID_CLIENT_ID, WEB_CLIENT_ID } from '@env';
+import {
+  EXPO_CLIENT_ID,
+  IOS_CLIENT_ID,
+  ANDROID_CLIENT_ID,
+  WEB_CLIENT_ID,
+} from '@env';
 
 const { width, height } = Dimensions.get('window');
 const PINK = '#ff5f96';
@@ -32,46 +39,36 @@ WebBrowser.maybeCompleteAuthSession();
 
 function LoginScreen({ navigation }) {
   const { t, i18n } = useTranslation();
+
+  // Phone input & UI states
   const [mobileNumber, setMobileNumber] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState(i18n.language || 'en');
   const [showLanguageModal, setShowLanguageModal] = useState(false);
+
+  // reCAPTCHA
   const recaptchaVerifier = useRef(null);
-  const [verificationId, setVerificationId] = useState(null);
 
-  // Languages array for the modal
-  const languages = [
-    { label: 'English', value: 'en' },
-    { label: 'हिंदी', value: 'hi' },
-    { label: 'मराठी', value: 'mr' },
-    { label: 'ગુજરાતી', value: 'gu' },
-    { label: 'தமிழ்', value: 'ta' },
-    { label: 'తెలుగు', value: 'te' },
-    { label: 'ಕನ್ನಡ', value: 'kn' },
-    { label: 'ਪੰਜਾਬੀ', value: 'pa' }
-  ];
-
-  useEffect(() => {
-    console.log('i18n object:', i18n);
-  }, []);
-
-  // Configure Google Auth Request
+  // Google Auth
   const [request, response, promptAsync] = Google.useAuthRequest({
     expoClientId: EXPO_CLIENT_ID,
     iosClientId: IOS_CLIENT_ID,
     androidClientId: ANDROID_CLIENT_ID,
     webClientId: WEB_CLIENT_ID,
-    // You can include responseType: 'id_token' if required for your Firebase setup
   });
 
   useEffect(() => {
+    // Listen for Google sign-in response
     if (response?.type === 'success') {
       const { idToken, accessToken } = response.authentication;
       const credential = GoogleAuthProvider.credential(idToken, accessToken);
+
       signInWithCredential(auth, credential)
         .then(async (userCredential) => {
           Alert.alert(t('login.successAlertTitle'), t('login.successAlertMessage'));
           const { uid, email, displayName } = userCredential.user;
-          const userDocRef = doc(firestore, 'users', uid);
+
+          // Save to Firestore if needed
+          const userDocRef = doc(db, 'users', uid);
           const userDoc = await getDoc(userDocRef);
           if (!userDoc.exists()) {
             await setDoc(userDocRef, {
@@ -88,18 +85,20 @@ function LoginScreen({ navigation }) {
     }
   }, [response, t, navigation]);
 
+  // Language selection
   const handleLanguagePress = () => setShowLanguageModal(true);
-
   const handleSelectLanguage = (lang) => {
     setSelectedLanguage(lang.value);
     i18n.changeLanguage(lang.value);
     setShowLanguageModal(false);
   };
 
-  const handleGoogleSignIn = async () => {
+  // Google sign-in button
+  const handleGoogleSignIn = () => {
     promptAsync();
   };
 
+  // Send OTP for phone sign-in
   const handleSendOTP = async () => {
     if (!mobileNumber.startsWith('+91') || mobileNumber.length !== 13) {
       Alert.alert(t('common.error'), t('login.invalidMobileError'));
@@ -109,10 +108,16 @@ function LoginScreen({ navigation }) {
       Alert.alert(t('common.error'), t('login.recaptchaError'));
       return;
     }
+
     try {
-      const confirmationResult = await signInWithPhoneNumber(auth, mobileNumber, recaptchaVerifier.current);
-      setVerificationId(confirmationResult.verificationId);
+      const confirmationResult = await signInWithPhoneNumber(
+        auth,
+        mobileNumber,
+        recaptchaVerifier.current
+      );
       Alert.alert(t('login.otpSuccessTitle'), t('login.otpSuccessMessage', { mobile: mobileNumber }));
+
+      // Navigate to OTP screen, pass verificationId & phone number
       navigation.replace('OTPVerificationScreen', {
         verificationId: confirmationResult.verificationId,
         mobileNumber,
@@ -122,18 +127,30 @@ function LoginScreen({ navigation }) {
     }
   };
 
+  // Language array
+  const languages = [
+    { label: 'English', value: 'en' },
+    { label: 'हिंदी', value: 'hi' },
+    { label: 'मराठी', value: 'mr' },
+    { label: 'ગુજરાતી', value: 'gu' },
+    { label: 'தமிழ்', value: 'ta' },
+    { label: 'తెలుగు', value: 'te' },
+    { label: 'ಕನ್ನಡ', value: 'kn' },
+    { label: 'ਪੰਜਾਬੀ', value: 'pa' },
+  ];
+
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      {/* reCAPTCHA modal */}
       <FirebaseRecaptchaVerifierModal
         ref={recaptchaVerifier}
         firebaseConfig={{
-          apiKey: "AIzaSyBRD6pmrMCcuAksz8hqxXAkP8hV3jih47c",
-          authDomain: "rakshasetu-c9e0b.firebaseapp.com",
-          projectId: "rakshasetu-c9e0b",
-          storageBucket: "rakshasetu-c9e0b.firebasestorage.app",
-          messagingSenderId: "704291591905",
-          appId: "1:704291591905:web:ffde7bd519cfad3106c9a0",
-          measurementId: "G-JJ881F4VBQ"
+          apiKey: 'AIzaSyBRD6pmrMCcuAksz8hqxXAkP8hV3jih47c',
+          authDomain: 'rakshasetu-c9e0b.firebaseapp.com',
+          projectId: 'rakshasetu-c9e0b',
+          storageBucket: 'rakshasetu-c9e0b.firebasestorage.app',
+          messagingSenderId: '704291591905',
+          appId: '1:704291591905:web:ffde7bd519cfad3106c9a0',
         }}
         attemptInvisibleVerification={false}
       />
@@ -143,6 +160,7 @@ function LoginScreen({ navigation }) {
           <View style={styles.topSection}>
             <Text style={styles.headerTitle}>{t('login.headerTitle')}</Text>
             <Text style={styles.headerSubtitle}>{t('login.headerSubtitle')}</Text>
+
             <TouchableOpacity style={styles.languageContainer} onPress={handleLanguagePress}>
               <Image
                 source={require('../../assets/languages.png')}
@@ -164,19 +182,20 @@ function LoginScreen({ navigation }) {
               onChangeText={(text) => setMobileNumber(text.replace(/[^0-9+]/g, ''))}
             />
 
+            {/* Google Sign-In button */}
             <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn}>
               <Ionicons name="logo-google" size={20} color="#fff" style={{ marginRight: 8 }} />
               <Text style={styles.googleButtonText}>{t('login.googleButtonText')}</Text>
             </TouchableOpacity>
 
+            {/* Phone Sign-In (Send OTP) */}
             <TouchableOpacity style={styles.sendOtpButton} onPress={handleSendOTP}>
               <Text style={styles.sendOtpButtonText}>{t('login.sendOtpButtonText')}</Text>
             </TouchableOpacity>
 
+            {/* Footer */}
             <View style={styles.footerContainer}>
-              <Text style={styles.footerText}>
-                {t('login.footerText')}
-              </Text>
+              <Text style={styles.footerText}>{t('login.footerText')}</Text>
               <View style={styles.signupContainer}>
                 <Text style={styles.footerText}>{t('login.noAccount')}</Text>
                 <TouchableOpacity onPress={() => navigation.replace('SignUpScreen')}>
@@ -188,6 +207,7 @@ function LoginScreen({ navigation }) {
         </LinearGradient>
       </KeyboardAwareScrollView>
 
+      {/* Language Modal */}
       <Modal
         visible={showLanguageModal}
         transparent
@@ -218,6 +238,7 @@ function LoginScreen({ navigation }) {
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
