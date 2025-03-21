@@ -8,7 +8,7 @@
       },
       "time_slot_data": {
         "12-3_am": {
-          "safety_score": 60,
+          "safety_score": 80,
           "factors": {
             "crime_rate": "medium",
             "visibility": "low",
@@ -20,7 +20,7 @@
           }
         },
         "3-6_am": {
-          "safety_score": 55,
+          "safety_score": 75,
           "factors": {
             "crime_rate": "medium",
             "visibility": "low",
@@ -92,7 +92,7 @@
           }
         },
         "9-12_pm": {
-          "safety_score": 68,
+          "safety_score": 80,
           "factors": {
             "crime_rate": "medium",
             "visibility": "low",
@@ -2436,6 +2436,643 @@
           }
         }
       }
-    }
+    },
+    {
+        "name": "Odoo Office Gujarat",
+        "address": "401 & 402, Floor 4, IT Tower 3 InfoCity Gate, 1, Infocity, Gandhinagar, Gujarat 382007, India",
+        "coordinates": {
+          "latitude": 23.193002834720655,
+          "longitude": 72.63666547487024
+        },
+        "time_slot_data": {
+          "6-9_am": {
+            "safety_score": 85,
+            "factors": {
+              "crime_rate": "very low",
+              "visibility": "high",
+              "road_busyness": "low",
+              "police_presence": "medium",
+              "lighting": "good",
+              "recent_crimes": "none",
+              "disturbances": "none"
+            }
+          },
+          "9-12_am": {
+            "safety_score": 90,
+            "factors": {
+              "crime_rate": "very low",
+              "visibility": "high",
+              "road_busyness": "medium",
+              "police_presence": "high",
+              "lighting": "excellent",
+              "recent_crimes": "none",
+              "disturbances": "none"
+            }
+          },
+          "12-3_pm": {
+            "safety_score": 88,
+            "factors": {
+              "crime_rate": "very low",
+              "visibility": "high",
+              "road_busyness": "high",
+              "police_presence": "high",
+              "lighting": "excellent",
+              "recent_crimes": "none",
+              "disturbances": "minor"
+            }
+          },
+          "3-6_pm": {
+            "safety_score": 82,
+            "factors": {
+              "crime_rate": "very low",
+              "visibility": "high",
+              "road_busyness": "medium",
+              "police_presence": "medium",
+              "lighting": "good",
+              "recent_crimes": "none",
+              "disturbances": "minor"
+            }
+          },
+          "6-9_pm": {
+            "safety_score": 85,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "medium",
+              "road_busyness": "low",
+              "police_presence": "low",
+              "lighting": "average",
+              "recent_crimes": "none",
+              "disturbances": "minor"
+            }
+          },
+          "9-12_pm": {
+            "safety_score": 78,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "low",
+              "road_busyness": "very low",
+              "police_presence": "low",
+              "lighting": "poor",
+              "recent_crimes": "few",
+              "disturbances": "minor"
+            }
+          },
+          "12-3_am": {
+            "safety_score": 83,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "very low",
+              "road_busyness": "very low",
+              "police_presence": "very low",
+              "lighting": "very poor",
+              "recent_crimes": "few",
+              "disturbances": "minor"
+            }
+          },
+           "3-6_am": {
+            "safety_score": 85,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "very low",
+              "road_busyness": "very low",
+              "police_presence": "very low",
+              "lighting": "very poor",
+              "recent_crimes": "few",
+              "disturbances": "minor"
+            }
+          }
+        }
+      },
+      {
+        "name": "INFOCITY THE GLOBAL IT PARK",
+        "address": "Infocity, Gandhinagar, Gujarat 382009, India",
+        "coordinates": {
+          "latitude": 23.19488864767239,
+          "longitude": 72.63633952164787
+        },
+        "time_slot_data": {
+          "6-9_am": {
+            "safety_score": 80,
+            "factors": {
+              "crime_rate": "very low",
+              "visibility": "high",
+              "road_busyness": "low",
+              "police_presence": "medium",
+              "lighting": "good",
+              "recent_crimes": "none",
+              "disturbances": "none"
+            }
+          },
+          "9-12_am": {
+            "safety_score": 90,
+            "factors": {
+              "crime_rate": "very low",
+              "visibility": "high",
+              "road_busyness": "medium",
+              "police_presence": "high",
+              "lighting": "excellent",
+              "recent_crimes": "none",
+              "disturbances": "none"
+            }
+          },
+          "12-3_pm": {
+            "safety_score": 87,
+            "factors": {
+              "crime_rate": "very low",
+              "visibility": "high",
+              "road_busyness": "high",
+              "police_presence": "high",
+              "lighting": "excellent",
+              "recent_crimes": "none",
+              "disturbances": "minor"
+            }
+          },
+          "3-6_pm": {
+            "safety_score": 85,
+            "factors": {
+              "crime_rate": "very low",
+              "visibility": "high",
+              "road_busyness": "medium",
+              "police_presence": "medium",
+              "lighting": "good",
+              "recent_crimes": "none",
+              "disturbances": "minor"
+            }
+          },
+          "6-9_pm": {
+            "safety_score": 85,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "medium",
+              "road_busyness": "low",
+              "police_presence": "low",
+              "lighting": "average",
+              "recent_crimes": "none",
+              "disturbances": "minor"
+            }
+          },
+          "9-12_pm": {
+            "safety_score": 78,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "low",
+              "road_busyness": "very low",
+              "police_presence": "low",
+              "lighting": "poor",
+              "recent_crimes": "few",
+              "disturbances": "minor"
+            }
+          },
+          "12-3_am": {
+            "safety_score": 70,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "very low",
+              "road_busyness": "very low",
+              "police_presence": "very low",
+              "lighting": "very poor",
+              "recent_crimes": "few",
+              "disturbances": "minor"
+            }
+          },
+           "3-6_am": {
+            "safety_score": 85,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "very low",
+              "road_busyness": "very low",
+              "police_presence": "very low",
+              "lighting": "very poor",
+              "recent_crimes": "few",
+              "disturbances": "minor"
+            }
+          }
+        }
+      },
+      {
+        "name": "Tata Consultancy Services",
+        "address": "TCS Main Building, DA IICT Rd, Infocity, Gandhinagar, Gujarat 382421, India",
+        "coordinates": {
+          "latitude": 23.1928571365852,
+          "longitude": 72.62776282588382
+        },
+        "time_slot_data": {
+          "12-3_am": {
+            "safety_score": 63,
+            "factors": {
+              "crime_rate": "medium",
+              "visibility": "low",
+              "road_busyness": "low",
+              "police_presence": "low",
+              "lighting": "poor",
+              "recent_crimes": "few",
+              "disturbances": "minor"
+            }
+          },
+          "3-6_am": {
+            "safety_score": 58,
+            "factors": {
+              "crime_rate": "medium",
+              "visibility": "low",
+              "road_busyness": "low",
+              "police_presence": "low",
+              "lighting": "poor",
+              "recent_crimes": "few",
+              "disturbances": "minor"
+            }
+          },
+          "6-9_am": {
+            "safety_score": 75,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "medium",
+              "road_busyness": "medium",
+              "police_presence": "medium",
+              "lighting": "average",
+              "recent_crimes": "none",
+              "disturbances": "none"
+            }
+          },
+         "9-12_am": {
+            "safety_score": 80,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "high",
+              "road_busyness": "medium",
+              "police_presence": "medium",
+              "lighting": "good",
+              "recent_crimes": "none",
+              "disturbances": "none"
+            }
+          },
+          "12-3_pm": {
+            "safety_score": 85,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "high",
+              "road_busyness": "high",
+              "police_presence": "high",
+              "lighting": "good",
+              "recent_crimes": "none",
+              "disturbances": "none"
+            }
+          },
+          "3-6_pm": {
+            "safety_score": 82,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "high",
+              "road_busyness": "high",
+              "police_presence": "medium",
+              "lighting": "good",
+              "recent_crimes": "none",
+              "disturbances": "none"
+            }
+          },
+          "6-9_pm": {
+            "safety_score": 75,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "medium",
+              "road_busyness": "medium",
+              "police_presence": "medium",
+              "lighting": "average",
+              "recent_crimes": "none",
+              "disturbances": "minor"
+            }
+          },
+          "9-12_pm": {
+            "safety_score": 68,
+            "factors": {
+              "crime_rate": "medium",
+              "visibility": "low",
+              "road_busyness": "low",
+              "police_presence": "low",
+              "lighting": "poor",
+              "recent_crimes": "few",
+              "disturbances": "minor"
+            }
+          }
+        }
+      },  
+        {
+        "name": "Super Mall 1",
+        "address": "Super mall 1, Gujarat 382007, India",
+        "coordinates": {
+          "latitude": 23.196369116588592,
+          "longitude": 72.63397352776612
+        },
+        "time_slot_data": {
+          "12-3_am": {
+            "safety_score": 60,
+            "factors": {
+              "crime_rate": "medium",
+              "visibility": "low",
+              "road_busyness": "low",
+              "police_presence": "low",
+              "lighting": "poor",
+              "recent_crimes": "few",
+              "disturbances": "minor"
+            }
+          },
+          "3-6_am": {
+            "safety_score": 55,
+            "factors": {
+              "crime_rate": "medium",
+              "visibility": "low",
+              "road_busyness": "low",
+              "police_presence": "low",
+              "lighting": "poor",
+              "recent_crimes": "few",
+              "disturbances": "minor"
+            }
+          },
+          "6-9_am": {
+            "safety_score": 72,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "medium",
+              "road_busyness": "medium",
+              "police_presence": "medium",
+              "lighting": "average",
+              "recent_crimes": "none",
+              "disturbances": "none"
+            }
+          },
+          "9-12_am": {
+            "safety_score": 80,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "high",
+              "road_busyness": "medium",
+              "police_presence": "medium",
+              "lighting": "good",
+              "recent_crimes": "none",
+              "disturbances": "none"
+            }
+          },
+          "12-3_pm": {
+            "safety_score": 85,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "high",
+              "road_busyness": "high",
+              "police_presence": "high",
+              "lighting": "good",
+              "recent_crimes": "none",
+              "disturbances": "none"
+            }
+          },
+          "3-6_pm": {
+            "safety_score": 82,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "high",
+              "road_busyness": "high",
+              "police_presence": "medium",
+              "lighting": "good",
+              "recent_crimes": "none",
+              "disturbances": "none"
+            }
+          },
+          "6-9_pm": {
+            "safety_score": 75,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "medium",
+              "road_busyness": "medium",
+              "police_presence": "medium",
+              "lighting": "average",
+              "recent_crimes": "none",
+              "disturbances": "minor"
+            }
+          },
+          "9-12_pm": {
+            "safety_score": 68,
+            "factors": {
+              "crime_rate": "medium",
+              "visibility": "low",
+              "road_busyness": "low",
+              "police_presence": "low",
+              "lighting": "poor",
+              "recent_crimes": "few",
+              "disturbances": "minor"
+            }
+          }
+        }
+      },
+      {
+        "name": "INDRODA NATURE PARK",
+        "address": "5MV3+5F4, Dholakuva, Gandhinagar, Gujarat 382421, India",
+        "coordinates": {
+          "latitude": 23.18990853161127,
+          "longitude": 72.65355069854965
+        },
+        "time_slot_data": {
+          "12-3_am": {
+            "safety_score": 64,
+            "factors": {
+              "crime_rate": "medium",
+              "visibility": "low",
+              "road_busyness": "low",
+              "police_presence": "low",
+              "lighting": "poor",
+              "recent_crimes": "few",
+              "disturbances": "minor"
+            }
+          },
+          "3-6_am": {
+            "safety_score": 59,
+            "factors": {
+              "crime_rate": "medium",
+              "visibility": "low",
+              "road_busyness": "low",
+              "police_presence": "low",
+              "lighting": "poor",
+              "recent_crimes": "few",
+              "disturbances": "minor"
+            }
+          },
+          "6-9_am": {
+            "safety_score": 76,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "medium",
+              "road_busyness": "medium",
+              "police_presence": "medium",
+              "lighting": "average",
+              "recent_crimes": "none",
+              "disturbances": "none"
+            }
+          },
+          "9-12_am": {
+            "safety_score": 84,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "high",
+              "road_busyness": "medium",
+              "police_presence": "medium",
+              "lighting": "good",
+              "recent_crimes": "none",
+              "disturbances": "none"
+            }
+          },
+          "12-3_pm": {
+            "safety_score": 89,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "high",
+              "road_busyness": "high",
+              "police_presence": "high",
+              "lighting": "good",
+              "recent_crimes": "none",
+              "disturbances": "none"
+            }
+          },
+          "3-6_pm": {
+            "safety_score": 86,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "high",
+              "road_busyness": "high",
+              "police_presence": "medium",
+              "lighting": "good",
+              "recent_crimes": "none",
+              "disturbances": "none"
+            }
+          },
+          "6-9_pm": {
+            "safety_score": 79,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "medium",
+              "road_busyness": "medium",
+              "police_presence": "medium",
+              "lighting": "average",
+              "recent_crimes": "none",
+              "disturbances": "minor"
+            }
+          },
+          "9-12_pm": {
+            "safety_score": 72,
+            "factors": {
+              "crime_rate": "medium",
+              "visibility": "low",
+              "road_busyness": "low",
+              "police_presence": "low",
+              "lighting": "poor",
+              "recent_crimes": "few",
+              "disturbances": "minor"
+            }
+          }
+        }
+      },
+      {
+        "name": "Dholakuva",
+        "address": "Gandhinagar, Gujarat 382421, India",
+        "coordinates": {
+          "latitude": 23.189472694732125,
+          "longitude": 72.64589501875616
+        },
+        "time_slot_data": {
+          "12-3_am": {
+            "safety_score": 64,
+            "factors": {
+              "crime_rate": "medium",
+              "visibility": "low",
+              "road_busyness": "low",
+              "police_presence": "low",
+              "lighting": "poor",
+              "recent_crimes": "few",
+              "disturbances": "minor"
+            }
+          },
+          "3-6_am": {
+            "safety_score": 59,
+            "factors": {
+              "crime_rate": "medium",
+              "visibility": "low",
+              "road_busyness": "low",
+              "police_presence": "low",
+              "lighting": "poor",
+              "recent_crimes": "few",
+              "disturbances": "minor"
+            }
+          },
+          "6-9_am": {
+            "safety_score": 76,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "medium",
+              "road_busyness": "medium",
+              "police_presence": "medium",
+              "lighting": "average",
+              "recent_crimes": "none",
+              "disturbances": "none"
+            }
+          },
+          "9-12_am": {
+            "safety_score": 84,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "high",
+              "road_busyness": "medium",
+              "police_presence": "medium",
+              "lighting": "good",
+              "recent_crimes": "none",
+              "disturbances": "none"
+            }
+          },
+          "12-3_pm": {
+            "safety_score": 89,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "high",
+              "road_busyness": "high",
+              "police_presence": "high",
+              "lighting": "good",
+              "recent_crimes": "none",
+              "disturbances": "none"
+            }
+          },
+          "3-6_pm": {
+            "safety_score": 86,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "high",
+              "road_busyness": "high",
+              "police_presence": "medium",
+              "lighting": "good",
+              "recent_crimes": "none",
+              "disturbances": "none"
+            }
+          },
+          "6-9_pm": {
+            "safety_score": 79,
+            "factors": {
+              "crime_rate": "low",
+              "visibility": "medium",
+              "road_busyness": "medium",
+              "police_presence": "medium",
+              "lighting": "average",
+              "recent_crimes": "none",
+              "disturbances": "minor"
+            }
+          },
+          "9-12_pm": {
+            "safety_score": 72,
+            "factors": {
+              "crime_rate": "medium",
+              "visibility": "low",
+              "road_busyness": "low",
+              "police_presence": "low",
+              "lighting": "poor",
+              "recent_crimes": "few",
+              "disturbances": "minor"
+            }
+          }
+        }
+      }
+      
   ]
   
