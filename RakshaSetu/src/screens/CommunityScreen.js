@@ -743,7 +743,8 @@ const styles = StyleSheet.create({
     borderBottomColor: "#e0e0e0",
     paddingBottom: 4,
   },
-  postContent: { fontSize: 15, color: "#555" },
+  // Added explicit width to help onTextLayout fire on iOS
+  postContent: { fontSize: 15, color: "#555", width: '100%' },
   readMore: { color: PINK, marginTop: 4, fontWeight: "600" },
   postImage: { width: "100%", height: 300, borderRadius: 8, marginTop: 10 },
   actionRow: {
