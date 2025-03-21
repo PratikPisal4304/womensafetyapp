@@ -113,12 +113,9 @@ const PostCard = ({
     outputRange: [0.5, 1.5],
   });
 
-  // Handle text layout to check number of lines
-  const onTextLayout = (e) => {
-    if (!textExpanded && e.nativeEvent.lines.length > 4) {
-      setShouldShowReadMore(true);
-    }
-  };
+  // onTextLayout for the visible text is removed on iOS,
+  // and instead a hidden Text is used to reliably measure the full content.
+  // (This is necessary because on iOS the visible Text with numberOfLines may report only the truncated line count.)
 
   return (
     <TouchableWithoutFeedback onPress={handleCardTap}>
@@ -148,7 +145,6 @@ const PostCard = ({
             style={styles.postContent}
             numberOfLines={textExpanded ? undefined : 4}
             ellipsizeMode="tail"
-            onTextLayout={onTextLayout}
           >
             {post.content}
           </Text>
@@ -162,6 +158,17 @@ const PostCard = ({
               <Text style={styles.readMore}>Read less...</Text>
             </TouchableOpacity>
           )}
+          {/* Hidden Text to measure number of lines reliably on iOS */}
+          <Text
+            style={[styles.postContent, { position: 'absolute', opacity: 0, zIndex: -1 }]}
+            onTextLayout={(e) => {
+              if (e.nativeEvent.lines.length > 4) {
+                setShouldShowReadMore(true);
+              }
+            }}
+          >
+            {post.content}
+          </Text>
         </View>
         {post.imageUrl ? (
           <Image source={{ uri: post.imageUrl }} style={styles.postImage} />
