@@ -58,6 +58,7 @@ const formatTimestamp = (timestamp) => {
  * - Listens for double taps.
  * - If the post is not already liked, a double tap toggles the like and plays an animation.
  * - If the post is already liked, a double tap simply removes the like without triggering animation.
+ * - If the content is long, shows a "Read more..." option after 4 lines, and "Read less..." when expanded.
  */
 const PostCard = ({
   post,
@@ -71,6 +72,10 @@ const PostCard = ({
 
   const likedBy = post.likedBy || [];
   const isLiked = auth.currentUser && likedBy.includes(auth.currentUser.uid);
+
+  // State for content truncation and read more/less toggle
+  const [textExpanded, setTextExpanded] = useState(false);
+  const [shouldShowReadMore, setShouldShowReadMore] = useState(false);
 
   const handleCardTap = () => {
     const now = Date.now();
@@ -108,6 +113,13 @@ const PostCard = ({
     outputRange: [0.5, 1.5],
   });
 
+  // Handle text layout to check number of lines
+  const onTextLayout = (e) => {
+    if (!textExpanded && e.nativeEvent.lines.length > 4) {
+      setShouldShowReadMore(true);
+    }
+  };
+
   return (
     <TouchableWithoutFeedback onPress={handleCardTap}>
       <View style={styles.postCard}>
@@ -131,7 +143,25 @@ const PostCard = ({
           )}
         </View>
         <Text style={styles.postTitle}>{post.title}</Text>
-        <Text style={styles.postContent}>{post.content}</Text>
+        <View>
+          <Text
+            style={styles.postContent}
+            numberOfLines={textExpanded ? undefined : 4}
+            onTextLayout={onTextLayout}
+          >
+            {post.content}
+          </Text>
+          {shouldShowReadMore && !textExpanded && (
+            <TouchableOpacity onPress={() => setTextExpanded(true)}>
+              <Text style={styles.readMore}>Read more...</Text>
+            </TouchableOpacity>
+          )}
+          {shouldShowReadMore && textExpanded && (
+            <TouchableOpacity onPress={() => setTextExpanded(false)}>
+              <Text style={styles.readMore}>Read less...</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         {post.imageUrl ? (
           <Image source={{ uri: post.imageUrl }} style={styles.postImage} />
         ) : null}
@@ -699,11 +729,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderWidth: 1,
     borderColor: "#f0f0f0",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
   },
   postHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   userAvatar: { width: 45, height: 45, borderRadius: 22.5, borderWidth: 2, borderColor: PINK },
@@ -718,8 +743,9 @@ const styles = StyleSheet.create({
     borderBottomColor: "#e0e0e0",
     paddingBottom: 4,
   },
-  postContent: { fontSize: 15, color: "#555", marginBottom: 12 },
-  postImage: { width: "100%", height: 300, borderRadius: 8, marginBottom: 10, resizeMode: "cover" },
+  postContent: { fontSize: 15, color: "#555" },
+  readMore: { color: PINK, marginTop: 4, fontWeight: "600" },
+  postImage: { width: "100%", height: 300, borderRadius: 8, marginTop: 10 },
   actionRow: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -728,9 +754,9 @@ const styles = StyleSheet.create({
     borderTopColor: "#eee",
     paddingTop: 10,
   },
-  actionButton: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 5 },
+  actionButton: { flexDirection: "row", alignItems: "center" },
   actionButtonText: { fontSize: 14, color: "#666" },
-  heartOverlay: { position: 'absolute', top: '40%', left: '40%' },
+  heartOverlay: { position: "absolute", top: "40%", left: "40%" },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.3)", justifyContent: "center", padding: 20 },
   modalContainer: { backgroundColor: "#fff", borderRadius: 15, padding: 20, maxHeight: "90%", alignSelf: "center", width: "100%" },
   modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 15, color: "#333", textAlign: "center" },
