@@ -147,6 +147,7 @@ const PostCard = ({
           <Text
             style={styles.postContent}
             numberOfLines={textExpanded ? undefined : 4}
+            ellipsizeMode="tail"
             onTextLayout={onTextLayout}
           >
             {post.content}
@@ -743,8 +744,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#e0e0e0",
     paddingBottom: 4,
   },
-  // Added explicit width to help onTextLayout fire on iOS
-  postContent: { fontSize: 15, color: "#555", width: '100%' },
+  postContent: { fontSize: 15, color: "#555" },
   readMore: { color: PINK, marginTop: 4, fontWeight: "600" },
   postImage: { width: "100%", height: 300, borderRadius: 8, marginTop: 10 },
   actionRow: {
