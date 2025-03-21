@@ -47,6 +47,16 @@ export default function OTPVerificationScreen({ route, navigation }) {
     }
   };
 
+  // Added backspace handling without making any other changes
+  const handleKeyPress = ({ nativeEvent }, index) => {
+    if (nativeEvent.key === 'Backspace' && otp[index] === '' && index > 0) {
+      const updated = [...otp];
+      updated[index - 1] = '';
+      setOtp(updated);
+      otpRefs[index - 1].current?.focus();
+    }
+  };
+
   const handleVerifyOTP = async () => {
     if (otp.includes('')) {
       Alert.alert('Error', 'Please fill out all 6 digits of the OTP.');
@@ -126,6 +136,7 @@ export default function OTPVerificationScreen({ route, navigation }) {
                     maxLength={1}
                     value={digit}
                     onChangeText={(text) => handleOtpChange(text, i)}
+                    onKeyPress={(e) => handleKeyPress(e, i)}
                   />
                 </View>
               ))}
